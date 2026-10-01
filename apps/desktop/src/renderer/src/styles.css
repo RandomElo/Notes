@@ -1,0 +1,31 @@
+@import 'tailwindcss';
+
+/* Couleurs provisoires du socle. Le vrai thème (theme.toml vers variables CSS) arrive en J4. */
+@theme {
+  --color-fond: #16171b;
+  --color-surface: #1e2026;
+  --color-bordure: #2d3039;
+  --color-texte: #e6e7ea;
+  --color-discret: #9aa0ab;
+  --color-accent: #7aa2f7;
+  --color-succes: #7bc47f;
+  --color-alerte: #e0af68;
+  --color-erreur: #f08a8a;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+html,
+body,
+#racine {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-fond);
+  color: var(--color-texte);
+  font-family: var(--font-sans);
+}

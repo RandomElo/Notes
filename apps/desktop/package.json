@@ -1,0 +1,33 @@
+{
+  "name": "@notes/desktop",
+  "productName": "Notes",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Éditeur de notes local-first avec synchronisation SMB",
+  "author": "Eloi",
+  "main": "./out/main/index.js",
+  "scripts": {
+    "dev": "electron-vite dev",
+    "build": "electron-vite build",
+    "typecheck": "tsc -p tsconfig.node.json && tsc -p tsconfig.web.json",
+    "package": "electron-builder --linux AppImage",
+    "package:dir": "electron-builder --linux dir"
+  },
+  "devDependencies": {
+    "@notes/core": "*",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^5.2.0",
+    "electron": "44.5.1",
+    "electron-builder": "^26.15.3",
+    "electron-vite": "^5.0.0",
+    "lucide-react": "^1.49.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^7.3.6"
+  }
+}

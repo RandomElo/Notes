@@ -1,0 +1,50 @@
+diff -u a/go-smb2/conn.go b/go-smb2/conn.go
+--- a/go-smb2/conn.go
++++ b/go-smb2/conn.go
+@@ -869,7 +869,9 @@
+ 				continue
+ 			}
+ 
++			ResponsesTotal.Add(1) // Notes patch
+ 			if isEncrypted {
++				ResponsesEncrypted.Add(1) // Notes patch
+ 				// Decrypt produced a new plaintext buffer; the
+ 				// original ciphertext buffer can be reused now.
+ 				conn.freePoolBuf(rb)
+diff -u a/go-smb2/notes_patch.go b/go-smb2/notes_patch.go
+--- /dev/null
++++ b/go-smb2/notes_patch.go
+@@ -0,0 +1,14 @@
++package smb2
++
++import "sync/atomic"
++
++// Notes patch. ForceEncryption makes every request after session setup
++// encrypted, even if the server did not ask for it. Set before dialing.
++var ForceEncryption bool
++
++// Counters of responses seen by the receiver, to check that the server
++// really answers encrypted.
++var (
++	ResponsesTotal     atomic.Int64
++	ResponsesEncrypted atomic.Int64
++)
+diff -u a/go-smb2/session.go b/go-smb2/session.go
+--- a/go-smb2/session.go
++++ b/go-smb2/session.go
+@@ -253,6 +253,15 @@
+ 
+ 	s.sessionFlags = r.SessionFlags()
+ 
++	// Notes patch: when the server leaves encryption up to the client,
++	// ask for it ourselves and refuse to go on without it.
++	if ForceEncryption {
++		if s.encrypter == nil {
++			return nil, &InternalError{"encryption required but not negotiated with the server"}
++		}
++		s.sessionFlags |= smb2.SMB2_SESSION_FLAG_ENCRYPT_DATA
++	}
++
+ 	// now, allow access from receiver
+ 	s.useSession.Store(true)
+ 

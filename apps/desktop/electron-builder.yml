@@ -1,0 +1,22 @@
+appId: fr.eloi.notes
+productName: Notes
+directories:
+  output: release
+  buildResources: build
+# Tout le code est compilé par electron-vite dans out/ : rien d'autre n'entre dans l'archive.
+files:
+  - out/**
+  - package.json
+# Le client SMB est livré avec l'application (aucune dépendance au système).
+extraResources:
+  - from: resources/bin/smb-companion
+    to: bin/smb-companion
+linux:
+  executableName: notes
+  target:
+    - target: AppImage
+      arch: x64
+  category: Office
+  artifactName: Notes-${version}-x86_64.${ext}
+npmRebuild: false
+publish: null

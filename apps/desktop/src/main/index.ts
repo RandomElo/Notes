@@ -1,0 +1,97 @@
+import { join } from 'node:path';
+import { pathToFileURL } from 'node:url';
+import { BrowserWindow, app, session } from 'electron';
+import { creerHandlersNas } from './ipc/nas';
+import { enregistrerCanaux } from './ipc/register';
+import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
+import { SecretStore } from './secrets/secret-store';
+import { durcirContenu, durcirSession } from './security/window-security';
+import { SettingsStore } from './settings/settings-store';
+import { CompanionProcess, lanceurDeBinaire } from './smb/companion-process';
+import { CompanionRemoteFs } from './smb/companion-remote-fs';
+
+const urlDeveloppement = app.isPackaged ? undefined : process.env['ELECTRON_RENDERER_URL'];
+const fichierRenderer = join(import.meta.dirname, '../renderer/index.html');
+const urlApplication = urlDeveloppement ?? pathToFileURL(fichierRenderer).href;
+
+/** Le binaire compagnon est livré avec l'application, jamais cherché sur le système. */
+function cheminCompagnon(): string {
+  const dossierRessources = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources');
+  return join(dossierRessources, 'bin', 'smb-companion');
+}
+
+let fenetre: BrowserWindow | null = null;
+
+function creerFenetre(): void {
+  fenetre = new BrowserWindow({
+    width: 1100,
+    height: 760,
+    minWidth: 720,
+    minHeight: 480,
+    show: false,
+    backgroundColor: '#16171b',
+    title: 'Notes',
+    autoHideMenuBar: true,
+    webPreferences: {
+      preload: join(import.meta.dirname, '../preload/index.cjs'),
+      sandbox: true,
+      contextIsolation: true,
+      nodeIntegration: false,
+      webSecurity: true,
+    },
+  });
+  durcirContenu(fenetre.webContents, urlApplication);
+  fenetre.once('ready-to-show', () => fenetre?.show());
+  fenetre.on('closed', () => {
+    fenetre = null;
+  });
+
+  if (urlDeveloppement !== undefined) {
+    void fenetre.loadURL(urlDeveloppement);
+  } else {
+    void fenetre.loadFile(fichierRenderer);
+  }
+}
+
+app.enableSandbox();
+
+// Une application installée ne doit pas pouvoir être pilotée de l'extérieur par le port de débogage de Chromium.
+if (app.isPackaged) {
+  app.commandLine.removeSwitch('remote-debugging-port');
+  app.commandLine.removeSwitch('remote-debugging-pipe');
+}
+
+if (!app.requestSingleInstanceLock()) {
+  app.quit();
+} else {
+  app.on('second-instance', () => {
+    if (fenetre !== null) {
+      if (fenetre.isMinimized()) {
+        fenetre.restore();
+      }
+      fenetre.focus();
+    }
+  });
+
+  void app.whenReady().then(() => {
+    durcirSession(session.defaultSession, urlDeveloppement !== undefined);
+
+    const donnees = app.getPath('userData');
+    const lancerCompagnon = lanceurDeBinaire(cheminCompagnon());
+    enregistrerCanaux({
+      nas: creerHandlersNas({
+        reglages: new SettingsStore(join(donnees, 'settings.json')),
+        secrets: new SecretStore(join(donnees, 'secrets.enc'), chiffreSafeStorage),
+        creerConnexion: (identifiants) => new CompanionRemoteFs(new CompanionProcess(lancerCompagnon), identifiants),
+      }),
+      expediteurAutorise: (evenement) =>
+        fenetre !== null &&
+        evenement.senderFrame === fenetre.webContents.mainFrame &&
+        evenement.senderFrame.url.startsWith(urlApplication),
+    });
+
+    creerFenetre();
+  });
+
+  app.on('window-all-closed', () => app.quit());
+}

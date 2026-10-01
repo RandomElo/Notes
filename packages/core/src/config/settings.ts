@@ -1,0 +1,83 @@
+import { verifierCheminRelatif } from '../fs/paths';
+
+/**
+ * Réglages locaux de l'application (un fichier par appareil, jamais
+ * synchronisé). Aucun identifiant ici : le mot de passe vit dans le coffre à
+ * secrets de la plateforme.
+ */
+export interface Settings {
+  nas: NasSettings | null;
+}
+
+export interface NasSettings {
+  /** Nom d'hôte ou adresse IPv4 du NAS. */
+  hote: string;
+  /** Nom du partage SMB. */
+  partage: string;
+  utilisateur: string;
+  /** Dossier du vault dans le partage, vide pour la racine. */
+  dossierVault: string;
+}
+
+export type NasSettingsField = keyof NasSettings;
+
+export type NasSettingsValidation =
+  | { ok: true; valeur: NasSettings }
+  | { ok: false; erreurs: Partial<Record<NasSettingsField, string>> };
+
+export const reglagesParDefaut: Settings = { nas: null };
+
+const hoteValide = /^[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$/;
+// eslint-disable-next-line no-control-regex
+const partageInterdit = /[\\/:*?"<>|\u0000-\u001f]/;
+// eslint-disable-next-line no-control-regex
+const controle = /[\u0000-\u001f]/;
+
+/** Valide des réglages NAS venus de l'extérieur (formulaire, fichier, IPC). */
+export function validerReglagesNas(valeur: unknown): NasSettingsValidation {
+  if (typeof valeur !== 'object' || valeur === null) {
+    return { ok: false, erreurs: { hote: 'Réglages illisibles.' } };
+  }
+  const brut = valeur as Record<string, unknown>;
+  const texte = (champ: NasSettingsField): string => {
+    const contenu = brut[champ];
+    return typeof contenu === 'string' ? contenu.trim() : '';
+  };
+  const reglages: NasSettings = {
+    hote: texte('hote'),
+    partage: texte('partage'),
+    utilisateur: texte('utilisateur'),
+    dossierVault: texte('dossierVault'),
+  };
+
+  const erreurs: Partial<Record<NasSettingsField, string>> = {};
+  if (!hoteValide.test(reglages.hote)) {
+    erreurs.hote = "Indique un nom d'hôte ou une adresse IP, sans « \\\\ » ni « / ».";
+  }
+  if (reglages.partage === '' || reglages.partage.length > 80 || partageInterdit.test(reglages.partage)) {
+    erreurs.partage = 'Indique le nom du partage seul, sans « \\ » ni « / ».';
+  }
+  if (reglages.utilisateur === '' || reglages.utilisateur.length > 256 || controle.test(reglages.utilisateur)) {
+    erreurs.utilisateur = "Indique le nom d'utilisateur du NAS.";
+  }
+  if (reglages.dossierVault !== '') {
+    const refus = verifierCheminRelatif(reglages.dossierVault);
+    if (refus !== null) {
+      erreurs.dossierVault = refus;
+    }
+  }
+
+  return Object.keys(erreurs).length > 0 ? { ok: false, erreurs } : { ok: true, valeur: reglages };
+}
+
+/**
+ * Lit des réglages depuis un contenu quelconque. Tolérant : ce qui est
+ * invalide est remplacé par le défaut, un fichier abîmé ne bloque pas l'app.
+ */
+export function lireReglages(valeur: unknown): Settings {
+  if (typeof valeur !== 'object' || valeur === null) {
+    return { ...reglagesParDefaut };
+  }
+  const nas = validerReglagesNas((valeur as Record<string, unknown>)['nas']);
+  return { nas: nas.ok ? nas.valeur : null };
+}

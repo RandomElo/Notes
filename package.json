@@ -1,0 +1,33 @@
+{
+  "name": "notes",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Éditeur de notes local-first avec synchronisation SMB",
+  "workspaces": [
+    "packages/*",
+    "apps/desktop"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "dev": "npm run build:companion && npm run dev -w @notes/desktop",
+    "build": "npm run build:companion && npm run build -w @notes/desktop",
+    "build:companion": "bash scripts/build-companion.sh",
+    "package": "npm run build && npm run package -w @notes/desktop",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "lint": "eslint . && node scripts/check-map.mjs",
+    "test": "vitest run && npm run test:companion",
+    "test:companion": "cd apps/smb-companion && go vet ./... && go test ./...",
+    "check": "npm run typecheck && npm run lint && npm run test"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.11.0",
+    "globals": "^17.13.0",
+    "typescript": "~6.0.3",
+    "typescript-eslint": "^8.71.0",
+    "vitest": "^5.0.3"
+  }
+}
