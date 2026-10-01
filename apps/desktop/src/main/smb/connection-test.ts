@@ -33,7 +33,7 @@ export async function testerConnexion(
   try {
     await etape('Connexion et authentification', () => connexion.ouvrir());
     if (dossierVault !== '') {
-      await etape('Dossier du vault présent', () => connexion.creerDossier(dossierVault));
+      await etape('Dossier des notes présent', () => connexion.creerDossier(dossierVault));
     }
     await etape('Écriture du fichier de test', () => connexion.ecrire(fichier, contenu));
     const relu = await etape('Relecture', () => connexion.lire(fichier));

@@ -9,9 +9,28 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 | | |
 |---|---|
 | Dernière mise à jour | 2026-10-01 |
-| Avancement | J0 terminé : socle, compagnon SMB, connexion au NAS vérifiée sur le NAS réel |
-| Jalon en cours | Aucun, prochain : J1 |
+| Avancement | J0 et J1 terminés, J2 pas commencé |
+| Jalon en cours | Aucun, prochain : J2 (éditeur de base) |
 | Points bloquants | Aucun |
+
+Ce qui fonctionne aujourd'hui :
+
+- le socle : monorepo, application Electron durcie, AppImage, vérifications automatiques (`npm run check`) ;
+- la connexion au NAS en SMB 3.1.1 signé et chiffré, par le binaire compagnon embarqué, vérifiée sur le NAS réel ;
+- le mot de passe du NAS chiffré par le trousseau du système ;
+- le choix du dossier des notes au premier lancement ;
+- l'arborescence : créer, renommer, déplacer, réordonner et dupliquer des pages, à la souris et au clavier, avec import à la demande des notes venues d'un autre outil ;
+- la persistance : l'arbre, les pages dépliées et la page ouverte se retrouvent après redémarrage.
+
+Ce qui n'existe pas encore : l'éditeur (le centre de la fenêtre n'affiche que le titre de la page), la synchronisation avec le NAS (seul le test de connexion existe), la suppression de page, l'application Android.
+
+Reste à faire avant ou pendant J2 :
+
+- commiter le travail de J1, qui ne l'est pas encore ;
+- créer le fichier `.env` à partir de `.env.example` pour pouvoir lancer `npm run test:nas` ;
+- dérouler les parties 3 à 5 de `docs/recettes/J0.md` (refus de connexion, relance, test d'intégration), non rapportées à ce jour.
+
+Pour reprendre : `npm install`, puis `npm run dev`. Le jalon suivant se lance avec `/jalon J2`.
 
 ## Sommaire
 
@@ -160,13 +179,15 @@ Pourquoi trois paquets : `core` se teste sans rien savoir de l'éditeur, `docume
 
 ### Dépendances clés
 
-`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `gray-matter`, `prosemirror-markdown` (sérialiseur custom), `@iarna/toml`, `lucide-react`, `@imgly/background-removal-node`, `chokidar`.
+`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `prosemirror-markdown` (sérialiseur custom), `@iarna/toml`, `lucide-react`, `@imgly/background-removal-node`.
 
 Côté Android : `@capacitor/core`, `@capacitor/filesystem`, plugin SMB maison en Kotlin s'appuyant sur `smbj` 0.13 (validé par un POC le 2026-10-01).
 
 ---
 
 ## 4. Format de stockage
+
+Le « vault » est le dossier qui contient toutes les notes : c'est lui qu'on choisit au premier lancement et qui est copié sur le NAS. Le mot vient d'Obsidian (un coffre de notes). Il existe en deux exemplaires, le vault local sur le poste, où l'on travaille, et sa copie sur le NAS. Dans l'interface, on parle simplement du « dossier des notes ».
 
 Une page est un dossier contenant `page.md`, un dossier `assets/` si besoin, et les pages enfants.
 
@@ -209,7 +230,27 @@ Markdown standard : titres, gras, italique, barré, code, listes, tâches `- [ ]
 
 ### Import de `.md` externes
 
-Détectés et marqués « non importés ». La normalisation (titre, UUID, front-matter) ne se fait qu'au premier clic. Jamais de réécriture silencieuse.
+Détectés et marqués « non importés ». La normalisation (titre, UUID, front-matter) ne se fait que sur demande explicite. Jamais de réécriture silencieuse.
+
+Trois cas, tous affichés en italique dans l'arborescence :
+
+- un fichier `Titre.md` posé dans le vault : l'import crée le dossier `Titre/` et y place le fichier sous le nom `page.md`, avec un front-matter ajouté ;
+- un dossier dont le `page.md` n'a pas de front-matter valide : l'import complète le front-matter, en gardant le titre, la date et les clés déjà présentes ;
+- un dossier sans `page.md` mais qui contient des notes : l'import y crée une page vide à son nom.
+
+Le texte du fichier n'est jamais modifié. Un élément s'importe après son dossier parent. Les fichiers dont le nom serait refusé par SMB (`:`, `?`, `*`...) ne sont pas affichés : ils ne pourraient pas être synchronisés.
+
+### Vault local
+
+Le dossier du vault sur le poste se choisit au premier lancement (`~/Notes` proposé) et se retient dans les réglages locaux. Il doit être réservé aux notes : la racine du disque et le dossier personnel sont refusés. L'application surveille ce dossier et met l'arborescence à jour quand un autre outil y change quelque chose.
+
+### Ordre d'affichage
+
+Les pages listées dans `.order` viennent d'abord, dans cet ordre. Le reste suit par titre, à la française (accents ignorés, « Page 2 » avant « Page 10 »). Dès qu'on déplace une page à la main, le `.order` du dossier est écrit avec toutes ses pages.
+
+### Écriture
+
+Une page ouverte puis enregistrée sans modification ne change pas d'un octet. Quand l'application modifie le front-matter, elle ne touche qu'aux clés concernées : clés inconnues, commentaires et ordre des clés sont conservés. Toute écriture passe par un fichier temporaire puis un renommage, pour qu'une coupure ne laisse jamais un fichier à moitié écrit.
 
 ---
 
@@ -323,7 +364,7 @@ Emoji (recherche FR), icône Lucide (table de correspondance FR vers EN), image 
 Section desktop. L'interface Android est décrite en §15.
 
 - Disposition : onglets en haut, barre latérale (arborescence) à gauche, éditeur au centre, sommaire à droite, barre de statut en bas (sync, corrections, coût IA du jour).
-- Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, exporter, supprimer), accès corbeille.
+- Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, exporter, supprimer), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
 - Onglets : multiples dans une seule fenêtre, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+1` à `9`, restaurés au démarrage, point si non synchronisé.
 - Recherche `Ctrl+K` : sur les titres de page uniquement (pas de full-text en v1), floue, insensible aux accents, pages récentes par défaut, proposition de création si aucun résultat.
 - Raccourci global : `Ctrl+Alt+Espace` par défaut, configurable, ramène la fenêtre au premier plan et ouvre la recherche depuis n'importe où dans le système. Les postes visés sont en session X11 (Cinnamon), où `globalShortcut` d'Electron fonctionne ; Wayland n'est pas pris en charge.
@@ -525,7 +566,7 @@ Chaque jalon est livrable et testable indépendamment. L'ordre suit les dépenda
 | Jalon | Objet | Critère de sortie | État |
 |---|---|---|---|
 | J0 | Socle monorepo, Electron, preuve SMB | Fenêtre ouverte sous Linux, fichier test écrit et relu sur le NAS en SMB 3 depuis le poste (preuve côté téléphone déjà faite) | Fait |
-| J1 | Stockage et arborescence | Arbre créé et réorganisé, persistant après redémarrage | À faire |
+| J1 | Stockage et arborescence | Arbre créé et réorganisé, persistant après redémarrage | Fait |
 | J2 | Éditeur de base | Aller-retour Markdown sans perte | À faire |
 | J3 | Gestion des blocs (clavier) | Page restructurable sans souris | À faire |
 | J4 | Thème | Modif du TOML visible à chaud, hiérarchie lisible | À faire |
@@ -569,6 +610,12 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-01 | Versions du socle : Electron 44 (version figée, exigée par electron-builder), Vite 7 (electron-vite 5 ne gère pas encore Vite 8), TypeScript 6 (typescript-eslint ne gère pas encore TypeScript 7), React 19, Tailwind 4, Vitest 5. |
 | 2026-10-01 | Protocole du compagnon : une requête JSON par ligne, le mot de passe arrive dans la requête `connecter`, le contenu des fichiers en base64. Le compagnon s'arrête quand son entrée se ferme. |
 | 2026-10-01 | Le dossier du vault dans le partage est un réglage (`dossierVault`, « Notes » par défaut), créé s'il n'existe pas. |
+| 2026-10-01 | Front-matter lu et écrit avec la lib `yaml` plutôt que `gray-matter` : elle tourne dans une WebView et sait modifier une clé sans réécrire le reste. Les valeurs sont lues comme du texte, pour qu'un titre « 2026 » ne devienne pas un nombre. |
+| 2026-10-01 | Surveillance du vault par `fs.watch` récursif de Node plutôt que `chokidar` : une dépendance de moins. |
+| 2026-10-01 | Dossier du vault local choisi au premier lancement, `~/Notes` proposé. Racine du disque et dossier personnel refusés. |
+| 2026-10-01 | Une page créée s'appelle « Sans titre » et passe aussitôt en renommage. Une copie s'appelle « Titre (copie) » et reçoit de nouveaux identifiants pour toute sa descendance ; ses liens internes pointent toujours vers les pages d'origine. |
+| 2026-10-01 | `Ctrl+N` crée une sous-page de la page ouverte, `Ctrl+Shift+N` une page à la racine (demande d'Eloi). |
+| 2026-10-01 | Pas de suppression de page avant le jalon de la corbeille (J10) : supprimer sans corbeille serait irréversible. |
 | 2026-10-01 | Le mot de passe du NAS ne revient jamais au renderer : il n'en connaît que l'état (enregistré, gardé pour la session, absent). |
 | 2026-10-01 | SMB 3 visé, avec chiffrement (le NAS l'accepte). Libs JavaScript pures écartées car limitées à SMB 2.0.2. |
 | 2026-10-01 | Accès hors domicile par Tailscale : l'app utilise l'adresse Tailscale du NAS partout. |
@@ -599,7 +646,8 @@ Desktop uniquement.
 | Raccourci | Action |
 |---|---|
 | `Ctrl+K` | Palette de recherche |
-| `Ctrl+N` | Nouvelle page |
+| `Ctrl+N` | Nouvelle sous-page de la page ouverte (à la racine si aucune page n'est ouverte) |
+| `Ctrl+Shift+N` | Nouvelle page à la racine |
 | `Ctrl+T` / `Ctrl+W` | Nouvel onglet / fermer |
 | `Ctrl+Tab` | Onglet suivant |
 | `Ctrl+1` à `Ctrl+9` | Onglet n |

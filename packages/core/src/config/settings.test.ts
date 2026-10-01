@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { lireReglages, validerReglagesNas } from './settings';
 
-const valide = { hote: '192.168.1.30', partage: 'Eloi', utilisateur: 'Eloi', dossierVault: 'Notes' };
+const valide = { hote: '192.0.2.10', partage: 'partage', utilisateur: 'utilisateur', dossierVault: 'Notes' };
 
 describe('validerReglagesNas', () => {
   it('accepte des réglages corrects et retire les espaces autour', () => {
@@ -39,11 +39,11 @@ describe('validerReglagesNas', () => {
 
 describe('lireReglages', () => {
   it('revient au défaut sur un contenu abîmé', () => {
-    expect(lireReglages(undefined)).toEqual({ nas: null });
-    expect(lireReglages({ nas: { hote: '' } })).toEqual({ nas: null });
+    expect(lireReglages(undefined)).toEqual({ nas: null, vaultLocal: null });
+    expect(lireReglages({ nas: { hote: '' }, vaultLocal: 'relatif/chemin' })).toEqual({ nas: null, vaultLocal: null });
   });
 
   it('garde des réglages valides', () => {
-    expect(lireReglages({ nas: valide })).toEqual({ nas: valide });
+    expect(lireReglages({ nas: valide, vaultLocal: '/home/eloi/Notes' })).toEqual({ nas: valide, vaultLocal: '/home/eloi/Notes' });
   });
 });

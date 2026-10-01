@@ -1,14 +1,17 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { BrowserWindow, app, session } from 'electron';
+import { BrowserWindow, app, dialog, session } from 'electron';
+import { evenements } from '../shared/ipc-contract';
 import { creerHandlersNas } from './ipc/nas';
 import { enregistrerCanaux } from './ipc/register';
+import { creerHandlersVault } from './ipc/vault';
 import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
 import { SecretStore } from './secrets/secret-store';
 import { durcirContenu, durcirSession } from './security/window-security';
 import { SettingsStore } from './settings/settings-store';
 import { CompanionProcess, lanceurDeBinaire } from './smb/companion-process';
 import { CompanionRemoteFs } from './smb/companion-remote-fs';
+import { VaultService } from './vault/vault-service';
 
 const urlDeveloppement = app.isPackaged ? undefined : process.env['ELECTRON_RENDERER_URL'];
 const fichierRenderer = join(import.meta.dirname, '../renderer/index.html');
@@ -21,6 +24,20 @@ function cheminCompagnon(): string {
 }
 
 let fenetre: BrowserWindow | null = null;
+
+/** Sélecteur de dossier du système pour le vault. null si l'utilisateur annule. */
+async function choisirDossierVault(dossierPropose: string): Promise<string | null> {
+  if (fenetre === null) {
+    return null;
+  }
+  const choix = await dialog.showOpenDialog(fenetre, {
+    title: 'Dossier des notes',
+    defaultPath: dossierPropose,
+    buttonLabel: 'Choisir ce dossier',
+    properties: ['openDirectory', 'createDirectory'],
+  });
+  return choix.canceled ? null : (choix.filePaths[0] ?? null);
+}
 
 function creerFenetre(): void {
   fenetre = new BrowserWindow({
@@ -73,14 +90,20 @@ if (!app.requestSingleInstanceLock()) {
     }
   });
 
-  void app.whenReady().then(() => {
+  void app.whenReady().then(async () => {
     durcirSession(session.defaultSession, urlDeveloppement !== undefined);
 
     const donnees = app.getPath('userData');
+    const reglages = new SettingsStore(join(donnees, 'settings.json'));
+    const vault = new VaultService(reglages, () => fenetre?.webContents.send(evenements.vaultModifie));
+    await vault.demarrer();
+    app.on('will-quit', () => vault.arreter());
+
     const lancerCompagnon = lanceurDeBinaire(cheminCompagnon());
     enregistrerCanaux({
+      vault: creerHandlersVault({ vault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) }),
       nas: creerHandlersNas({
-        reglages: new SettingsStore(join(donnees, 'settings.json')),
+        reglages,
         secrets: new SecretStore(join(donnees, 'secrets.enc'), chiffreSafeStorage),
         creerConnexion: (identifiants) => new CompanionRemoteFs(new CompanionProcess(lancerCompagnon), identifiants),
       }),

@@ -1,11 +1,10 @@
 //go:build nas
 
 // Test d'intégration contre le NAS réel. Il n'est jamais lancé par
-// « go test ./... » : il faut le tag nas, un terminal pour saisir le mot de
-// passe, et trois variables d'environnement.
-//
-//	NOTES_NAS_HOTE=192.168.1.30 NOTES_NAS_PARTAGE=Eloi NOTES_NAS_UTILISATEUR=Eloi \
-//	  go test -tags nas -count=1 -v ./internal/smbfs/
+// « go test ./... » : il faut le tag nas et un terminal pour saisir le mot de
+// passe. L'adresse, le partage et l'utilisateur viennent de l'environnement
+// (NOTES_NAS_HOTE, NOTES_NAS_PARTAGE, NOTES_NAS_UTILISATEUR), que
+// « npm run test:nas » charge depuis le fichier .env de la racine.
 package smbfs
 
 import (
@@ -29,7 +28,7 @@ func identifiantsDuTest(t *testing.T) protocol.Credentials {
 		Utilisateur: os.Getenv("NOTES_NAS_UTILISATEUR"),
 	}
 	if id.Hote == "" || id.Partage == "" || id.Utilisateur == "" {
-		t.Fatal("définir NOTES_NAS_HOTE, NOTES_NAS_PARTAGE et NOTES_NAS_UTILISATEUR")
+		t.Fatal("NOTES_NAS_HOTE, NOTES_NAS_PARTAGE et NOTES_NAS_UTILISATEUR sont à renseigner dans .env (voir .env.example), puis lancer npm run test:nas")
 	}
 	// Le mot de passe se saisit au clavier, sans écho. go test ne transmet pas
 	// l'entrée standard, d'où l'ouverture directe du terminal.

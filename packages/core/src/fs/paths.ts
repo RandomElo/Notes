@@ -34,3 +34,19 @@ export function verifierCheminRelatif(chemin: string): string | null {
 export function joindreChemins(...morceaux: string[]): string {
   return morceaux.filter((morceau) => morceau !== '').join('/');
 }
+
+/** Dossier parent d'un chemin, vide pour un élément à la racine. */
+export function dossierParent(chemin: string): string {
+  const coupure = chemin.lastIndexOf('/');
+  return coupure === -1 ? '' : chemin.slice(0, coupure);
+}
+
+/** Dernier segment d'un chemin. */
+export function nomDeBase(chemin: string): string {
+  return chemin.slice(chemin.lastIndexOf('/') + 1);
+}
+
+/** Vrai si « chemin » est « ancetre » lui-même ou se trouve dedans. */
+export function estDansDossier(chemin: string, ancetre: string): boolean {
+  return ancetre === '' || chemin === ancetre || chemin.startsWith(`${ancetre}/`);
+}

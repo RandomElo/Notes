@@ -20,6 +20,7 @@
     "lint": "eslint . && node scripts/check-map.mjs",
     "test": "vitest run && npm run test:companion",
     "test:companion": "cd apps/smb-companion && go vet ./... && go test ./...",
+    "test:nas": "bash scripts/test-nas.sh",
     "check": "npm run typecheck && npm run lint && npm run test"
   },
   "devDependencies": {

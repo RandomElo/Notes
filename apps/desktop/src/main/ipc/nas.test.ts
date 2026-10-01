@@ -7,7 +7,7 @@ import { SettingsStore } from '../settings/settings-store';
 import type { CompanionCredentials } from '../smb/protocol';
 import { creerHandlersNas } from './nas';
 
-const saisie = { hote: '192.168.1.30', partage: 'Eloi', utilisateur: 'Eloi', dossierVault: 'Notes' };
+const saisie = { hote: '192.0.2.10', partage: 'partage', utilisateur: 'utilisateur', dossierVault: 'Notes' };
 
 async function monter(trousseau = true) {
   const dossier = await mkdtemp(join(tmpdir(), 'notes-ipc-'));

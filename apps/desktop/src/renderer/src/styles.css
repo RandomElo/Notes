@@ -18,6 +18,11 @@ html {
   color-scheme: dark;
 }
 
+* {
+  scrollbar-color: var(--color-bordure) transparent;
+  scrollbar-width: thin;
+}
+
 html,
 body,
 #racine {

@@ -7,6 +7,8 @@ import { verifierCheminRelatif } from '../fs/paths';
  */
 export interface Settings {
   nas: NasSettings | null;
+  /** Chemin absolu du dossier du vault sur cet appareil, null tant qu'il n'est pas choisi. */
+  vaultLocal: string | null;
 }
 
 export interface NasSettings {
@@ -25,7 +27,7 @@ export type NasSettingsValidation =
   | { ok: true; valeur: NasSettings }
   | { ok: false; erreurs: Partial<Record<NasSettingsField, string>> };
 
-export const reglagesParDefaut: Settings = { nas: null };
+export const reglagesParDefaut: Settings = { nas: null, vaultLocal: null };
 
 const hoteValide = /^[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$/;
 // eslint-disable-next-line no-control-regex
@@ -70,6 +72,12 @@ export function validerReglagesNas(valeur: unknown): NasSettingsValidation {
   return Object.keys(erreurs).length > 0 ? { ok: false, erreurs } : { ok: true, valeur: reglages };
 }
 
+/** Vrai pour un chemin absolu Unix utilisable comme dossier de vault. */
+export function estCheminAbsolu(valeur: unknown): valeur is string {
+  // eslint-disable-next-line no-control-regex
+  return typeof valeur === 'string' && valeur.startsWith('/') && valeur.length <= 4096 && !/[\u0000-\u001f]/.test(valeur);
+}
+
 /**
  * Lit des réglages depuis un contenu quelconque. Tolérant : ce qui est
  * invalide est remplacé par le défaut, un fichier abîmé ne bloque pas l'app.
@@ -78,6 +86,7 @@ export function lireReglages(valeur: unknown): Settings {
   if (typeof valeur !== 'object' || valeur === null) {
     return { ...reglagesParDefaut };
   }
-  const nas = validerReglagesNas((valeur as Record<string, unknown>)['nas']);
-  return { nas: nas.ok ? nas.valeur : null };
+  const brut = valeur as Record<string, unknown>;
+  const nas = validerReglagesNas(brut['nas']);
+  return { nas: nas.ok ? nas.valeur : null, vaultLocal: estCheminAbsolu(brut['vaultLocal']) ? brut['vaultLocal'] : null };
 }

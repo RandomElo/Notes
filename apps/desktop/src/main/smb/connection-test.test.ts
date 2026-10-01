@@ -57,7 +57,7 @@ describe('testerConnexion', () => {
     expect(fichiers.size).toBe(0);
     expect(resultat.etapes.map((etape) => etape.libelle)).toEqual([
       'Connexion et authentification',
-      'Dossier du vault présent',
+      'Dossier des notes présent',
       'Écriture du fichier de test',
       'Relecture',
       'Suppression du fichier de test',

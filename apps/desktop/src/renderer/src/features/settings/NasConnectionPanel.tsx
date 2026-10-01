@@ -130,8 +130,8 @@ export function NasConnectionPanel() {
             erreur={erreurs.partage}
           />
           <TextField
-            libelle="Dossier du vault"
-            aide="Créé s'il n'existe pas. Vide pour la racine du partage."
+            libelle="Dossier des notes sur le NAS"
+            aide="Dossier du partage où ranger les notes. Créé s'il n'existe pas."
             valeur={saisie.dossierVault}
             surChangement={modifier('dossierVault')}
             erreur={erreurs.dossierVault}
