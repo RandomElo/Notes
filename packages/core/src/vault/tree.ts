@@ -1,5 +1,6 @@
 import { joindreChemins, verifierCheminRelatif } from '../fs/paths';
 import type { LocalFs } from '../fs/local-fs';
+import { estFichierDeConflit } from '../page/conflict';
 import { analyserPage } from '../page/page-file';
 import { fichierPage } from '../page/types';
 import type { PageMode } from '../page/types';
@@ -39,7 +40,7 @@ export function estIgnore(nom: string, estDossier: boolean): boolean {
     return nom === dossierAssets;
   }
   // Sauvegardes de conflit de la sync (README §5) : ce ne sont pas des pages.
-  return !nom.toLowerCase().endsWith('.md') || nom === fichierPage || nom.startsWith('page.conflit-');
+  return !nom.toLowerCase().endsWith('.md') || nom === fichierPage || estFichierDeConflit(nom);
 }
 
 /** Lit toute l'arborescence du vault. */

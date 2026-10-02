@@ -1,10 +1,12 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { BrowserWindow, app, dialog, session } from 'electron';
+import { BrowserWindow, app, dialog, session, shell } from 'electron';
 import { evenements } from '../shared/ipc-contract';
 import { creerHandlersNas } from './ipc/nas';
 import { enregistrerCanaux } from './ipc/register';
+import { creerHandlersTheme } from './ipc/theme';
 import { creerHandlersVault } from './ipc/vault';
+import { creerHandlersFenetre } from './ipc/window';
 import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
 import { SecretStore } from './secrets/secret-store';
 import { durcirContenu, durcirSession } from './security/window-security';
@@ -39,7 +41,7 @@ async function choisirDossierVault(dossierPropose: string): Promise<string | nul
   return choix.canceled ? null : (choix.filePaths[0] ?? null);
 }
 
-function creerFenetre(): void {
+function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
   fenetre = new BrowserWindow({
     width: 1100,
     height: 760,
@@ -48,6 +50,8 @@ function creerFenetre(): void {
     show: false,
     backgroundColor: '#16171b',
     title: 'Notes',
+    // Pas de cadre du système : la barre de titre est dessinée par l'application (features/title-bar).
+    frame: false,
     autoHideMenuBar: true,
     webPreferences: {
       preload: join(import.meta.dirname, '../preload/index.cjs'),
@@ -59,6 +63,13 @@ function creerFenetre(): void {
   });
   durcirContenu(fenetre.webContents, urlApplication);
   fenetre.once('ready-to-show', () => fenetre?.show());
+  const signalerAgrandissement = (): void => fenetre?.webContents.send(evenements.fenetreAgrandie, fenetre.isMaximized());
+  fenetre.on('maximize', signalerAgrandissement);
+  fenetre.on('unmaximize', signalerAgrandissement);
+  // La fermeture attend que le renderer ait enregistré la page ouverte (voir ipc/window.ts).
+  fenetre.on('close', (evenement) => {
+    handlers.surDemandeDeFermeture(evenement, () => fenetre?.webContents.send(evenements.fermetureDemandee));
+  });
   fenetre.on('closed', () => {
     fenetre = null;
   });
@@ -100,8 +111,12 @@ if (!app.requestSingleInstanceLock()) {
     app.on('will-quit', () => vault.arreter());
 
     const lancerCompagnon = lanceurDeBinaire(cheminCompagnon());
+    const handlersVault = creerHandlersVault({ vault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
+    const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
     enregistrerCanaux({
-      vault: creerHandlersVault({ vault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) }),
+      fenetre: handlersFenetre,
+      vault: handlersVault,
+      theme: creerHandlersTheme({ vault, ouvrirFichier: (chemin) => shell.openPath(chemin) }),
       nas: creerHandlersNas({
         reglages,
         secrets: new SecretStore(join(donnees, 'secrets.enc'), chiffreSafeStorage),
@@ -113,7 +128,7 @@ if (!app.requestSingleInstanceLock()) {
         evenement.senderFrame.url.startsWith(urlApplication),
     });
 
-    creerFenetre();
+    creerFenetre(handlersFenetre);
   });
 
   app.on('window-all-closed', () => app.quit());

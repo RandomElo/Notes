@@ -1,5 +1,8 @@
 import type { TreeNode } from '@notes/core';
+import { PageView } from '@notes/ui';
 import { ArrowDownToLine, FilePlus } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { api } from '../../lib/ipc';
 
 interface PageSummaryProps {
   noeud: TreeNode | null;
@@ -7,7 +10,7 @@ interface PageSummaryProps {
   surImport: (noeud: TreeNode) => void;
 }
 
-/** Zone centrale en attendant l'éditeur (J2) : rappelle la page ouverte, ou propose d'importer un élément étranger. */
+/** Zone centrale quand aucune page n'est ouverte, ou pour un élément venu d'un autre outil : import proposé, contenu montré en lecture seule. */
 export function PageSummary({ noeud, surCreation, surImport }: PageSummaryProps) {
   if (noeud === null) {
     return (
@@ -30,9 +33,7 @@ export function PageSummary({ noeud, surCreation, surImport }: PageSummaryProps)
       <p className="text-discret text-xs">{noeud.chemin.split('/').join(' / ')}</p>
       <h2 className="mt-2 text-3xl font-bold">{noeud.titre}</h2>
 
-      {noeud.importe ? (
-        <p className="text-discret mt-6 text-sm">L'éditeur de contenu arrive au prochain jalon.</p>
-      ) : (
+      {!noeud.importe && (
         <div className="border-bordure bg-surface mt-6 rounded-lg border p-5 text-sm">
           <p>
             Cet élément vient d'un autre outil et n'a pas encore d'identifiant. Rien n'y est modifié tant que tu ne
@@ -53,6 +54,31 @@ export function PageSummary({ noeud, surCreation, surImport }: PageSummaryProps)
           </button>
         </div>
       )}
+
+      {!noeud.importe && noeud.genre !== 'dossier' && <ForeignPreview chemin={noeud.chemin} />}
     </article>
+  );
+}
+
+/** Contenu d'un élément non importé, en lecture seule : on voit ce qu'on s'apprête à importer, sans rien écrire. */
+function ForeignPreview({ chemin }: { chemin: string }) {
+  const [corps, definirCorps] = useState<string | null>(null);
+
+  useEffect(() => {
+    let actif = true;
+    void api.lirePage({ chemin }).then((lu) => {
+      if (actif) {
+        definirCorps(lu.ok ? lu.corps : null);
+      }
+    });
+    return () => {
+      actif = false;
+    };
+  }, [chemin]);
+
+  return corps === null || corps.trim() === '' ? null : (
+    <section aria-label="Aperçu du contenu" className="mt-8">
+      <PageView corps={corps} />
+    </section>
   );
 }

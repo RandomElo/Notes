@@ -1,6 +1,6 @@
 {
   "name": "notes",
-  "version": "0.1.0",
+  "version": "0.5.2",
   "private": true,
   "type": "module",
   "description": "Éditeur de notes local-first avec synchronisation SMB",
@@ -20,8 +20,10 @@
     "lint": "eslint . && node scripts/check-map.mjs",
     "test": "vitest run && npm run test:companion",
     "test:companion": "cd apps/smb-companion && go vet ./... && go test ./...",
+    "test:e2e": "npm run build && npm run test:e2e -w @notes/desktop",
     "test:nas": "bash scripts/test-nas.sh",
-    "check": "npm run typecheck && npm run lint && npm run test"
+    "check": "npm run typecheck && npm run lint && npm run test",
+    "version:set": "node scripts/set-version.mjs"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

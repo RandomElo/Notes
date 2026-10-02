@@ -5,6 +5,24 @@ import type { NotesApi } from '../shared/ipc-contract';
 // Seule surface offerte au renderer : des fonctions nommées, jamais ipcRenderer lui-même.
 const api: NotesApi = {
   version: () => ipcRenderer.invoke(canaux.version),
+
+  reduireFenetre: () => ipcRenderer.invoke(canaux.reduireFenetre),
+  basculerAgrandissementFenetre: () => ipcRenderer.invoke(canaux.basculerAgrandissementFenetre),
+  fermerFenetre: () => ipcRenderer.invoke(canaux.fermerFenetre),
+  fenetreEstAgrandie: () => ipcRenderer.invoke(canaux.fenetreEstAgrandie),
+  surFenetreAgrandie: (ecouteur) => {
+    const relais = (_evenement: unknown, agrandie: unknown): void => ecouteur(agrandie === true);
+    ipcRenderer.on(evenements.fenetreAgrandie, relais);
+    return () => ipcRenderer.removeListener(evenements.fenetreAgrandie, relais);
+  },
+
+  surFermetureDemandee: (ecouteur) => {
+    const relais = (): void => ecouteur();
+    ipcRenderer.on(evenements.fermetureDemandee, relais);
+    return () => ipcRenderer.removeListener(evenements.fermetureDemandee, relais);
+  },
+  confirmerFermeture: () => ipcRenderer.invoke(canaux.confirmerFermeture),
+
   lireEtatNas: () => ipcRenderer.invoke(canaux.lireEtatNas),
   enregistrerNas: (saisie) => ipcRenderer.invoke(canaux.enregistrerNas, saisie),
   oublierMotDePasse: () => ipcRenderer.invoke(canaux.oublierMotDePasse),
@@ -19,6 +37,12 @@ const api: NotesApi = {
   deplacerPage: (demande) => ipcRenderer.invoke(canaux.deplacerPage, demande),
   dupliquerPage: (demande) => ipcRenderer.invoke(canaux.dupliquerPage, demande),
   importer: (demande) => ipcRenderer.invoke(canaux.importer, demande),
+  lirePage: (demande) => ipcRenderer.invoke(canaux.lirePage, demande),
+  enregistrerPage: (demande) => ipcRenderer.invoke(canaux.enregistrerPage, demande),
+  lireTheme: () => ipcRenderer.invoke(canaux.lireTheme),
+  creerTheme: () => ipcRenderer.invoke(canaux.creerTheme),
+  ouvrirTheme: () => ipcRenderer.invoke(canaux.ouvrirTheme),
+  enregistrerTheme: (theme) => ipcRenderer.invoke(canaux.enregistrerTheme, theme),
   surVaultModifie: (ecouteur) => {
     const relais = (): void => ecouteur();
     ipcRenderer.on(evenements.vaultModifie, relais);

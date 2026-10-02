@@ -8,9 +8,10 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 
 | | |
 |---|---|
-| Dernière mise à jour | 2026-10-01 |
-| Avancement | J0 et J1 terminés, J2 pas commencé |
-| Jalon en cours | Aucun, prochain : J2 (éditeur de base) |
+| Dernière mise à jour | 2026-10-02 |
+| Version | 0.5.2 |
+| Avancement | J0 à J4 terminés, J5 pas commencé |
+| Jalon en cours | Aucun, prochain : J5 (sync SMB) |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -19,18 +20,28 @@ Ce qui fonctionne aujourd'hui :
 - la connexion au NAS en SMB 3.1.1 signé et chiffré, par le binaire compagnon embarqué, vérifiée sur le NAS réel ;
 - le mot de passe du NAS chiffré par le trousseau du système ;
 - le choix du dossier des notes au premier lancement ;
+- la barre de titre de l'application, avec ses boutons de fenêtre, à la place du cadre du système ;
 - l'arborescence : créer, renommer, déplacer, réordonner et dupliquer des pages, à la souris et au clavier, avec import à la demande des notes venues d'un autre outil ;
-- la persistance : l'arbre, les pages dépliées et la page ouverte se retrouvent après redémarrage.
+- la persistance : l'arbre, les pages dépliées et la page ouverte se retrouvent après redémarrage ;
+- l'éditeur de base : paragraphes, titres de niveau 1 à 5, listes à puces, ordonnées et de tâches, blocs de code, gras, italique, barré, souligné, code, surlignage, avec les raccourcis de saisie Markdown et les raccourcis clavier ;
+- l'enregistrement automatique en Markdown, sans perte : une page ouverte sans être modifiée ne change pas d'un octet, et seuls les blocs modifiés sont réécrits ;
+- l'aperçu en lecture seule d'une note venue d'un autre outil, avant son import ;
+- la gestion des blocs au clavier : `Échap` sélectionne le bloc du curseur (puis toute la liste, puis rien), les flèches parcourent, `Shift+↑/↓` étend, `Ctrl+Shift+↑/↓` déplace, `Ctrl+D` duplique, `Suppr` supprime, `Tab` indente. Dans une liste, un élément emmène ses sous-éléments avec lui. Une poignée apparaît sur la sélection pour la glisser ou ouvrir son menu ;
+- le menu `/` (texte, titres, listes, tâche, code, page enfant, date), la barre d'outils flottante et le titre de page modifiable sur place ;
+- la création d'une page depuis le texte (`/page`) ou l'arborescence : on tape son nom, puis le curseur est dans son contenu.
+- le thème : il se règle dans les réglages, avec un aperçu en direct, et s'enregistre dans `.notes/theme.toml`, qu'on peut aussi modifier à la main. Couleurs, polices, titres, puces et largeurs. Le fichier est relu dès qu'il est enregistré, une valeur fausse est ignorée et signalée sans rien bloquer, et une page peut avoir ses propres couleurs.
 
-Ce qui n'existe pas encore : l'éditeur (le centre de la fenêtre n'affiche que le titre de la page), la synchronisation avec le NAS (seul le test de connexion existe), la suppression de page, l'application Android.
+Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
-Reste à faire avant ou pendant J2 :
+Ce qui n'existe pas encore : la synchronisation avec le NAS (seul le test de connexion existe), les tableaux, les images et les callouts (affichés tels quels en attendant J6), la suppression de page, l'application Android.
 
-- commiter le travail de J1, qui ne l'est pas encore ;
+Reste à faire :
+
+- commiter le travail de J2, J3 et J4 (versions 0.3.0 à 0.5.2), qui ne l'est pas encore ;
 - créer le fichier `.env` à partir de `.env.example` pour pouvoir lancer `npm run test:nas` ;
 - dérouler les parties 3 à 5 de `docs/recettes/J0.md` (refus de connexion, relance, test d'intégration), non rapportées à ce jour.
 
-Pour reprendre : `npm install`, puis `npm run dev`. Le jalon suivant se lance avec `/jalon J2`.
+Pour reprendre : `npm install`, puis `npm run dev`. Le jalon suivant se lance avec `/jalon J5`.
 
 ## Sommaire
 
@@ -55,6 +66,7 @@ Pour reprendre : `npm install`, puis `npm run dev`. Le jalon suivant se lance av
 19. [Points à trancher](#19-points-à-trancher)
 20. [Journal des décisions](#20-journal-des-décisions)
 21. [Annexe : raccourcis](#annexe--raccourcis)
+22. [Frise chronologique](#frise-chronologique)
 
 ---
 
@@ -163,11 +175,11 @@ Pourquoi trois paquets : `core` se teste sans rien savoir de l'éditeur, `docume
 | Type | Emplacement | Outil |
 |---|---|---|
 | Unitaire TypeScript | À côté du fichier testé (`x.test.ts`) | Vitest |
-| Aller-retour Markdown | `packages/document/tests/roundtrip/` | Vitest |
+| Aller-retour Markdown | `packages/document/tests/roundtrip/`, un fichier `.md` par cas, plus tout le vault d'exemple et des textes tirés au hasard | Vitest |
 | Sync sans NAS | `packages/core/src/sync/`, avec des systèmes de fichiers en mémoire | Vitest |
 | Unitaire Go | À côté du fichier (`x_test.go`) | `go test` |
 | Intégration sur le NAS réel | `apps/smb-companion`, sous le tag `nas`, lancé à la main | `go test -tags nas` |
-| Bout en bout desktop | `apps/desktop/e2e/`, sur `fixtures/vault-demo/` | Playwright |
+| Bout en bout desktop | `apps/desktop/e2e/`, sur une copie de `fixtures/vault-demo/`, lancé par `npm run test:e2e` | Playwright |
 | Recette manuelle | `docs/recettes/J<n>.md` | À la main |
 
 ### Processus desktop
@@ -179,7 +191,7 @@ Pourquoi trois paquets : `core` se teste sans rien savoir de l'éditeur, `docume
 
 ### Dépendances clés
 
-`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `prosemirror-markdown` (sérialiseur custom), `@iarna/toml`, `lucide-react`, `@imgly/background-removal-node`.
+`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `smol-toml` (thème), `markdown-it` et `markdown-it-mark` (lecture du Markdown), `prosemirror-markdown` (écriture, avec un sérialiseur maison), `@iarna/toml`, `lucide-react`, `@imgly/background-removal-node`.
 
 Côté Android : `@capacitor/core`, `@capacitor/filesystem`, plugin SMB maison en Kotlin s'appuyant sur `smbj` 0.13 (validé par un POC le 2026-10-01).
 
@@ -222,6 +234,8 @@ Nom de dossier = titre assaini (caractères refusés par SMB remplacés : `\ / :
 
 Markdown standard : titres, gras, italique, barré, code, listes, tâches `- [ ]` et `- [x]`, tableaux GFM, code fencé, images.
 
+- Souligné : Markdown n'a pas de syntaxe pour lui, il s'écrit `<u>texte</u>`. C'est la seule balise HTML que l'application reconnaît.
+
 - Blocs avancés sans équivalent Markdown : bloc code fencé `notes-callout` contenant du YAML (type, icône, texte). Reste lisible dans n'importe quel éditeur.
 - Liens internes : syntaxe Markdown standard avec cible `notes://uuid`, résolue en titre courant à l'affichage, réécrite en chemin relatif à l'export. Lien cassé affiché barré.
 - Liens externes : label nettoyé si identique à l'URL (`https://www.google.com/` devient `google.com`).
@@ -251,6 +265,12 @@ Les pages listées dans `.order` viennent d'abord, dans cet ordre. Le reste suit
 ### Écriture
 
 Une page ouverte puis enregistrée sans modification ne change pas d'un octet. Quand l'application modifie le front-matter, elle ne touche qu'aux clés concernées : clés inconnues, commentaires et ordre des clés sont conservés. Toute écriture passe par un fichier temporaire puis un renommage, pour qu'une coupure ne laisse jamais un fichier à moitié écrit.
+
+Le corps suit la même règle, bloc par bloc. À la lecture, chaque bloc de premier niveau (un paragraphe, un titre, une liste entière, un bloc de code) garde son texte d'origine et ce qui le sépare du suivant. À l'enregistrement, un bloc qui n'a pas changé ressort avec ce texte, même s'il a été écrit par un autre outil avec une autre syntaxe (`*` pour les puces, titres soulignés, fins de ligne Windows). Seuls les blocs créés ou modifiés sont écrits, dans la forme de l'application : puces en `-`, emphase en `*`, code entre clôtures, une ligne vide entre deux blocs. Avant d'écrire, l'application relit ce qu'elle a produit et vérifie qu'elle retrouve le même document. Sinon elle réécrit toute la page dans sa forme à elle.
+
+Ce que Markdown ne sait pas écrire n'est pas enregistré : les paragraphes vides et les espaces en début de paragraphe.
+
+Si le fichier a changé sur le disque depuis sa lecture (autre outil, sync) alors que la page est en cours de modification, sa version est d'abord gardée à côté, dans `page.conflit-[date].md`, puis la page est enregistrée. Sans modification en cours, la page ouverte est simplement rechargée.
 
 ---
 
@@ -323,19 +343,60 @@ Section desktop. Sur Android, le même schéma TipTap sert au rendu en lecture s
 
 ### Raccourcis de saisie Markdown
 
-`#` à `#####` (titres), `-` ou `*` (puces), `1.` (ordonnée), `[]` ou `[ ]` (case à cocher), `>` (citation), `---` (séparateur), ` ``` ` (code), `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``, `==surlignage==`.
+`#` à `#####` (titres), `-` ou `*` (puces), `1.` (ordonnée), `[]` ou `[ ]` (case à cocher), ` ``` ` (code), `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``, `==surlignage==`.
+
+Ni citation ni séparateur : Eloi n'en veut pas dans ses notes. `>` et `---` tapés restent du texte, et rien dans l'application n'en crée. Un fichier qui en contient déjà (note venue d'un autre outil) les affiche et les garde tels quels.
+
+La case à cocher se tape aussi dans une puce, comme en Markdown : `- [ ] ` donne une tâche, `- [x] ` une tâche cochée. Les marques se déclenchent en début de ligne, après une espace, et aussi après une apostrophe, une parenthèse, un guillemet ou un tiret : `l'*italique*` fonctionne.
+
+### Affichage des listes et des titres
+
+- Puces : la forme et la couleur changent à chaque niveau (disque bleu, cercle orange, carré vert), puis le cycle reprend.
+- Listes ordonnées : 1, 2, 3 au premier niveau, a, b, c au deuxième, i, ii, iii au troisième. C'est un affichage : dans le fichier, Markdown ne connaît que les nombres, les sous-listes y restent numérotées 1, 2, 3.
+- Titres : le niveau 1 est le titre de la page, affiché en haut, en grand. Dans le texte, `#` est donc le premier niveau en dessous, et il y en a cinq, chacun avec son signe : `#` en gras, `##` un peu plus petit avec un trait fin gris dessous, `###` en italique, `####` gris à la taille du texte, `#####` en italique gris sans gras. Pas de couleur, pas de filet. Dans le fichier, `#` reste un titre Markdown de niveau 1. Ces valeurs deviendront celles du thème par défaut en J4.
+
+### Enregistrement
+
+Il n'y a pas de commande pour enregistrer. La page s'enregistre toute seule un peu moins d'une seconde après la dernière frappe, au changement de page et à la fermeture de la fenêtre, qui attend la fin de l'écriture. L'état (« Modifié », « Enregistrement… », « Enregistré ») s'affiche en haut de la page et y reste visible quand elle défile. Un échec s'y affiche aussi, et l'enregistrement est retenté tout seul.
+
+Le titre affiché en haut de la page est celui du front-matter. Il se modifie sur place : on clique dedans et on tape. `Entrée` ou `↓` le valide et passe au contenu, `Échap` annule, `↑` au tout début du contenu y remonte. La page est renommée quand on quitte le titre, son dossier aussi, comme avec `F2` dans l'arborescence. Un titre refusé (vide, trop long) n'est pas enregistré : l'ancien revient et la raison s'affiche dessous.
+
+### Syntaxe non gérée
+
+Ce que l'éditeur ne sait pas encore modifier s'affiche tel quel, en texte brut, dans un bloc à part qu'on ne peut pas modifier : tableaux et images jusqu'à J6, titres de niveau 6, définitions de liens par référence. Ce texte est réécrit à l'identique dans le fichier. Le HTML n'est jamais interprété : il reste du texte. Seule exception, `<u>texte</u>`, lu comme du souligné. Un callout est pour l'instant un bloc de code `notes-callout`.
+
+Une liste à puces dont certains items seulement ont une case à cocher reste une liste à puces, la case y est du texte.
 
 ### Menu `/`
 
-Titres, paragraphe, listes, tâche, citation, code, tableau, image, séparateur, callout, page enfant, lien, date. En français avec alias anglais, recherche insensible aux accents.
+Titres, paragraphe, listes, tâche, code, tableau, image, callout, page enfant, lien, date. En français avec alias anglais, recherche insensible aux accents.
+
+- Il s'ouvre quand on tape `/` en début de bloc ou après une espace, pas dans « et/ou », une date ou un bloc de code. Ce qu'on tape ensuite filtre la liste, y compris par le nom anglais (`quote`, `todo`) ou la syntaxe Markdown (`###`).
+- Flèches pour choisir, `Entrée` ou `Tab` pour valider, `Échap` pour fermer sans toucher au texte.
+- Dans un bloc vide, la commande transforme le bloc. Dans un bloc qui contient déjà du texte, elle crée le nouveau bloc en dessous.
+- « Page enfant » crée une sous-page de la page ouverte et l'ouvre : on tape son nom dans l'arborescence, et une fois le nom validé le curseur est dans son contenu. C'est vrai de toute page qu'on vient de créer (`Ctrl+N`, bouton, menu). « Date » écrit la date du jour en toutes lettres (« 2 octobre 2026 »).
+- Tableau, image, callout et lien n'y figurent pas tant que leur jalon n'est pas fait (J6, J8).
 
 ### Gestion des blocs au clavier
 
-Comportement Notion, absent d'AppFlowy : `Échap` sélectionne le bloc (deux fois : le bloc parent), les flèches naviguent, `Shift+↑/↓` étend la sélection, `Ctrl+Shift+↑/↓` déplace, `Ctrl+D` duplique, `Tab` et `Shift+Tab` indentent. Poignée `⠿` au survol pour le glisser-déposer et le menu contextuel.
+Comportement Notion, absent d'AppFlowy : `Échap` sélectionne le bloc, puis le désélectionne, les flèches naviguent, `Shift+↑/↓` étend la sélection, `Ctrl+Shift+↑/↓` déplace, `Ctrl+D` duplique, `Tab` et `Shift+Tab` indentent. Poignée `⠿` au survol pour le glisser-déposer et le menu contextuel.
+
+- Un bloc est un paragraphe, un titre, un bloc de code, ou un item de liste. Une liste n'est pas un bloc, ses items le sont. Un item sélectionné ne montre que sa ligne : ses sous-items ne sont pas mis en évidence, mais ils le suivent quand il est déplacé, dupliqué ou supprimé.
+- `Échap` sélectionne le bloc du curseur. Sur un paragraphe ou un titre sélectionné, un deuxième appui rend le curseur. Sur un item ou un sous-item sélectionné, le deuxième appui prend toute la liste, sous-listes comprises, et le troisième rend le curseur. Il n'y a pas d'étape intermédiaire (sous-liste, item parent).
+- Avec du texte déjà sélectionné, `Échap` prend tous les blocs que la sélection traverse. Une liste où elle commence ou finit est prise en entier. Après `Ctrl+A`, toute la page est prise.
+- Les blocs sélectionnés se montrent par leur fond, de la même hauteur pour tous les blocs d'une ligne (titre, paragraphe ou item). Les flèches passent d'un bloc à l'autre dans l'ordre de lecture, sous-items compris. `Shift+↑/↓` étend la sélection aux blocs voisins de même niveau.
+- La règle des flèches : sans `Ctrl`, elles agissent sur la sélection (`↑/↓` la déplace, `Shift+↑/↓` l'étend). `Ctrl+Shift+↑/↓` déplace les blocs eux-mêmes. `Ctrl+↑/↓` seul ne fait rien sur des blocs.
+- `Entrée` rend le curseur, à la fin du bloc. `Suppr` ou `Retour arrière` supprime les blocs sélectionnés. Une frappe ordinaire ne remplace pas des blocs sélectionnés : elle est ignorée.
+- `Ctrl+Shift+↑/↓` et `Ctrl+D` marchent aussi sans sélection, sur le bloc du curseur, qui reste dans son texte.
+- Déplacer : le bloc passe de l'autre côté de son voisin, une liste entière comptant pour un voisin. Le premier ou le dernier item d'une liste en sort pour franchir le bloc d'à côté, et rejoint une liste de même nature s'il en trouve une. Un sous-item au bord de sa sous-liste garde son niveau et change de parent : en montant il devient le dernier sous-item de l'item du dessus, en descendant le premier sous-item de l'item du dessous. Si son parent n'a pas de voisin de ce côté, il sort au niveau de son parent.
+- `Tab` et `Shift+Tab` n'agissent que sur les items de liste. Ailleurs ils ne font rien, Markdown n'ayant pas de retrait pour un paragraphe, mais ne font pas sortir de l'éditeur.
+- La poignée n'apparaît pas au survol. Elle existe tant que des blocs sont sélectionnés, à gauche du premier, et reste là où que soit la souris. On la tire pour déplacer la sélection, on clique dessus pour ouvrir son menu : dupliquer, monter, descendre, supprimer.
 
 ### Barre d'outils flottante
 
 Apparaît au clic (pas seulement à la sélection de texte), disparaît à la frappe, au clic ailleurs ou sur `Échap`. Contenu adapté au type de bloc (texte, titre, cellule, image, code, callout).
+
+Elle se place au-dessus de la ligne du curseur et revient quand du texte est sélectionné au clavier. Elle porte la nature du bloc (texte, titres, listes, code), qu'on change dans une liste déroulante, puis gras, italique, souligné, barré, code et surlignage. Dans un bloc de code, seule la nature du bloc est proposée. Les contenus propres aux cellules, images et callouts viendront avec J6.
 
 ### Tableaux
 
@@ -363,6 +424,7 @@ Emoji (recherche FR), icône Lucide (table de correspondance FR vers EN), image 
 
 Section desktop. L'interface Android est décrite en §15.
 
+- Barre de titre : la fenêtre n'a pas le cadre du système. L'application dessine sa propre barre, comme Firefox : nom et version à gauche, boutons réduire, agrandir et fermer à droite. Toute la barre sert à déplacer la fenêtre.
 - Disposition : onglets en haut, barre latérale (arborescence) à gauche, éditeur au centre, sommaire à droite, barre de statut en bas (sync, corrections, coût IA du jour).
 - Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, exporter, supprimer), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
 - Onglets : multiples dans une seule fenêtre, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+1` à `9`, restaurés au démarrage, point si non synchronisé.
@@ -376,11 +438,47 @@ Section desktop. L'interface Android est décrite en §15.
 
 Thème défini dans `.notes/theme.toml`, converti en variables CSS, rechargé à chaud. Sombre uniquement en v1. Le même thème s'applique sur Android, sans réglage sur le téléphone.
 
-Le point clé est la hiérarchie H1 à H5, nettement différenciée (taille, graisse, couleur). C'est la correction principale par rapport à AppFlowy.
+Le point clé est la hiérarchie H1 à H5, nettement différenciée (taille, graisse, italique, trait), le titre de la page tenant lieu de niveau 1 (détail en §6). C'est la correction principale par rapport à AppFlowy.
 
-- Sections du TOML : couleurs (`colors`), typographie (`typography`), par niveau de titre (`heading.h1` à `h5`), code et sa coloration syntaxique, callouts, tableau, UI (largeurs, radius, transitions).
-- Surcharges par page : `theme_overrides` dans le front-matter peut redéfinir des couleurs, pas la typo, les tailles ni les espacements, pour garder une cohérence globale.
-- Validation tolérante : une valeur TOML invalide provoque un repli sur le défaut et un avertissement non bloquant. Une faute de frappe dans le thème ne casse jamais l'app.
+- Thème par défaut : l'apparence arrêtée à la fin de J3 (titres choisis sur comparatif, puces et numérotation par niveau, fond de code, surlignage). Sans fichier de thème, c'est lui qui s'applique. J4 n'a pas changé l'apparence, il l'a rendue réglable.
+- Réglage dans l'application : l'éditeur de thème a son propre écran, pour ne pas se mélanger aux autres réglages. La page des réglages dit seulement où en est le thème (par défaut, personnalisé, réglages ignorés) et porte le bouton « Modifier le thème » qui y mène, un bouton de retour en ramène. Cet écran a un formulaire du thème (couleurs, texte, chaque niveau de titre, puces, code, interface) avec un aperçu d'une page d'exemple à côté. Chaque réglage s'applique tout de suite à l'écran, puis est écrit dans le fichier après un court délai, ou tout de suite si on quitte les réglages ou ferme la fenêtre. Une saisie refusée est signalée sous son champ, n'est pas appliquée et n'est pas écrite. Chaque réglage a son retour au défaut, et tout le thème aussi, après confirmation.
+- Le fichier reste la référence, et l'application ne l'écrit que sur un geste : un réglage dans le formulaire, ou le bouton « Créer le fichier de thème ». Il n'est jamais créé tout seul. L'application l'écrit en entier, toutes les valeurs, commentées par section : un commentaire ou un réglage inconnu ajouté à la main disparaît donc au prochain réglage fait dans le formulaire. Le bouton « Ouvrir le fichier de thème » l'ouvre dans l'éditeur de texte du système.
+- Le formulaire ne montre pas les réglages encore sans effet (coloration du code, callouts, tableaux, voir plus bas) : ils sont dans le fichier.
+- Rechargement à chaud : le fichier est relu à chaque modification du dossier des notes, et ses valeurs deviennent des variables CSS posées sur la racine. Une ligne supprimée reprend sa valeur par défaut, un fichier supprimé rend le thème par défaut.
+- Citations et séparateurs gardent un affichage fixe, hors du thème : l'application n'en crée plus (§6).
+- Surcharges par page : `theme_overrides` dans le front-matter peut redéfinir des couleurs de la palette (`accent: "#ff8800"`), pas la typo, les tailles ni les espacements, pour garder une cohérence globale. Elles s'appliquent à la page ouverte seulement, pas à l'arborescence, et suivent le fichier à chaud. Ce qui n'est pas une couleur de la palette est ignoré.
+- Validation tolérante : une valeur invalide ou un réglage inconnu est ignoré, la valeur par défaut reste, et un avertissement non bloquant le dit (un bandeau discret, et le détail dans les réglages). Un fichier illisible donne le thème par défaut. Une faute de frappe dans le thème ne casse jamais l'app.
+- Le contenu du fichier n'est pas de confiance : seules des formes précises sont acceptées (couleur `#rrggbb`, taille comme `1.3rem`, graisse de 100 à 900, durée en `ms`, noms de polices), rien d'autre ne passe dans une variable CSS.
+
+Sections du fichier :
+
+| Section | Réglages |
+|---|---|
+| `[colors]` | `background`, `surface`, `border`, `text`, `muted`, `accent`, `success`, `warning`, `error`. C'est la palette : partout ailleurs, une couleur s'écrit `#rrggbb` ou par un de ces noms |
+| `[typography]` | `font`, `mono`, `size`, `line_height` |
+| `[heading.h1]` à `[heading.h5]` | `size`, `weight`, `italic`, `underline`, `color`, `margin_top`. `h1` est le `#` du texte, le titre de la page n'en fait pas partie |
+| `[list]` | `bullet_1`, `bullet_2`, `bullet_3` : couleur des puces par niveau |
+| `[code]` et `[code.syntax]` | `background`, `font_size`, puis `comment`, `keyword`, `string`, `number`, `function`, `type`, `variable` |
+| `[callout]` | `info`, `success`, `warning`, `danger` |
+| `[table]` | `border`, `header_background` |
+| `[ui]` | `content_width`, `sidebar_width`, `radius`, `transition` |
+
+La coloration du code, les callouts et les tableaux arrivent en J6 : leurs réglages sont déjà lus et leurs variables déjà posées, mais rien ne s'en sert encore.
+
+Exemple :
+
+```toml
+[colors]
+accent = "#ff8800"
+
+[heading.h2]
+size = "1.4rem"
+underline = false
+color = "accent"
+
+[ui]
+content_width = "56rem"
+```
 
 ---
 
@@ -567,9 +665,9 @@ Chaque jalon est livrable et testable indépendamment. L'ordre suit les dépenda
 |---|---|---|---|
 | J0 | Socle monorepo, Electron, preuve SMB | Fenêtre ouverte sous Linux, fichier test écrit et relu sur le NAS en SMB 3 depuis le poste (preuve côté téléphone déjà faite) | Fait |
 | J1 | Stockage et arborescence | Arbre créé et réorganisé, persistant après redémarrage | Fait |
-| J2 | Éditeur de base | Aller-retour Markdown sans perte | À faire |
-| J3 | Gestion des blocs (clavier) | Page restructurable sans souris | À faire |
-| J4 | Thème | Modif du TOML visible à chaud, hiérarchie lisible | À faire |
+| J2 | Éditeur de base | Aller-retour Markdown sans perte | Fait |
+| J3 | Gestion des blocs (clavier) | Page restructurable sans souris | Fait |
+| J4 | Thème | Modif du TOML visible à chaud, hiérarchie lisible | Fait |
 | J5 | Sync SMB | Deux machines pendant une journée sans perte ni écrasement | À faire |
 | J6 | Blocs riches (code, images, tableaux, callouts) | Page technique complète rédigée confortablement | À faire |
 | J7 | Navigation avancée | Raccourci global et sommaire toujours à jour | À faire |
@@ -591,7 +689,7 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Réf | Question | Échéance |
 |---|---|---|
-| | Aucun point ouvert | |
+| P1 | L'export Markdown convertit les callouts en citations (§9), alors que l'application ne propose plus de citation. Garder cette conversion pour les autres outils, ou écrire autre chose ? | J9 |
 
 ---
 
@@ -614,9 +712,49 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-01 | Surveillance du vault par `fs.watch` récursif de Node plutôt que `chokidar` : une dépendance de moins. |
 | 2026-10-01 | Dossier du vault local choisi au premier lancement, `~/Notes` proposé. Racine du disque et dossier personnel refusés. |
 | 2026-10-01 | Une page créée s'appelle « Sans titre » et passe aussitôt en renommage. Une copie s'appelle « Titre (copie) » et reçoit de nouveaux identifiants pour toute sa descendance ; ses liens internes pointent toujours vers les pages d'origine. |
+| 2026-10-01 | Fenêtre sans cadre du système, barre de titre dessinée par l'application avec ses boutons de fenêtre (demande d'Eloi). |
+| 2026-10-01 | Numéro de version : un jalon terminé augmente le deuxième nombre (J0 = 0.1.0, J1 = 0.2.0), toute autre livraison le troisième. Il se change d'un coup avec `npm run version:set`. |
+| 2026-10-01 | Frise chronologique en fin de README : une ligne de quelques mots par étape, jamais retirée. |
 | 2026-10-01 | `Ctrl+N` crée une sous-page de la page ouverte, `Ctrl+Shift+N` une page à la racine (demande d'Eloi). |
 | 2026-10-01 | Pas de suppression de page avant le jalon de la corbeille (J10) : supprimer sans corbeille serait irréversible. |
 | 2026-10-01 | Le mot de passe du NAS ne revient jamais au renderer : il n'en connaît que l'état (enregistré, gardé pour la session, absent). |
+| 2026-10-02 | P3 tranché : le titre de la page se modifie sur place, la page est renommée quand on le quitte (choix d'Eloi). |
+| 2026-10-02 | Menu `/` : les entrées dont la fonction n'existe pas encore (tableau, image, callout, lien) sont masquées jusqu'à leur jalon. `/date` écrit la date en toutes lettres (choix d'Eloi). |
+| 2026-10-02 | Menu `/` dans un bloc non vide : la commande crée un bloc en dessous au lieu de transformer le texte déjà écrit. |
+| 2026-10-02 | Une liste n'est pas un bloc, ses items le sont. Pour déplacer ou étendre une sélection, une liste entière compte pour un voisin. |
+| 2026-10-02 | Une frappe ne remplace pas des blocs sélectionnés : `Entrée` pour écrire, `Suppr` pour supprimer. Évite d'effacer plusieurs blocs par une touche tapée par erreur. |
+| 2026-10-02 | `Tab` n'indente que les items de liste : Markdown n'a pas de retrait pour un paragraphe. Hors liste il ne fait rien et ne sort pas de l'éditeur. |
+| 2026-10-02 | Souligné ajouté (`Ctrl+U`), écrit `<u>texte</u>` dans le fichier, faute de syntaxe Markdown. Seule cette balise est reconnue, comme une marque du schéma, jamais injectée (demande d'Eloi). |
+| 2026-10-02 | Sous-listes ordonnées affichées a, b, c puis i, ii, iii. Le fichier garde des nombres : Markdown n'a pas de listes à lettres (demande d'Eloi). |
+| 2026-10-02 | Puces : forme et couleur différentes à chaque niveau (demande d'Eloi). |
+| 2026-10-02 | Hiérarchie des titres arrêtée par Eloi après trois tours de comparatif (`~/demo-claude/notes/titres/`) : le titre de la page est le niveau 1, `#` est le premier niveau du texte. `#` gras, `##` trait fin gris, `###` italique, `####` gris, `#####` italique gris. Ni couleur ni filet. Remplace la variante à filet et bleu de la 0.3.1. |
+| 2026-10-02 | Contrôle avant écriture précisé : un bloc gardé doit se relire comme dans le document, un bloc réécrit doit se relire à sa place comme il se lit seul. Une espace en fin de gras ne fait donc plus réécrire toute la page. |
+| 2026-10-02 | Aller-retour Markdown sans perte par conservation du texte d'origine : chaque bloc de premier niveau garde son texte, seuls les blocs modifiés sont réécrits. Une relecture de contrôle précède chaque écriture (§4). |
+| 2026-10-02 | Lecture du Markdown avec `markdown-it` et un convertisseur maison vers le schéma TipTap, écriture avec `prosemirror-markdown`. `@tiptap/markdown` écarté : il ne donne pas les lignes d'origine de chaque bloc. |
+| 2026-10-02 | Ce que le schéma ne représente pas encore (tableau, image, titre de niveau 6, définition de lien) devient un bloc brut, affiché tel quel, non modifiable, jamais perdu. Le HTML reste du texte. |
+| 2026-10-02 | Forme écrite par l'application : puces en `-`, emphase en `*`, gras en `**`, code entre clôtures, saut de ligne forcé par une barre oblique inverse. Deux listes voisines de même nature changent de marqueur (`-` puis `*`, `1.` puis `1)`) pour ne pas être relues comme une seule. |
+| 2026-10-02 | Enregistrement automatique, 800 ms après la dernière frappe, au changement de page et à la fermeture. Pas de `Ctrl+S`. La fermeture de la fenêtre attend la fin des écritures. |
+| 2026-10-02 | Fichier modifié ailleurs pendant la frappe : sa version est gardée en `page.conflit-[date].md` (date à l'heure du poste, à la seconde), puis la page est enregistrée. Sans frappe en attente, la page ouverte est rechargée. |
+| 2026-10-02 | Les paragraphes vides ne sont pas enregistrés : Markdown n'a pas de quoi les écrire. |
+| 2026-10-02 | `- [ ] ` tapé dans une puce donne une tâche, et les marques se déclenchent après une apostrophe (`l'*italique*`) : deux ajouts aux raccourcis de saisie de TipTap. |
+| 2026-10-02 | Tests de bout en bout avec Playwright, qui lance l'application construite sur une copie du vault d'exemple (`npm run test:e2e`). Hors de `npm run check`, car ils ouvrent des fenêtres. |
+| 2026-10-02 | Une note non importée s'affiche en lecture seule sous la proposition d'import, avec le même rendu que l'éditeur. |
+| 2026-10-02 | Ni citation ni séparateur dans l'application (demande d'Eloi) : retirés du menu « / », de la barre d'outils et des raccourcis de saisie. Ils restent lus et réécrits sans perte quand un fichier en contient. |
+| 2026-10-02 | `Échap` répété monte d'un cran (bloc, liste entière, bloc contenant) puis rend le curseur. Avant, il s'arrêtait sur le dernier bloc parent et ne désélectionnait jamais. Une sélection de texte, `Ctrl+A` compris, devient une sélection de blocs. |
+| 2026-10-02 | Fond de sélection de même hauteur pour tous les blocs d'une ligne (celle du plus grand titre), en couleur opaque pour que deux items voisins ne fassent pas de bande plus foncée. |
+| 2026-10-02 | Après le nom d'une page qu'on vient de créer, le curseur va dans son contenu, quelle que soit la façon de la créer. |
+| 2026-10-02 | Listes, choix d'Eloi : un item sélectionné ne montre que sa ligne et ses sous-items le suivent. `Échap` : l'item, toute la liste, puis rien (remplace la montée cran par cran décidée plus haut). `Ctrl+Shift+↑/↓` étend la sélection, `Alt+Shift+↑/↓` déplace. |
+| 2026-10-02 | La poignée n'apparaît plus au survol : elle existe seulement tant que des blocs sont sélectionnés (demande d'Eloi). La souris seule ne sélectionne donc plus un bloc, il faut `Échap`. |
+| 2026-10-02 | Un sous-item au bord de sa sous-liste se déplace en gardant son niveau : il passe sous l'item voisin de son parent, ou sort au niveau du parent s'il n'y a pas de voisin. Avant, le déplacement ne faisait rien. |
+| 2026-10-02 | Règle des flèches sur les blocs, voulue par Eloi : sans `Ctrl` elles agissent sur la sélection (`↑/↓` naviguer, `Shift+↑/↓` étendre), avec `Ctrl` elles déplacent les blocs (`Ctrl+↑/↓`, `Ctrl+Shift+↑/↓`). Remplace `Ctrl+Shift` pour étendre et `Alt+Shift` pour déplacer, décidés le même jour. |
+| 2026-10-02 | `Ctrl+↑/↓` ne déplace plus les blocs (demande d'Eloi) : seul `Ctrl+Shift+↑/↓` le fait, sur les blocs sélectionnés ou sur celui du curseur. |
+| 2026-10-02 | Thème : les clés du TOML sont en anglais, comme les noms de sections prévus. Une couleur hors palette peut renvoyer à une couleur de la palette par son nom (`color = "muted"`), ce qui permet aux surcharges de page de tout faire suivre. |
+| 2026-10-02 | Le fichier de thème n'est jamais créé tout seul dans le vault (règle 3) : il se crée depuis les réglages, avec les valeurs par défaut commentées, et n'est jamais remplacé s'il existe. |
+| 2026-10-02 | Lecture du TOML avec `smol-toml` (JavaScript pur, tourne dans une WebView), dans `packages/ui`. Le main ne fait que lire le fichier : c'est le renderer qui l'interprète, avec une liste fermée de formes acceptées pour chaque valeur. |
+| 2026-10-02 | Les réglages de coloration du code, des callouts et des tableaux existent dès J4, sans effet avant J6, pour que le fichier de thème créé maintenant soit déjà complet. |
+| 2026-10-02 | Une surcharge de page invalide est ignorée sans message : seul le fichier de thème a ses avertissements à l'écran. |
+| 2026-10-02 | Le thème se règle aussi dans les réglages (demande d'Eloi) : formulaire et aperçu en direct. Le fichier TOML reste la référence. Le renderer envoie le thème réglé, le main le revérifie valeur par valeur et rédige lui-même le fichier, en entier : le renderer ne choisit jamais le texte écrit sur le disque. Ce qu'on avait ajouté à la main dans le fichier hors des réglages connus est perdu à ce moment-là. |
+| 2026-10-02 | L'éditeur de thème est un écran à part, ouvert par un bouton depuis les réglages (demande d'Eloi) : chaque famille de réglages longue aura son écran plutôt que de s'empiler sur la même page. |
 | 2026-10-01 | SMB 3 visé, avec chiffrement (le NAS l'accepte). Libs JavaScript pures écartées car limitées à SMB 2.0.2. |
 | 2026-10-01 | Accès hors domicile par Tailscale : l'app utilise l'adresse Tailscale du NAS partout. |
 | 2026-10-01 | Aucun identifiant en clair sur le disque. Sans trousseau système, le secret n'est pas enregistré et est redemandé à chaque lancement. |
@@ -660,6 +798,7 @@ Desktop uniquement.
 | Raccourci | Action |
 |---|---|
 | `Ctrl+B` / `Ctrl+I` | Gras / italique |
+| `Ctrl+U` | Souligné |
 | `Ctrl+Shift+S` | Barré |
 | `Ctrl+E` | Code inline |
 | `Ctrl+Shift+H` | Surlignage |
@@ -673,12 +812,14 @@ Desktop uniquement.
 
 | Raccourci | Action |
 |---|---|
-| `Échap` (×1 / ×2) | Sélectionner le bloc / le parent |
+| `Échap` | Sélectionner le bloc, puis sa liste, puis désélectionner |
 | `↑` / `↓` | Bloc précédent / suivant |
 | `Shift+↑/↓` | Étendre la sélection |
-| `Ctrl+Shift+↑/↓` | Déplacer le bloc |
+| `Ctrl+Shift+↑/↓` | Déplacer les blocs sélectionnés, ou le bloc du curseur |
 | `Ctrl+D` | Dupliquer |
-| `Tab` / `Shift+Tab` | Indenter / désindenter |
+| `Tab` / `Shift+Tab` | Indenter / désindenter (items de liste) |
+| `Entrée` | Quitter la sélection, curseur à la fin du bloc |
+| `Suppr` / `Retour arrière` | Supprimer les blocs sélectionnés |
 
 ### Tableaux
 
@@ -689,3 +830,35 @@ Desktop uniquement.
 | `Ctrl+←/→` (bref) | Mot précédent / suivant |
 | `Ctrl+←/→` (long) | Cellule précédente / suivante |
 | `Entrée` (dernière cellule) | Nouvelle ligne |
+
+---
+
+## Frise chronologique
+
+Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cette frise : c'est la trace courte de tout le projet, y compris des séances dont le détail a été élagué du journal de bord.
+
+| Date | Version | Étape |
+|---|---|---|
+| 2026-10-01 | | Spécification réécrite, Windows retiré |
+| 2026-10-01 | | Application Android spécifiée |
+| 2026-10-01 | | POC SMB Android concluant |
+| 2026-10-01 | | POC compagnon Go concluant |
+| 2026-10-01 | | Chiffrement SMB imposé |
+| 2026-10-01 | | Architecture et carte du code |
+| 2026-10-01 | 0.1.0 | J0 : socle et connexion NAS |
+| 2026-10-01 | 0.1.0 | Connexion validée sur le NAS |
+| 2026-10-01 | 0.2.0 | J1 : stockage et arborescence |
+| 2026-10-01 | 0.2.0 | Valeurs personnelles sorties du code |
+| 2026-10-01 | 0.2.1 | Arborescence : états par le fond |
+| 2026-10-01 | 0.2.1 | Barre de titre intégrée |
+| 2026-10-02 | 0.3.0 | J2 : éditeur de base |
+| 2026-10-02 | 0.3.1 | Souligné, listes, titres |
+| 2026-10-02 | 0.3.2 | Hiérarchie des titres arrêtée |
+| 2026-10-02 | 0.4.0 | J3 : blocs au clavier |
+| 2026-10-02 | 0.4.1 | Retours sur les blocs |
+| 2026-10-02 | 0.4.2 | Listes : sélection et déplacement |
+| 2026-10-02 | 0.4.3 | Flèches : sélection ou déplacement |
+| 2026-10-02 | 0.4.4 | Déplacement : Ctrl+Maj seul |
+| 2026-10-02 | 0.5.0 | J4 : thème |
+| 2026-10-02 | 0.5.1 | Thème réglable dans les réglages |
+| 2026-10-02 | 0.5.2 | Thème : écran à part |

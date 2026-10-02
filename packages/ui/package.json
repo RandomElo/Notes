@@ -1,0 +1,29 @@
+{
+  "name": "@notes/ui",
+  "version": "0.5.2",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./styles/theme.css": "./src/styles/theme.css",
+    "./styles/base.css": "./src/styles/base.css",
+    "./theme": "./src/theme/index.ts",
+    "./theme-template": "./src/theme/template.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@notes/document": "*",
+    "@tiptap/core": "^3.31.4",
+    "@tiptap/pm": "^3.31.4",
+    "@tiptap/react": "^3.31.4",
+    "smol-toml": "^1.9.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
+  }
+}

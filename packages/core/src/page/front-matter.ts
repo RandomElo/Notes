@@ -96,6 +96,26 @@ export function lireMeta(enTete: string | null): PageMeta | null {
 }
 
 /**
+ * Surcharges de thème d'une page (`theme_overrides`), telles qu'elles sont
+ * écrites : des paires clé et texte. Leur sens et leur validité sont l'affaire
+ * du thème, pas de core. Vide s'il n'y en a pas ou si le champ est mal formé.
+ */
+export function lireSurcharges(enTete: string | null): Record<string, string> {
+  const champs = (enTete === null ? null : lireChampsTexte(enTete)) ?? {};
+  const brut = champs['theme_overrides'];
+  if (typeof brut !== 'object' || brut === null || Array.isArray(brut)) {
+    return {};
+  }
+  const surcharges: Record<string, string> = {};
+  for (const [cle, valeur] of Object.entries(brut)) {
+    if (typeof valeur === 'string' && Object.keys(surcharges).length < 50) {
+      surcharges[cle] = valeur;
+    }
+  }
+  return surcharges;
+}
+
+/**
  * Champs texte déjà présents dans un front-matter incomplet (page venue d'un
  * autre outil), pour les garder à l'import plutôt que de les écraser.
  */

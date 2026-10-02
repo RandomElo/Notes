@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir } from 'node:fs/promises';
+import { mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import { homedir, tmpdir } from 'node:os';
 import { join } from 'node:path';
 import type { TreeNode } from '@notes/core';
@@ -99,6 +99,71 @@ describe('handlers vault', () => {
     );
     expect(resultats.every((resultat) => resultat.ok)).toBe(true);
     expect(titres(await handlers.lireArbre())).toEqual(Array.from({ length: 8 }, (_, numero) => `Page ${numero + 1}`));
+    vault.arreter();
+  });
+
+  it('lit puis enregistre le corps d’une page sur le disque, sans toucher au reste du fichier', async () => {
+    const { handlers, dossier, vault } = await monter();
+    await handlers.choisirDossier();
+    const page = await handlers.creerPage({ parent: '', titre: 'Journal' });
+    if (!page.ok) {
+      throw new Error('création refusée');
+    }
+    const fichier = join(dossier, 'Journal', 'page.md');
+    const avant = await readFile(fichier, 'utf8');
+    expect(await handlers.lirePage({ chemin: 'Journal' })).toEqual({ ok: true, corps: '', surcharges: {} });
+
+    // Sans changement, rien n'est écrit : le fichier reste identique à l'octet près.
+    expect(await handlers.enregistrerPage({ chemin: 'Journal', corps: '', corpsDeBase: '' })).toEqual({ ok: true, ecrit: false, conflit: null });
+    expect(await readFile(fichier, 'utf8')).toBe(avant);
+
+    expect(await handlers.enregistrerPage({ chemin: 'Journal', corps: '# Lundi\n', corpsDeBase: '' })).toEqual({ ok: true, ecrit: true, conflit: null });
+    expect(await handlers.lirePage({ chemin: 'Journal' })).toEqual({ ok: true, corps: '# Lundi\n', surcharges: {} });
+    const apres = await readFile(fichier, 'utf8');
+    expect(apres.endsWith('---\n# Lundi\n')).toBe(true);
+    expect(apres).toContain('title: Journal');
+    vault.arreter();
+  });
+
+  it('garde la version modifiée ailleurs au lieu de l’écraser', async () => {
+    const { handlers, dossier, vault } = await monter();
+    await handlers.choisirDossier();
+    await handlers.creerPage({ parent: '', titre: 'Journal' });
+    const fichier = join(dossier, 'Journal', 'page.md');
+    const modifieAilleurs = (await readFile(fichier, 'utf8')) + 'écrit par un autre outil\n';
+    await writeFile(fichier, modifieAilleurs);
+
+    const resultat = await handlers.enregistrerPage({ chemin: 'Journal', corps: 'écrit ici\n', corpsDeBase: '' });
+    expect(resultat).toMatchObject({ ok: true, ecrit: true });
+    const conflit = resultat.ok ? resultat.conflit : null;
+    expect(conflit).toMatch(/^page\.conflit-/);
+    expect(await readFile(join(dossier, 'Journal', conflit ?? ''), 'utf8')).toBe(modifieAilleurs);
+    expect(await handlers.lirePage({ chemin: 'Journal' })).toEqual({ ok: true, corps: 'écrit ici\n', surcharges: {} });
+    vault.arreter();
+  });
+
+  it('refuse de lire ou d’enregistrer hors du vault ou avec une demande malformée', async () => {
+    const { handlers, vault } = await monter();
+    await handlers.choisirDossier();
+    for (const demande of [null, {}, { chemin: '../ailleurs' }, { chemin: '/etc/passwd' }, { chemin: 42 }]) {
+      expect(await handlers.lirePage(demande)).toMatchObject({ ok: false, erreur: { code: 'requete_invalide' } });
+    }
+    for (const demande of [{ chemin: 'Journal' }, { chemin: 'Journal', corps: 'x' }, { chemin: '../x', corps: 'x', corpsDeBase: '' }, { chemin: 'Journal', corps: 1, corpsDeBase: '' }]) {
+      expect(await handlers.enregistrerPage(demande)).toMatchObject({ ok: false, erreur: { code: 'requete_invalide' } });
+    }
+    expect(await handlers.lirePage({ chemin: 'Absente' })).toMatchObject({ ok: false, erreur: { code: 'introuvable' } });
+    expect(await handlers.enregistrerPage({ chemin: 'Absente', corps: 'x', corpsDeBase: '' })).toMatchObject({ ok: false, erreur: { code: 'introuvable' } });
+    vault.arreter();
+  });
+
+  it('attend la fin des écritures demandées', async () => {
+    const { handlers, dossier, vault } = await monter();
+    await handlers.choisirDossier();
+    await handlers.creerPage({ parent: '', titre: 'Journal' });
+    // L'enregistrement n'est pas attendu ici : c'est « attendre » qui garantit qu'il est fini.
+    void handlers.enregistrerPage({ chemin: 'Journal', corps: 'dernière frappe\n', corpsDeBase: '' });
+    await handlers.attendre();
+    expect(await readFile(join(dossier, 'Journal', 'page.md'), 'utf8')).toContain('dernière frappe');
     vault.arreter();
   });
 

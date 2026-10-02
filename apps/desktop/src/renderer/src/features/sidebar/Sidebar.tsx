@@ -11,7 +11,7 @@ interface SidebarProps extends PageTreeProps {
 export function Sidebar({ reglagesOuverts, surReglages, ...arbre }: SidebarProps) {
   const { vault } = arbre;
   return (
-    <nav aria-label="Arborescence des pages" className="border-bordure bg-surface flex w-72 shrink-0 flex-col border-r">
+    <nav aria-label="Arborescence des pages" className="border-bordure bg-surface flex w-(--ui-largeur-barre) shrink-0 flex-col border-r">
       <div className="flex items-center justify-between px-4 pt-4 pb-2">
         <h2 className="text-discret text-xs font-semibold tracking-wide uppercase">Pages</h2>
         <button

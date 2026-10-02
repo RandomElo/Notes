@@ -1,6 +1,6 @@
-import { LocalFsError, VaultError, creerPage, deplacerPage, dupliquerPage, importer, lireArbre, renommerPage, verifierCheminRelatif } from '@notes/core';
+import { LocalFsError, VaultError, creerPage, deplacerPage, dupliquerPage, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
 import type { PageLocation, TreeNode, VaultContext } from '@notes/core';
-import type { VaultOperationResult, VaultState } from '../../shared/ipc-contract';
+import type { PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
 import type { VaultService } from '../vault/vault-service';
 
 export interface VaultHandlersDependencies {
@@ -76,10 +76,50 @@ export function creerHandlersVault({ vault, choisirDossier }: VaultHandlersDepen
       const { chemin } = champs(demande);
       return estChemin(chemin) ? operation((contexte) => importer(contexte, chemin)) : Promise.resolve(requeteInvalide());
     },
+
+    lirePage: (demande: unknown): Promise<PageReadResult> => {
+      const { chemin } = champs(demande);
+      if (!estChemin(chemin)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          return { ok: true, ...(await lireContenu(vault.contexte().fs, chemin)) };
+        } catch (erreur) {
+          return { ok: false, erreur: versErreur(erreur) };
+        }
+      });
+    },
+
+    enregistrerPage: (demande: unknown): Promise<PageSaveResult> => {
+      const { chemin, corps, corpsDeBase } = champs(demande);
+      if (!estChemin(chemin) || !estCorps(corps) || !estCorps(corpsDeBase)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          return { ok: true, ...(await enregistrerCorps(vault.contexte(), chemin, { corps, corpsDeBase })) };
+        } catch (erreur) {
+          return { ok: false, erreur: versErreur(erreur) };
+        }
+      });
+    },
+
+    /** Se termine quand toutes les opérations déjà demandées sont finies. Sert à ne pas quitter au milieu d'une écriture. */
+    attendre: async (): Promise<void> => {
+      await file;
+    },
   };
 }
 
-type EchecOuEtat = VaultState | Extract<VaultOperationResult, { ok: false }>;
+type EchecOuEtat = VaultState | VaultFailure;
+
+/** Taille maximale d'un corps de page accepté du renderer : bien au-delà d'une note, bien en deçà d'un abus. */
+const tailleMaxDuCorps = 20_000_000;
+
+function estCorps(valeur: unknown): valeur is string {
+  return typeof valeur === 'string' && valeur.length <= tailleMaxDuCorps;
+}
 
 async function definir(vault: VaultService, dossier: string): Promise<EchecOuEtat> {
   try {
@@ -106,11 +146,11 @@ function estIndex(valeur: unknown): valeur is number | undefined {
   return valeur === undefined || (typeof valeur === 'number' && Number.isInteger(valeur) && valeur >= 0 && valeur < 1_000_000);
 }
 
-function requeteInvalide(): Extract<VaultOperationResult, { ok: false }> {
+function requeteInvalide(): VaultFailure {
   return { ok: false, erreur: { code: 'requete_invalide', message: 'Demande invalide.' } };
 }
 
-function versErreur(erreur: unknown): Extract<VaultOperationResult, { ok: false }>['erreur'] {
+function versErreur(erreur: unknown): VaultFailure['erreur'] {
   if (erreur instanceof VaultError || erreur instanceof LocalFsError) {
     return { code: erreur.code, message: erreur.message };
   }

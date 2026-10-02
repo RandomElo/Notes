@@ -27,7 +27,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['scripts/**', '*.config.{js,ts}', 'apps/*/*.config.{js,ts}'],
+    files: ['scripts/**', '*.config.{js,ts}', 'apps/*/*.config.{js,ts}', 'apps/desktop/e2e/**'],
     languageOptions: { globals: { ...globals.node } },
   },
   // Sens des dépendances (voir .claude/CARTE.md).

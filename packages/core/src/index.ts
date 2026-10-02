@@ -15,6 +15,8 @@ export type { PageFile, PageMeta, PageMode } from './page/types';
 
 export { VaultError } from './vault/context';
 export type { VaultContext, VaultErrorCode } from './vault/context';
+export { enregistrerCorps, lireContenu, lireCorps } from './vault/content';
+export type { PageContent, SaveRequest, SaveResult } from './vault/content';
 export { importer } from './vault/import';
 export { chargerPage, creerPage, deplacerPage, dupliquerPage, renommerPage } from './vault/operations';
 export type { PageLocation } from './vault/operations';

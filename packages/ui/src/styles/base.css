@@ -1,0 +1,289 @@
+/*
+ * Styles du contenu d'une page, pour l'éditeur comme pour le rendu en lecture
+ * seule. Tout ce qui se règle vient de variables CSS produites par le thème
+ * (src/theme/css-vars.ts, à partir de `.notes/theme.toml`) : aucune valeur du
+ * thème n'est écrite ici en dur.
+ */
+.notes-page {
+  --page-titre-trait: var(--color-discret);
+  --page-surlignage: color-mix(in srgb, var(--color-alerte) 35%, transparent);
+  --page-selection: color-mix(in srgb, var(--color-accent) 25%, transparent);
+
+  color: var(--color-texte);
+  font-family: var(--font-sans);
+  font-size: var(--page-taille);
+  line-height: var(--page-interligne);
+  overflow-wrap: anywhere;
+  outline: 0;
+}
+
+.notes-page > * + * {
+  margin-top: 0.75em;
+}
+
+/*
+ * Hiérarchie des titres (README §6 et §8). Le niveau 1 est le titre de la
+ * page, affiché par l'application au-dessus du contenu : dans le texte, `#`
+ * est le premier niveau en dessous. Taille, graisse, italique, trait et
+ * couleur de chaque niveau viennent du thème.
+ */
+.notes-page h1,
+.notes-page h2,
+.notes-page h3,
+.notes-page h4,
+.notes-page h5 {
+  line-height: 1.25;
+  text-decoration-color: var(--page-titre-trait);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.3em;
+}
+
+.notes-page h1 {
+  margin-top: var(--page-h1-marge);
+  color: var(--page-h1-couleur);
+  font-size: var(--page-h1-taille);
+  font-style: var(--page-h1-style);
+  font-weight: var(--page-h1-graisse);
+  text-decoration-line: var(--page-h1-trait);
+}
+
+.notes-page h2 {
+  margin-top: var(--page-h2-marge);
+  color: var(--page-h2-couleur);
+  font-size: var(--page-h2-taille);
+  font-style: var(--page-h2-style);
+  font-weight: var(--page-h2-graisse);
+  text-decoration-line: var(--page-h2-trait);
+}
+
+.notes-page h3 {
+  margin-top: var(--page-h3-marge);
+  color: var(--page-h3-couleur);
+  font-size: var(--page-h3-taille);
+  font-style: var(--page-h3-style);
+  font-weight: var(--page-h3-graisse);
+  text-decoration-line: var(--page-h3-trait);
+}
+
+.notes-page h4 {
+  margin-top: var(--page-h4-marge);
+  color: var(--page-h4-couleur);
+  font-size: var(--page-h4-taille);
+  font-style: var(--page-h4-style);
+  font-weight: var(--page-h4-graisse);
+  text-decoration-line: var(--page-h4-trait);
+}
+
+.notes-page h5 {
+  margin-top: var(--page-h5-marge);
+  color: var(--page-h5-couleur);
+  font-size: var(--page-h5-taille);
+  font-style: var(--page-h5-style);
+  font-weight: var(--page-h5-graisse);
+  text-decoration-line: var(--page-h5-trait);
+}
+
+.notes-page > :first-child {
+  margin-top: 0;
+}
+
+.notes-page strong {
+  font-weight: 700;
+}
+
+.notes-page a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
+}
+
+.notes-page u {
+  text-decoration: underline;
+  text-underline-offset: 0.18em;
+}
+
+.notes-page mark {
+  border-radius: 0.2em;
+  background-color: var(--page-surlignage);
+  color: inherit;
+  padding: 0.05em 0.15em;
+}
+
+.notes-page code {
+  border-radius: 0.3em;
+  background-color: var(--page-fond-code);
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  padding: 0.15em 0.35em;
+}
+
+.notes-page pre {
+  overflow-x: auto;
+  border-radius: 0.5em;
+  background-color: var(--page-fond-code);
+  font-family: var(--font-mono);
+  font-size: var(--page-code-taille);
+  line-height: 1.55;
+  padding: 0.8em 1em;
+  white-space: pre;
+}
+
+.notes-page pre code {
+  background: none;
+  font-size: inherit;
+  padding: 0;
+}
+
+/* Bloc gardé tel quel (tableau, image... pas encore gérés) : du texte brut, visiblement à part. */
+.notes-page pre[data-raw-block] {
+  background-color: transparent;
+  background-image: linear-gradient(to right, var(--color-bordure) 3px, transparent 3px);
+  color: var(--color-discret);
+  white-space: pre-wrap;
+}
+
+.notes-page blockquote {
+  border-left: 3px solid var(--color-bordure);
+  color: var(--color-discret);
+  padding-left: 1em;
+}
+
+.notes-page blockquote > * + *,
+.notes-page li > * + *,
+.notes-page li > div > * + * {
+  margin-top: 0.4em;
+}
+
+.notes-page hr {
+  margin: 1.5em 0;
+  border: 0;
+  border-top: 1px solid var(--color-bordure);
+}
+
+.notes-page ul,
+.notes-page ol {
+  padding-left: 1.5em;
+}
+
+/* Puces : la forme et la couleur changent à chaque niveau, puis le cycle reprend. */
+.notes-page ul {
+  list-style: disc;
+}
+
+.notes-page ul ul {
+  list-style: circle;
+}
+
+.notes-page ul ul ul {
+  list-style: square;
+}
+
+.notes-page ul ul ul ul {
+  list-style: disc;
+}
+
+.notes-page ul > li::marker {
+  color: var(--page-puce-1);
+}
+
+.notes-page ul ul > li::marker {
+  color: var(--page-puce-2);
+}
+
+.notes-page ul ul ul > li::marker {
+  color: var(--page-puce-3);
+}
+
+.notes-page ul ul ul ul > li::marker {
+  color: var(--page-puce-1);
+}
+
+/* Listes ordonnées : 1, 2, 3 puis a, b, c puis i, ii, iii. Dans le fichier, ce sont toujours des nombres. */
+.notes-page ol {
+  list-style: decimal;
+}
+
+.notes-page ol ol {
+  list-style: lower-alpha;
+}
+
+.notes-page ol ol ol {
+  list-style: lower-roman;
+}
+
+.notes-page ol ol ol ol {
+  list-style: decimal;
+}
+
+.notes-page ol > li::marker {
+  color: var(--color-discret);
+  font-variant-numeric: tabular-nums;
+}
+
+.notes-page li + li {
+  margin-top: 0.2em;
+}
+
+/* Liste de tâches : la case remplace la puce. */
+.notes-page ul[data-type='taskList'] {
+  list-style: none;
+  padding-left: 0.1em;
+}
+
+.notes-page ul[data-type='taskList'] > li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6em;
+}
+
+.notes-page ul[data-type='taskList'] > li > label {
+  display: flex;
+  flex: none;
+  /* Centre la case sur la première ligne du texte : (hauteur de ligne - hauteur de la case) / 2. */
+  margin-top: 0.325em;
+  user-select: none;
+}
+
+.notes-page ul[data-type='taskList'] > li > label input {
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  accent-color: var(--color-accent);
+  cursor: pointer;
+}
+
+.notes-page ul[data-type='taskList'] > li > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.notes-page ul[data-type='taskList'] > li[data-checked='true'] > div > p {
+  color: var(--color-discret);
+  text-decoration: line-through;
+}
+
+/* Bloc sélectionné en entier (séparateur, bloc brut) : montré par le fond, pas par un contour. */
+.notes-page .ProseMirror-selectednode,
+.notes-page pre[data-raw-block].ProseMirror-selectednode {
+  border-radius: 0.3em;
+  background-color: var(--page-selection);
+  outline: 0;
+}
+
+.notes-page hr.ProseMirror-selectednode {
+  border-top-color: var(--color-accent);
+  box-shadow: 0 0 0 0.5em var(--page-selection);
+}
+
+.notes-page ::selection {
+  background-color: color-mix(in srgb, var(--color-accent) 40%, transparent);
+}
+
+/* Texte d'invite d'une page vide. */
+.notes-page p.is-editor-empty:first-child::before {
+  float: left;
+  height: 0;
+  color: var(--color-discret);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}

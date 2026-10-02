@@ -1,0 +1,19 @@
+/*
+ * Jetons de couleur communs au desktop et au téléphone, pour Tailwind 4
+ * (classes bg-fond, text-discret...) et pour les styles du contenu (base.css).
+ * Valeurs provisoires : le vrai thème (theme.toml vers variables CSS) arrive en J4.
+ * « static » : toutes les variables sont émises, même celles qu'aucune classe n'utilise.
+ */
+@theme static {
+  --color-fond: #16171b;
+  --color-surface: #1e2026;
+  --color-bordure: #2d3039;
+  --color-texte: #e6e7ea;
+  --color-discret: #9aa0ab;
+  --color-accent: #7aa2f7;
+  --color-succes: #7bc47f;
+  --color-alerte: #e0af68;
+  --color-erreur: #f08a8a;
+  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: ui-monospace, 'JetBrains Mono', 'DejaVu Sans Mono', monospace;
+}

@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react';
 import { defineConfig } from 'electron-vite';
 
 // Les paquets du monorepo sont du TypeScript source : ils sont compilés avec l'application, pas laissés en import externe.
-const paquetsInternes = ['@notes/core'];
+const paquetsInternes = ['@notes/core', '@notes/ui'];
 
 export default defineConfig({
   main: {

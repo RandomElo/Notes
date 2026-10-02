@@ -1,21 +1,77 @@
 @import 'tailwindcss';
+@import '@notes/ui/styles/theme.css';
+@import '@notes/ui/styles/base.css';
 
-/* Couleurs provisoires du socle. Le vrai thème (theme.toml vers variables CSS) arrive en J4. */
-@theme {
-  --color-fond: #16171b;
-  --color-surface: #1e2026;
-  --color-bordure: #2d3039;
-  --color-texte: #e6e7ea;
-  --color-discret: #9aa0ab;
-  --color-accent: #7aa2f7;
-  --color-succes: #7bc47f;
-  --color-alerte: #e0af68;
-  --color-erreur: #f08a8a;
-  --font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
-}
+/* Les classes Tailwind utilisées par les composants partagés doivent aussi être générées. */
+@source '../../../../../packages/ui/src';
 
 html {
   color-scheme: dark;
+}
+
+/* Barre de titre : la zone qui déplace la fenêtre, et ce qui doit rester cliquable dedans. */
+.zone-de-deplacement {
+  -webkit-app-region: drag;
+}
+
+.hors-deplacement {
+  -webkit-app-region: no-drag;
+}
+
+/*
+ * Bloc sélectionné en entier (Échap) : montré par le fond, jamais par un contour.
+ * Le fond a la même hauteur quel que soit le bloc : sur une ligne, celle du plus
+ * grand titre. Il déborde donc au-dessus et au-dessous des blocs plus bas, de
+ * « --debord », calculé à partir des tailles du thème. La couleur est opaque,
+ * pour que deux débords qui se touchent (items voisins) ne fassent pas une
+ * bande plus foncée.
+ */
+.notes-page .bloc-selectionne {
+  --fond-selection: color-mix(in srgb, var(--color-accent) 25%, var(--color-fond));
+  --hauteur-selection: calc(var(--page-h1-taille) * 1.25);
+  --hauteur-ligne: calc(var(--page-taille) * var(--page-interligne));
+  --debord: max(0px, calc((var(--hauteur-selection) - var(--hauteur-ligne)) / 2));
+
+  border-radius: 0.3rem;
+  background-color: var(--fond-selection);
+  box-shadow:
+    0 calc(-1 * var(--debord)) 0 var(--fond-selection),
+    0 var(--debord) 0 var(--fond-selection);
+}
+
+/* Des blocs sont sélectionnés : le surlignage du texte ne doit pas s'ajouter à leur fond. */
+.notes-page.ProseMirror-hideselection ::selection {
+  background-color: transparent;
+}
+
+.notes-page pre.bloc-selectionne {
+  --debord: 0px;
+}
+
+.notes-page h1.bloc-selectionne {
+  --hauteur-ligne: calc(var(--page-h1-taille) * 1.25);
+}
+
+.notes-page h2.bloc-selectionne {
+  --hauteur-ligne: calc(var(--page-h2-taille) * 1.25);
+}
+
+.notes-page h3.bloc-selectionne {
+  --hauteur-ligne: calc(var(--page-h3-taille) * 1.25);
+}
+
+.notes-page h4.bloc-selectionne {
+  --hauteur-ligne: calc(var(--page-h4-taille) * 1.25);
+}
+
+.notes-page h5.bloc-selectionne {
+  --hauteur-ligne: calc(var(--page-h5-taille) * 1.25);
+}
+
+/* Titre de page vide : l'invite s'affiche tant que rien n'est tapé. */
+.titre-de-page:empty::before {
+  color: var(--color-discret);
+  content: attr(data-placeholder);
 }
 
 * {

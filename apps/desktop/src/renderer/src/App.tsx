@@ -1,29 +1,38 @@
 import type { TreeNode } from '@notes/core';
 import { titreParDefaut } from '@notes/core';
-import { NotebookText } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { PageEditor } from './features/editor/PageEditor';
+import { toutEnregistrer } from './features/editor/pending-saves';
 import { PageSummary } from './features/page/PageSummary';
 import { NasConnectionPanel } from './features/settings/NasConnectionPanel';
 import { Sidebar } from './features/sidebar/Sidebar';
+import { ThemeNotice } from './features/theme/ThemeNotice';
+import { ThemePanel } from './features/theme/ThemePanel';
+import { ThemeSummary } from './features/theme/ThemeSummary';
+import { useTheme } from './features/theme/useTheme';
+import { TitleBar } from './features/title-bar/TitleBar';
 import { cleDeNoeud, clesDesAncetres, trouverParCle } from './features/sidebar/tree-model';
 import { VaultChooser } from './features/welcome/VaultChooser';
 import { api } from './lib/ipc';
 import { estListeDeTextes, estTexteOuNull, useStoredState } from './state/useStoredState';
 import { useVault } from './state/useVault';
 
-/** Disposition générale : arborescence à gauche, page ou réglages au centre. */
+/** Disposition générale : arborescence à gauche, éditeur de la page ouverte ou réglages au centre. */
 export function App() {
   const vault = useVault();
-  const [version, definirVersion] = useState('');
+  // undefined tant que l'état du vault n'est pas connu : le thème attend de savoir quel dossier lire.
+  const theme = useTheme(vault.etat === null ? undefined : vault.etat.dossier);
   const [reglagesOuverts, definirReglagesOuverts] = useState(false);
+  // L'éditeur de thème est un écran à part, auquel on arrive depuis les réglages.
+  const [themeOuvert, definirThemeOuvert] = useState(false);
   const [selection, definirSelection] = useStoredState<string | null>('notes.selection', null, estTexteOuNull);
   const [listeDeplies, definirListeDeplies] = useStoredState<string[]>('notes.deplies', [], estListeDeTextes);
   const [renommage, definirRenommage] = useState<string | null>(null);
+  // Page tout juste créée, en attente de son nom : une fois nommée, le curseur va dans son contenu.
+  const creee = useRef<string | null>(null);
+  const [aEcrire, definirAEcrire] = useState<string | null>(null);
+  const contenuRejoint = useCallback(() => definirAEcrire(null), []);
   const deplies = useMemo(() => new Set(listeDeplies), [listeDeplies]);
-
-  useEffect(() => {
-    void api.version().then(definirVersion);
-  }, []);
 
   const deplier = useCallback(
     (cles: string[], deplie = true) => {
@@ -46,6 +55,7 @@ export function App() {
     (cle: string) => {
       definirSelection(cle);
       definirReglagesOuverts(false);
+      definirThemeOuvert(false);
     },
     [definirSelection],
   );
@@ -61,6 +71,7 @@ export function App() {
         deplier([cleDeNoeud(parent)]);
       }
       selectionner(page.id);
+      creee.current = page.id;
       definirRenommage(page.id);
     },
     [vault, deplier, selectionner],
@@ -97,20 +108,14 @@ export function App() {
     // doit rouvrir ses ancêtres, pas un repli fait à la main.
   }, [cheminSelectionne]);
 
+  // Fermeture de la fenêtre : la page ouverte est enregistrée avant que le main ne ferme pour de bon.
+  useEffect(() => api.surFermetureDemandee(() => void toutEnregistrer().then(() => api.confirmerFermeture())), []);
+
   const sansVault = vault.etat !== null && vault.etat.dossier === null;
 
   return (
     <div className="flex h-full flex-col">
-      <header className="border-bordure flex shrink-0 items-center gap-3 border-b px-4 py-3">
-        <NotebookText className="text-accent size-5 shrink-0" aria-hidden="true" />
-        <h1 className="shrink-0 text-base font-semibold">Notes</h1>
-        {version !== '' && <span className="text-discret shrink-0 text-sm whitespace-nowrap">version {version}</span>}
-        {vault.etat?.dossier != null && (
-          <span className="text-discret ml-auto min-w-0 truncate text-xs" title={`Dossier des notes : ${vault.etat.dossier}`}>
-            {vault.etat.dossier}
-          </span>
-        )}
-      </header>
+      <TitleBar dossier={vault.etat?.dossier ?? null} />
 
       <div className="flex min-h-0 flex-1">
         {vault.etat?.dossier != null && (
@@ -121,20 +126,54 @@ export function App() {
             deplies={deplies}
             surDepliage={(cle, deplie) => deplier([cle], deplie)}
             renommage={renommage}
-            surRenommage={definirRenommage}
+            surRenommage={(cle) => {
+              definirRenommage(cle);
+              if (cle === null && creee.current !== null) {
+                definirAEcrire(creee.current);
+              }
+              if (cle !== creee.current) {
+                creee.current = null;
+              }
+            }}
             surCreation={(parent) => void creer(parent)}
             reglagesOuverts={reglagesOuverts}
-            surReglages={() => definirReglagesOuverts((ouverts) => !ouverts)}
+            surReglages={() => {
+              definirReglagesOuverts((ouverts) => !ouverts);
+              definirThemeOuvert(false);
+            }}
           />
         )}
 
-        <main className="min-w-0 flex-1 overflow-y-auto px-6 py-4">
+        <main className="min-w-0 flex-1 overflow-y-auto px-6 pb-4">
           {vault.etat === null ? null : sansVault ? (
             <VaultChooser vault={vault} dossierPropose={vault.etat.dossierPropose} />
           ) : reglagesOuverts ? (
-            <div className="mx-auto max-w-2xl py-4">
-              <NasConnectionPanel />
-            </div>
+            themeOuvert ? (
+              <div className="mx-auto max-w-5xl py-4">
+                <ThemePanel theme={theme} surRetour={() => definirThemeOuvert(false)} />
+              </div>
+            ) : (
+              <div className="mx-auto max-w-2xl space-y-10 py-4">
+                <ThemeSummary theme={theme} surOuverture={() => definirThemeOuvert(true)} />
+                <NasConnectionPanel />
+              </div>
+            )
+          ) : noeudSelectionne?.importe === true ? (
+            <PageEditor
+              key={noeudSelectionne.id}
+              noeud={noeudSelectionne}
+              surRenommage={(titre) => api.renommerPage({ chemin: noeudSelectionne.chemin, titre }).then((resultat) => {
+                if (!resultat.ok) {
+                  return resultat.erreur.message;
+                }
+                void vault.recharger();
+                return null;
+              })}
+              surSousPage={() => void creer(noeudSelectionne)}
+              entrer={aEcrire === noeudSelectionne.id}
+              surEntree={contenuRejoint}
+              theme={theme.theme}
+            />
           ) : (
             <PageSummary
               noeud={noeudSelectionne}
@@ -146,6 +185,15 @@ export function App() {
           )}
         </main>
       </div>
+      {!reglagesOuverts && (
+        <ThemeNotice
+          avertissements={theme.avertissements}
+          surDetail={() => {
+            definirReglagesOuverts(true);
+            definirThemeOuvert(true);
+          }}
+        />
+      )}
     </div>
   );
 }

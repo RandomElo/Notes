@@ -63,6 +63,7 @@ export function useVault() {
     arbre,
     erreur,
     fermerErreur: useCallback(() => definirErreur(null), []),
+    recharger,
     ouvrirDossier,
     creerPage: useCallback(
       async (parent: string, titre: string) => appliquer(await api.creerPage({ parent, titre })),
