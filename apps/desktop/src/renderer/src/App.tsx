@@ -12,6 +12,7 @@ import { ThemeSummary } from './features/theme/ThemeSummary';
 import { useTheme } from './features/theme/useTheme';
 import { TitleBar } from './features/title-bar/TitleBar';
 import { cleDeNoeud, clesDesAncetres, trouverParCle } from './features/sidebar/tree-model';
+import { StatusBar } from './features/status-bar/StatusBar';
 import { VaultChooser } from './features/welcome/VaultChooser';
 import { api } from './lib/ipc';
 import { estListeDeTextes, estTexteOuNull, useStoredState } from './state/useStoredState';
@@ -185,6 +186,7 @@ export function App() {
           )}
         </main>
       </div>
+      <StatusBar />
       {!reglagesOuverts && (
         <ThemeNotice
           avertissements={theme.avertissements}

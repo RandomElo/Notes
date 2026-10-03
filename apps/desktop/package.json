@@ -1,7 +1,7 @@
 {
   "name": "@notes/desktop",
   "productName": "Notes",
-  "version": "0.5.7",
+  "version": "0.5.8",
   "private": true,
   "type": "module",
   "description": "Éditeur de notes local-first avec synchronisation SMB",

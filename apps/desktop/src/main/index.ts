@@ -2,10 +2,11 @@ import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { BrowserWindow, app, dialog, session, shell } from 'electron';
 import { evenements } from '../shared/ipc-contract';
-import { creerHandlersNas } from './ipc/nas';
+import { cleMotDePasse, creerHandlersNas } from './ipc/nas';
 import { enregistrerCanaux } from './ipc/register';
 import { creerHandlersTheme } from './ipc/theme';
 import { creerHandlersVault } from './ipc/vault';
+import { creerHandlersSync } from './ipc/sync';
 import { creerHandlersFenetre } from './ipc/window';
 import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
 import { SecretStore } from './secrets/secret-store';
@@ -13,6 +14,9 @@ import { durcirContenu, durcirSession } from './security/window-security';
 import { SettingsStore } from './settings/settings-store';
 import { CompanionProcess, lanceurDeBinaire } from './smb/companion-process';
 import { CompanionRemoteFs } from './smb/companion-remote-fs';
+import { identiteDuPoste } from './sync/device';
+import { IndexFile } from './sync/index-file';
+import { SyncScheduler } from './sync/scheduler';
 import { VaultService } from './vault/vault-service';
 
 const urlDeveloppement = app.isPackaged ? undefined : process.env['ELECTRON_RENDERER_URL'];
@@ -111,6 +115,30 @@ if (!app.requestSingleInstanceLock()) {
     app.on('will-quit', () => vault.arreter());
 
     const lancerCompagnon = lanceurDeBinaire(cheminCompagnon());
+    const secrets = new SecretStore(join(donnees, 'secrets.enc'), chiffreSafeStorage);
+    const sync = new SyncScheduler({
+      reglages,
+      lireMotDePasse: () => secrets.lire(cleMotDePasse),
+      localFs: () => vault.fsOuNull(),
+      creerConnexion: (identifiants) => new CompanionRemoteFs(new CompanionProcess(lancerCompagnon), identifiants),
+      index: new IndexFile(join(donnees, 'cache', 'sync-index.json')),
+      appareil: identiteDuPoste(reglages),
+      surEtat: (etat) => fenetre?.webContents.send(evenements.etatSyncModifie, etat),
+    });
+    vault.surChangementDeDossier(() => void sync.reconfigurer());
+    // Dernier cycle à la fermeture (README §5) : la fenêtre est déjà fermée, l'application attend la fin de la sync.
+    let syncTerminee = false;
+    app.on('before-quit', (evenement) => {
+      if (syncTerminee) {
+        return;
+      }
+      evenement.preventDefault();
+      void sync.arreter().finally(() => {
+        syncTerminee = true;
+        app.quit();
+      });
+    });
+
     const handlersVault = creerHandlersVault({ vault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
     const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
     enregistrerCanaux({
@@ -119,8 +147,18 @@ if (!app.requestSingleInstanceLock()) {
       theme: creerHandlersTheme({ vault, ouvrirFichier: (chemin) => shell.openPath(chemin) }),
       nas: creerHandlersNas({
         reglages,
-        secrets: new SecretStore(join(donnees, 'secrets.enc'), chiffreSafeStorage),
+        secrets,
         creerConnexion: (identifiants) => new CompanionRemoteFs(new CompanionProcess(lancerCompagnon), identifiants),
+        surChangement: () => void sync.reconfigurer(),
+      }),
+      sync: creerHandlersSync({
+        sync,
+        montrerFichier: (chemin) => {
+          const dossier = vault.etat().dossier;
+          if (dossier !== null) {
+            shell.showItemInFolder(join(dossier, ...chemin.split('/')));
+          }
+        },
       }),
       expediteurAutorise: (evenement) =>
         fenetre !== null &&
@@ -129,6 +167,7 @@ if (!app.requestSingleInstanceLock()) {
     });
 
     creerFenetre(handlersFenetre);
+    sync.demarrer();
   });
 
   app.on('window-all-closed', () => app.quit());

@@ -8,6 +8,8 @@ interface PageTitleProps {
   surRenommage: (titre: string) => Promise<string | null>;
   /** Entrée ou flèche bas : le curseur passe dans le contenu. */
   surDescente: () => void;
+  /** Vrai quand un autre appareil édite la page : le titre ne se modifie pas. */
+  lectureSeule?: boolean;
 }
 
 /**
@@ -15,7 +17,7 @@ interface PageTitleProps {
  * page. Il est enregistré quand on le quitte : la page est renommée, son
  * dossier aussi. Échap annule la saisie.
  */
-export function PageTitle({ titre, surRenommage, surDescente }: PageTitleProps) {
+export function PageTitle({ titre, surRenommage, surDescente, lectureSeule = false }: PageTitleProps) {
   const champ = useRef<HTMLHeadingElement>(null);
   const [erreur, definirErreur] = useState<string | null>(null);
 
@@ -64,9 +66,10 @@ export function PageTitle({ titre, surRenommage, surDescente }: PageTitleProps) 
       {/* Texte brut seulement : ni mise en forme collée, ni retour à la ligne. */}
       <h2
         ref={champ}
-        contentEditable="plaintext-only"
+        contentEditable={lectureSeule ? 'false' : 'plaintext-only'}
         suppressContentEditableWarning
         role="textbox"
+        aria-readonly={lectureSeule}
         aria-label="Titre de la page"
         aria-invalid={erreur !== null}
         spellCheck={false}

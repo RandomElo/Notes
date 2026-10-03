@@ -7,18 +7,20 @@ import { testerConnexion } from '../smb/connection-test';
 import type { TestableConnection } from '../smb/connection-test';
 import type { CompanionCredentials } from '../smb/protocol';
 
-const cleMotDePasse = 'nas.motDePasse';
+export const cleMotDePasse = 'nas.motDePasse';
 const longueurMaxMotDePasse = 1024;
 
 export interface NasHandlersDependencies {
   reglages: SettingsStore;
   secrets: SecretStore;
   creerConnexion: (identifiants: CompanionCredentials) => TestableConnection;
+  /** Réglages ou mot de passe changés : la sync repart sur une connexion neuve. */
+  surChangement?: () => void;
 }
 
 /** Handlers des canaux « nas: ». Les entrées viennent du renderer : rien n'est supposé valide. */
 export function creerHandlersNas(dependances: NasHandlersDependencies) {
-  const { reglages, secrets, creerConnexion } = dependances;
+  const { reglages, secrets, creerConnexion, surChangement } = dependances;
   let testEnCours = false;
 
   const lireEtat = async (): Promise<NasState> => ({
@@ -45,11 +47,13 @@ export function creerHandlersNas(dependances: NasHandlersDependencies) {
       await secrets.enregistrer(cleMotDePasse, motDePasse);
     }
     await reglages.ecrire({ ...(await reglages.lire()), nas: validation.valeur });
+    surChangement?.();
     return { ok: true, etat: await lireEtat() };
   };
 
   const oublierMotDePasse = async (): Promise<NasState> => {
     await secrets.oublier(cleMotDePasse);
+    surChangement?.();
     return lireEtat();
   };
 

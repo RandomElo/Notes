@@ -5,7 +5,7 @@ import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions
 import { EditorContent, useEditor } from '@tiptap/react';
 import type { Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { X } from 'lucide-react';
+import { Lock, X } from 'lucide-react';
 import { Selection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -20,6 +20,7 @@ import type { SaveState } from './page-saver';
 import { PageTitle } from './PageTitle';
 import { inscrireVidage } from './pending-saves';
 import { SaveIndicator } from './SaveIndicator';
+import { usePageLock } from './usePageLock';
 
 /** Temps sans frappe avant l'enregistrement automatique. */
 const delaiEnregistrementMs = 800;
@@ -64,6 +65,8 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
     genre: 'enregistre',
   });
   const cheminDeDepart = useRef(noeud.chemin);
+  const verrou = usePageLock(noeud.chemin);
+  const lectureSeule = verrou.verrou.etat === 'autre';
 
   useEffect(() => {
     let actif = true;
@@ -98,7 +101,9 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           {chargement.etat === 'pret' && <SaveIndicator etat={enregistrement} />}
         </div>
         {/* Le titre de la page est le niveau 1 : dans le contenu, `#` est le premier niveau en dessous. */}
-        <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} />
+        <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} lectureSeule={lectureSeule} />
+
+        {verrou.verrou.etat === 'autre' && <LockNotice nom={verrou.verrou.nom} surForcage={verrou.forcer} />}
 
         {chargement.etat === 'erreur' && (
           <p role="alert" className="bg-erreur/10 rounded-md p-3 text-sm">
@@ -115,6 +120,8 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
             entrer={entrer}
             surEntree={surEntree}
             surSurcharges={surSurcharges}
+            lectureSeule={lectureSeule}
+            surFrappe={verrou.signalerFrappe}
           />
         )}
       </article>
@@ -134,9 +141,13 @@ interface EditorSurfaceProps {
   surEntree: () => void;
   /** Les surcharges de thème relues quand le fichier change sur le disque. */
   surSurcharges: (surcharges: Record<string, string>) => void;
+  /** Un autre appareil édite la page : on la lit sans pouvoir la modifier. */
+  lectureSeule: boolean;
+  /** Appelé à chaque modification du contenu, pour le verrou de la page. */
+  surFrappe: () => void;
 }
 
-function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges }: EditorSurfaceProps) {
+function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe }: EditorSurfaceProps) {
   const [conflit, definirConflit] = useState<string | null>(null);
   const depart = useMemo(() => lireMarkdown(corps), [corps]);
   // Texte d'origine de chaque bloc : c'est ce qui permet de ne réécrire que les blocs modifiés.
@@ -196,8 +207,19 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
         return true;
       },
     },
-    onUpdate: () => sauvegarde.signalerModification(),
+    onUpdate: () => {
+      sauvegarde.signalerModification();
+      surFrappe();
+    },
   });
+
+  // ProseMirror n'écoute plus le clavier d'un éditeur non modifiable : raccourcis des blocs compris.
+  // Sans le second argument, TipTap émettrait une mise à jour et la page se croirait modifiée.
+  useEffect(() => {
+    if (editeur.isEditable === lectureSeule) {
+      editeur.setEditable(!lectureSeule, false);
+    }
+  }, [editeur, lectureSeule]);
   useEffect(() => {
     editeurActuel.current = editeur;
   }, [editeur]);
@@ -272,9 +294,44 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
         </div>
       )}
       <EditorContent editor={editeur} />
-      <BlockHandle editor={editeur} />
-      <FloatingToolbar editor={editeur} />
-      <SlashMenu editor={editeur} surSousPage={surSousPage} />
+      {!lectureSeule && (
+        <>
+          <BlockHandle editor={editeur} />
+          <FloatingToolbar editor={editeur} />
+          <SlashMenu editor={editeur} surSousPage={surSousPage} />
+        </>
+      )}
     </>
+  );
+}
+
+interface LockNoticeProps {
+  /** Nom de l'appareil qui tient le verrou. */
+  nom: string;
+  surForcage: () => Promise<void>;
+}
+
+/** La page est éditée sur un autre appareil : elle reste lisible, et se met à jour à chaque synchronisation. */
+function LockNotice({ nom, surForcage }: LockNoticeProps) {
+  const [enCours, definirEnCours] = useState(false);
+  return (
+    <div role="status" className="bg-alerte/15 mb-4 flex items-start gap-3 rounded-md p-3 text-sm">
+      <Lock className="text-alerte mt-0.5 size-4 shrink-0" aria-hidden="true" />
+      <p className="flex-1">
+        Cette page est en cours de modification sur {nom === '' ? 'un autre appareil' : `« ${nom} »`}. Elle est en lecture seule ici et se met à jour à chaque synchronisation.
+      </p>
+      <button
+        type="button"
+        disabled={enCours}
+        onClick={() => {
+          definirEnCours(true);
+          void surForcage().finally(() => definirEnCours(false));
+        }}
+        title="L'autre appareil passera en lecture seule. S'il avait des modifications pas encore synchronisées, elles seront gardées à côté de la page."
+        className="bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 shrink-0 rounded px-2 py-1 outline-0 disabled:opacity-50"
+      >
+        Forcer l'édition
+      </button>
+    </div>
   );
 }

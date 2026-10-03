@@ -1,8 +1,11 @@
 package smbfs
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"errors"
 	"os"
+	"strings"
 
 	smb2 "github.com/cloudsoda/go-smb2"
 
@@ -71,15 +74,45 @@ func (s *Session) Lire(chemin string) ([]byte, error) {
 	return contenu, err
 }
 
-// Ecrire remplace le contenu d'un fichier, ou le crée.
+// Ecrire remplace le contenu d'un fichier, ou le crée. L'écriture est
+// atomique : le contenu va dans un fichier temporaire du même dossier, qui
+// remplace ensuite la cible d'un seul renommage. Un lecteur (l'autre appareil)
+// voit l'ancienne version ou la nouvelle, jamais un fichier à moitié écrit.
 func (s *Session) Ecrire(chemin string, contenu []byte) error {
 	cheminSmb, err := versCheminSmb(chemin, false)
 	if err != nil {
 		return err
 	}
 	return s.executer(true, func(partage *smb2.Share) error {
-		return partage.WriteFile(cheminSmb, contenu, 0o644)
+		// Un nom neuf à chaque essai : un essai rejoué après une coupure ne retombe pas sur l'ancien temporaire.
+		temporaire, err := nomTemporaire(cheminSmb)
+		if err != nil {
+			return err
+		}
+		if err := partage.WriteFile(temporaire, contenu, 0o644); err != nil {
+			_ = partage.Remove(temporaire)
+			return err
+		}
+		if err := partage.Rename(temporaire, cheminSmb); err != nil {
+			_ = partage.Remove(temporaire)
+			return err
+		}
+		return nil
 	})
+}
+
+// nomTemporaire donne « .nom.xxxxxxxxxxxx.tmp » à côté du fichier visé : la
+// sync ignore ce motif (packages/core/src/sync/scan.ts).
+func nomTemporaire(cheminSmb string) (string, error) {
+	alea := make([]byte, 6)
+	if _, err := rand.Read(alea); err != nil {
+		return "", err
+	}
+	dossier, nom := "", cheminSmb
+	if coupure := strings.LastIndex(cheminSmb, `\`); coupure >= 0 {
+		dossier, nom = cheminSmb[:coupure+1], cheminSmb[coupure+1:]
+	}
+	return dossier + "." + nom + "." + hex.EncodeToString(alea) + ".tmp", nil
 }
 
 // CreerDossier crée un dossier et ses parents manquants. Sans effet s'il existe.

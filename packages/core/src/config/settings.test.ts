@@ -39,11 +39,11 @@ describe('validerReglagesNas', () => {
 
 describe('lireReglages', () => {
   it('revient au défaut sur un contenu abîmé', () => {
-    expect(lireReglages(undefined)).toEqual({ nas: null, vaultLocal: null });
-    expect(lireReglages({ nas: { hote: '' }, vaultLocal: 'relatif/chemin' })).toEqual({ nas: null, vaultLocal: null });
+    expect(lireReglages(undefined)).toEqual({ nas: null, vaultLocal: null, appareil: null });
+    expect(lireReglages({ nas: { hote: '' }, vaultLocal: 'relatif/chemin', appareil: '../x' })).toEqual({ nas: null, vaultLocal: null, appareil: null });
   });
 
   it('garde des réglages valides', () => {
-    expect(lireReglages({ nas: valide, vaultLocal: '/home/eloi/Notes' })).toEqual({ nas: valide, vaultLocal: '/home/eloi/Notes' });
+    expect(lireReglages({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000' })).toEqual({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000' });
   });
 });

@@ -1,4 +1,4 @@
-import type { LocalFsErrorCode, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, TreeNode, VaultErrorCode } from '@notes/core';
+import type { LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TreeNode, VaultErrorCode } from '@notes/core';
 
 /**
  * Contrat IPC entre le main, le preload et le renderer. Tout canal ajouté ici
@@ -30,6 +30,11 @@ export const canaux = {
   creerTheme: 'theme:creer',
   ouvrirTheme: 'theme:ouvrir',
   enregistrerTheme: 'theme:enregistrer',
+  lireEtatSync: 'sync:lire-etat',
+  synchroniserMaintenant: 'sync:synchroniser',
+  etatVerrou: 'sync:etat-verrou',
+  prendreVerrou: 'sync:prendre-verrou',
+  montrerFichier: 'sync:montrer-fichier',
 } as const;
 
 /** Événements envoyés par le main au renderer. */
@@ -40,7 +45,14 @@ export const evenements = {
   fenetreAgrandie: 'fenetre:agrandie',
   /** L'utilisateur ferme la fenêtre : le renderer enregistre ce qui ne l'est pas, puis confirme. */
   fermetureDemandee: 'fenetre:fermeture-demandee',
+  /** L'état de la sync a changé (début ou fin d'un cycle, NAS injoignable). Porte le nouvel état. */
+  etatSyncModifie: 'sync:etat-modifie',
 } as const;
+
+/** Verrou d'une page vu du renderer : « inconnu » quand la sync est coupée ou le NAS injoignable. */
+export type LockView = LockState | { etat: 'inconnu' };
+
+export type { SyncStatus, TakeResult };
 
 export interface VaultState {
   /** Dossier du vault sur ce poste, null tant qu'il n'est pas choisi. */
@@ -162,4 +174,15 @@ export interface NotesApi {
   enregistrerTheme(theme: unknown): Promise<ThemeActionResult>;
   /** S'abonne aux modifications du vault. Renvoie la fonction de désabonnement. */
   surVaultModifie(ecouteur: () => void): () => void;
+
+  lireEtatSync(): Promise<SyncStatus>;
+  /** Lance un cycle tout de suite et rend l'état à sa fin. */
+  synchroniserMaintenant(): Promise<SyncStatus>;
+  surEtatSync(ecouteur: (etat: SyncStatus) => void): () => void;
+  /** Qui édite la page, d'après son verrou sur le NAS. Ne modifie rien. */
+  etatVerrou(demande: { chemin: string }): Promise<LockView>;
+  /** À la frappe : pose ou entretient le verrou de la page. « forcer » prend le verrou d'un autre appareil. */
+  prendreVerrou(demande: { chemin: string; forcer?: boolean }): Promise<TakeResult>;
+  /** Montre un fichier du dossier des notes dans le gestionnaire de fichiers (sauvegarde de conflit). */
+  montrerFichier(demande: { chemin: string }): Promise<void>;
 }

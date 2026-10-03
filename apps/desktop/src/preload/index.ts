@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { canaux, evenements } from '../shared/ipc-contract';
-import type { NotesApi } from '../shared/ipc-contract';
+import type { NotesApi, SyncStatus } from '../shared/ipc-contract';
 
 // Seule surface offerte au renderer : des fonctions nommées, jamais ipcRenderer lui-même.
 const api: NotesApi = {
@@ -48,6 +48,17 @@ const api: NotesApi = {
     ipcRenderer.on(evenements.vaultModifie, relais);
     return () => ipcRenderer.removeListener(evenements.vaultModifie, relais);
   },
+
+  lireEtatSync: () => ipcRenderer.invoke(canaux.lireEtatSync),
+  synchroniserMaintenant: () => ipcRenderer.invoke(canaux.synchroniserMaintenant),
+  surEtatSync: (ecouteur) => {
+    const relais = (_evenement: unknown, etat: SyncStatus): void => ecouteur(etat);
+    ipcRenderer.on(evenements.etatSyncModifie, relais);
+    return () => ipcRenderer.removeListener(evenements.etatSyncModifie, relais);
+  },
+  etatVerrou: (demande) => ipcRenderer.invoke(canaux.etatVerrou, demande),
+  prendreVerrou: (demande) => ipcRenderer.invoke(canaux.prendreVerrou, demande),
+  montrerFichier: (demande) => ipcRenderer.invoke(canaux.montrerFichier, demande),
 };
 
 contextBridge.exposeInMainWorld('notes', api);

@@ -76,6 +76,15 @@ func TestNasReel(t *testing.T) {
 		t.Fatalf("contenu relu différent : %q", relu)
 	}
 
+	// Une seconde écriture remplace la première par renommage du fichier temporaire.
+	contenu = []byte("Notes, test d'intégration du compagnon SMB, version 2\n")
+	etape("remplacement", session.Ecrire(fichier, contenu))
+	relu, err = session.Lire(fichier)
+	etape("lecture après remplacement", err)
+	if !bytes.Equal(relu, contenu) {
+		t.Fatalf("contenu remplacé différent : %q", relu)
+	}
+
 	infos, err := session.Infos(fichier)
 	etape("métadonnées", err)
 	if infos == nil || infos.EstDossier || infos.Taille != int64(len(contenu)) {
@@ -97,6 +106,7 @@ func TestNasReel(t *testing.T) {
 	etape("renommage", session.Renommer(fichier, renomme))
 	entrees, err := session.Lister(dossier + "/sous-dossier")
 	etape("liste", err)
+	// Une seule entrée : aucun fichier temporaire n'est resté.
 	if len(entrees) != 1 || entrees[0].Nom != "page-renommee.md" {
 		t.Fatalf("liste inattendue : %+v", entrees)
 	}

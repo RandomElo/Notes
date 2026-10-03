@@ -1,6 +1,8 @@
 import { dossierParent, estDansDossier, nomDeBase, verifierCheminRelatif } from '../fs/paths';
 import { LocalFsError } from '../fs/local-fs';
 import type { LocalEntry, LocalFs } from '../fs/local-fs';
+import type { IndexStore } from '../sync/index-store';
+import { versOctets, versTexte } from '../fs/utf8';
 
 /**
  * LocalFs en mémoire, pour tester core et les applications sans toucher au
@@ -8,7 +10,7 @@ import type { LocalEntry, LocalFs } from '../fs/local-fs';
  * dossier parent obligatoire, pas d'écrasement au renommage.
  */
 export class MemoryLocalFs implements LocalFs {
-  private readonly fichiers = new Map<string, string>();
+  private readonly fichiers = new Map<string, Uint8Array>();
   private readonly dossiers = new Set<string>(['']);
   private readonly dates = new Map<string, number>();
   private horloge = 1;
@@ -20,7 +22,7 @@ export class MemoryLocalFs implements LocalFs {
     const fs = new MemoryLocalFs();
     for (const [chemin, contenu] of Object.entries(fichiers)) {
       fs.creerParents(chemin);
-      fs.fichiers.set(chemin, contenu);
+      fs.fichiers.set(chemin, versOctets(contenu));
       fs.dates.set(chemin, fs.horloge++);
     }
     return fs;
@@ -28,7 +30,7 @@ export class MemoryLocalFs implements LocalFs {
 
   /** Contenu complet, trié par chemin, pour comparer deux états. */
   contenu(): Record<string, string> {
-    return Object.fromEntries([...this.fichiers].sort(([a], [b]) => (a < b ? -1 : 1)));
+    return Object.fromEntries([...this.fichiers].sort(([a], [b]) => (a < b ? -1 : 1)).map(([chemin, octets]) => [chemin, versTexte(octets)]));
   }
 
   async infos(chemin: string): Promise<LocalEntry | null> {
@@ -61,22 +63,37 @@ export class MemoryLocalFs implements LocalFs {
   }
 
   async lireTexte(chemin: string): Promise<string> {
+    return versTexte(await this.lireOctets(chemin));
+  }
+
+  async ecrireTexte(chemin: string, contenu: string): Promise<void> {
+    await this.ecrireOctets(chemin, versOctets(contenu));
+  }
+
+  async lireOctets(chemin: string): Promise<Uint8Array> {
     this.verifier(chemin);
     const contenu = this.fichiers.get(chemin);
     if (contenu === undefined) {
       throw new LocalFsError('introuvable', `Fichier introuvable : ${chemin}`);
     }
-    return contenu;
+    return contenu.slice();
   }
 
-  async ecrireTexte(chemin: string, contenu: string): Promise<void> {
+  async ecrireOctets(chemin: string, contenu: Uint8Array): Promise<void> {
     this.verifier(chemin);
     if (!this.dossiers.has(dossierParent(chemin)) || this.dossiers.has(chemin)) {
       throw new LocalFsError('introuvable', `Dossier parent introuvable pour ${chemin}`);
     }
-    this.fichiers.set(chemin, contenu);
+    this.fichiers.set(chemin, contenu.slice());
     this.dates.set(chemin, this.horloge++);
     this.ecritures++;
+  }
+
+  /** Change la date d'un fichier sans toucher à son contenu, comme `touch`. */
+  toucher(chemin: string): void {
+    if (this.fichiers.has(chemin)) {
+      this.dates.set(chemin, this.horloge++);
+    }
   }
 
   async creerDossier(chemin: string): Promise<void> {
@@ -96,10 +113,12 @@ export class MemoryLocalFs implements LocalFs {
     if (!this.dossiers.has(dossierParent(vers))) {
       throw new LocalFsError('introuvable', `Dossier parent introuvable pour ${vers}`);
     }
+    // Comme sur un vrai disque, un fichier renommé garde sa date de modification.
     const contenu = this.fichiers.get(chemin);
     if (contenu !== undefined) {
       this.fichiers.delete(chemin);
       this.fichiers.set(vers, contenu);
+      this.dates.set(vers, this.dates.get(chemin) ?? 0);
     } else if (this.dossiers.has(chemin)) {
       const deplacer = (ancien: string): string => vers + ancien.slice(chemin.length);
       for (const dossier of [...this.dossiers].filter((d) => estDansDossier(d, chemin))) {
@@ -109,6 +128,7 @@ export class MemoryLocalFs implements LocalFs {
       for (const [fichier, texte] of [...this.fichiers].filter(([f]) => estDansDossier(f, chemin))) {
         this.fichiers.delete(fichier);
         this.fichiers.set(deplacer(fichier), texte);
+        this.dates.set(deplacer(fichier), this.dates.get(fichier) ?? 0);
       }
     } else {
       throw new LocalFsError('introuvable', `Introuvable : ${chemin}`);
@@ -120,7 +140,7 @@ export class MemoryLocalFs implements LocalFs {
     if (this.fichiers.has(vers) || this.dossiers.has(vers)) {
       throw new LocalFsError('existe_deja', `La destination existe : ${vers}`);
     }
-    await this.ecrireTexte(vers, await this.lireTexte(chemin));
+    await this.ecrireOctets(vers, await this.lireOctets(chemin));
   }
 
   async supprimer(chemin: string): Promise<void> {
@@ -166,4 +186,17 @@ export function contexteDeTest(fs: LocalFs, depart = Date.UTC(2026, 9, 1, 12, 0,
       return Uint8Array.from({ length: taille }, (_, index) => (compteur * 31 + index * 7) % 256);
     },
   };
+}
+
+/** Magasin d'index de sync en mémoire. */
+export class MemoryIndexStore implements IndexStore {
+  texte: string | null = null;
+
+  async lire(): Promise<string | null> {
+    return this.texte;
+  }
+
+  async ecrire(texte: string): Promise<void> {
+    this.texte = texte;
+  }
 }

@@ -13,6 +13,10 @@ export interface LocalFs {
   lireTexte(chemin: string): Promise<string>;
   /** Crée ou remplace un fichier UTF-8, de façon atomique. Le dossier parent doit exister. */
   ecrireTexte(chemin: string, contenu: string): Promise<void>;
+  /** Lit un fichier octet pour octet (sync, images). */
+  lireOctets(chemin: string): Promise<Uint8Array>;
+  /** Crée ou remplace un fichier, octet pour octet, de façon atomique. Le dossier parent doit exister. */
+  ecrireOctets(chemin: string, contenu: Uint8Array): Promise<void>;
   /** Crée le dossier et ses parents manquants. Sans effet s'il existe. */
   creerDossier(chemin: string): Promise<void>;
   /** Renomme ou déplace. Échoue si la destination existe. */

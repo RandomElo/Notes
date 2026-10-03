@@ -9,6 +9,8 @@ export interface Settings {
   nas: NasSettings | null;
   /** Chemin absolu du dossier du vault sur cet appareil, null tant qu'il n'est pas choisi. */
   vaultLocal: string | null;
+  /** Identifiant de cette installation, tiré au hasard au premier besoin. Signe les verrous de page sur le NAS. */
+  appareil: string | null;
 }
 
 export interface NasSettings {
@@ -27,7 +29,7 @@ export type NasSettingsValidation =
   | { ok: true; valeur: NasSettings }
   | { ok: false; erreurs: Partial<Record<NasSettingsField, string>> };
 
-export const reglagesParDefaut: Settings = { nas: null, vaultLocal: null };
+export const reglagesParDefaut: Settings = { nas: null, vaultLocal: null, appareil: null };
 
 const hoteValide = /^[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$/;
 // eslint-disable-next-line no-control-regex
@@ -88,5 +90,14 @@ export function lireReglages(valeur: unknown): Settings {
   }
   const brut = valeur as Record<string, unknown>;
   const nas = validerReglagesNas(brut['nas']);
-  return { nas: nas.ok ? nas.valeur : null, vaultLocal: estCheminAbsolu(brut['vaultLocal']) ? brut['vaultLocal'] : null };
+  return {
+    nas: nas.ok ? nas.valeur : null,
+    vaultLocal: estCheminAbsolu(brut['vaultLocal']) ? brut['vaultLocal'] : null,
+    appareil: estIdentifiantDAppareil(brut['appareil']) ? brut['appareil'] : null,
+  };
+}
+
+/** Un identifiant d'appareil : des chiffres hexadécimaux et des tirets, rien d'autre. */
+export function estIdentifiantDAppareil(valeur: unknown): valeur is string {
+  return typeof valeur === 'string' && /^[0-9a-f-]{8,64}$/.test(valeur);
 }

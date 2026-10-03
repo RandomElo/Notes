@@ -3,7 +3,7 @@ import { mkdir, stat } from 'node:fs/promises';
 import { homedir } from 'node:os';
 import { join, resolve } from 'node:path';
 import { VaultError, estCheminAbsolu } from '@notes/core';
-import type { VaultContext } from '@notes/core';
+import type { LocalFs, VaultContext } from '@notes/core';
 import type { VaultState } from '../../shared/ipc-contract';
 import { NodeLocalFs } from '../fs/node-local-fs';
 import { surveillerVault } from '../fs/watcher';
@@ -16,6 +16,7 @@ import type { SettingsStore } from '../settings/settings-store';
 export class VaultService {
   private dossier: string | null = null;
   private arreterSurveillance: (() => void) | null = null;
+  private readonly ecouteursDeDossier = new Set<() => void>();
 
   constructor(
     private readonly reglages: SettingsStore,
@@ -45,7 +46,20 @@ export class VaultService {
     await mkdir(dossier, { recursive: true });
     await this.reglages.ecrire({ ...(await this.reglages.lire()), vaultLocal: dossier });
     this.ouvrir(dossier);
+    for (const ecouteur of this.ecouteursDeDossier) {
+      ecouteur();
+    }
     return this.etat();
+  }
+
+  /** Appelé quand le dossier du vault change (la sync repart sur un autre index). */
+  surChangementDeDossier(ecouteur: () => void): void {
+    this.ecouteursDeDossier.add(ecouteur);
+  }
+
+  /** Accès au vault ouvert, null si aucun dossier n'est choisi. */
+  fsOuNull(): LocalFs | null {
+    return this.dossier === null ? null : new NodeLocalFs(this.dossier);
   }
 
   /** Contexte pour les opérations de core. Échoue si aucun vault n'est ouvert. */

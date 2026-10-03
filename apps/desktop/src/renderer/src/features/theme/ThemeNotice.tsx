@@ -19,7 +19,7 @@ export function ThemeNotice({ avertissements, surDetail }: ThemeNoticeProps) {
     return null;
   }
   return (
-    <div role="status" className="bg-surface fixed right-4 bottom-4 z-30 flex max-w-sm items-center gap-3 rounded-lg p-3 text-sm shadow-lg">
+    <div role="status" className="bg-surface fixed right-4 bottom-10 z-30 flex max-w-sm items-center gap-3 rounded-lg p-3 text-sm shadow-lg">
       <TriangleAlert className="text-alerte size-4 shrink-0" aria-hidden="true" />
       <p className="flex-1">{avertissements.length === 1 ? 'Thème : un réglage a été ignoré.' : `Thème : ${avertissements.length} réglages ont été ignorés.`}</p>
       <button type="button" onClick={surDetail} className="bg-texte/10 hover:bg-texte/20 focus-visible:bg-texte/30 rounded px-2 py-1 outline-0">

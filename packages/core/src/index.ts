@@ -4,7 +4,7 @@ export type { LocalEntry, LocalFs, LocalFsErrorCode } from './fs/local-fs';
 export { RemoteFsError, versCodeErreur } from './fs/remote-fs';
 export type { RemoteEntry, RemoteFs, RemoteFsErrorCode } from './fs/remote-fs';
 
-export { estCheminAbsolu, lireReglages, reglagesParDefaut, validerReglagesNas } from './config/settings';
+export { estCheminAbsolu, estIdentifiantDAppareil, lireReglages, reglagesParDefaut, validerReglagesNas } from './config/settings';
 export type { NasSettings, NasSettingsField, NasSettingsValidation, Settings } from './config/settings';
 
 export { estId, genererId } from './page/id';
@@ -24,3 +24,14 @@ export { indexerTitres } from './vault/titles-index';
 export type { TitleEntry } from './vault/titles-index';
 export { lireArbre, trouverNoeud } from './vault/tree';
 export type { TreeNode } from './vault/tree';
+
+export { sousDossierDistant } from './fs/remote-subdir';
+export { versOctets, versTexte } from './fs/utf8';
+export { estSauvegardeDeConflit } from './sync/conflict';
+export { etatLocalDePage, synchroniser } from './sync/engine';
+export type { CycleReport, SyncContext } from './sync/engine';
+export type { IndexStore } from './sync/index-store';
+export { LockManager, dureeDeVieDuVerrouMs, inactiviteAvantRelacheMs } from './sync/lock';
+export type { LocalPageState, LockOwner, LockState, TakeResult } from './sync/lock';
+export { etatApresCycle, etatApresEchec, etatDesactive, etatEnCours } from './sync/status';
+export type { SyncStatus, SyncStatusKind } from './sync/status';

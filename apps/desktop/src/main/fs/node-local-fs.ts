@@ -60,12 +60,24 @@ export class NodeLocalFs implements LocalFs {
   }
 
   async ecrireTexte(chemin: string, contenu: string): Promise<void> {
+    await this.ecrireOctets(chemin, Buffer.from(contenu, 'utf8'));
+  }
+
+  async lireOctets(chemin: string): Promise<Uint8Array> {
+    try {
+      return new Uint8Array(await readFile(this.resoudre(chemin)));
+    } catch (erreur) {
+      throw traduire(erreur, chemin);
+    }
+  }
+
+  async ecrireOctets(chemin: string, contenu: Uint8Array): Promise<void> {
     const cible = this.resoudre(chemin);
     // Écriture atomique : un fichier temporaire à côté, puis un renommage. Une
     // coupure en cours d'écriture laisse l'ancien contenu intact.
     const temporaire = join(this.resoudre(dossierParent(chemin), true), `.${nomDeBase(chemin)}.${randomBytes(6).toString('hex')}.tmp`);
     try {
-      await writeFile(temporaire, contenu, { encoding: 'utf8', flag: 'wx' });
+      await writeFile(temporaire, contenu, { flag: 'wx' });
       await rename(temporaire, cible);
     } catch (erreur) {
       await rm(temporaire, { force: true }).catch(() => undefined);

@@ -9,10 +9,10 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 | | |
 |---|---|
 | Dernière mise à jour | 2026-10-03 |
-| Version | 0.5.7 |
-| Avancement | J0 à J4 terminés, J5 pas commencé |
-| Jalon en cours | Aucun, prochain : J5 (sync SMB) |
-| Points bloquants | Aucun |
+| Version | 0.5.8 |
+| Avancement | J0 à J4 terminés, J5 écrit et testé sans NAS, en recette |
+| Jalon en cours | J5 (sync SMB), en attente de la vérification d'Eloi. J6 ne commence pas avant. |
+| Points bloquants | Recette J5 à dérouler sur le NAS et les deux machines (`docs/recettes/J5.md`) |
 
 Ce qui fonctionne aujourd'hui :
 
@@ -30,14 +30,16 @@ Ce qui fonctionne aujourd'hui :
 - le menu `/` (texte, titres, listes, tâche, code, page enfant, date), la barre d'outils flottante et le titre de page modifiable sur place ;
 - la création d'une page depuis le texte (`/page`) ou l'arborescence : on tape son nom, puis le curseur est dans son contenu.
 - le thème : il se règle dans les réglages, avec un aperçu en direct, et s'enregistre dans `.notes/theme.toml`, qu'on peut aussi modifier à la main. Couleurs, polices, titres, puces et largeurs. Le fichier est relu dès qu'il est enregistré, une valeur fausse est ignorée et signalée sans rien bloquer, et une page peut avoir ses propres couleurs.
+- la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 30 secondes et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
-Ce qui n'existe pas encore : la synchronisation avec le NAS (seul le test de connexion existe), les tableaux, les images et les callouts (affichés tels quels en attendant J6), la suppression de page, l'application Android.
+Ce qui n'existe pas encore : les tableaux, les images et les callouts (affichés tels quels en attendant J6), la suppression de page, l'application Android.
 
 Reste à faire :
 
-- commiter le travail de J2, J3 et J4 (versions 0.3.0 à 0.5.7), qui ne l'est pas encore ;
+- dérouler la recette de J5 (`docs/recettes/J5.md`) sur le NAS, le PC fixe et le portable : c'est elle qui ferme le jalon ;
+- commiter le travail de J5 (version 0.5.8), qui ne l'est pas encore ;
 - créer le fichier `.env` à partir de `.env.example` pour pouvoir lancer `npm run test:nas` ;
 - dérouler les parties 3 à 5 de `docs/recettes/J0.md` (refus de connexion, relance, test d'intégration), non rapportées à ce jour.
 
@@ -289,6 +291,17 @@ Le vault local est la source de travail. Client SMB intégré, pas de montage sy
 
 Lister l'état distant, comparer à l'index local (chemin, mtime, hash), calculer le delta (push, pull, suppression), transférer, mettre à jour l'index, rafraîchir l'UI. Cycle sauté si rien n'a changé.
 
+Règles précises, arrêtées en J5 :
+
+- L'index retient, pour chaque fichier, sa date et sa taille des deux côtés au dernier passage, et l'empreinte SHA-256 du contenu. Un fichier n'a changé d'un côté que si sa date ou sa taille diffère ; si seul l'horodatage a bougé (contenu identique), rien n'est transféré.
+- Modifié d'un seul côté : il part de l'autre. Supprimé d'un côté et inchangé de l'autre : supprimé de l'autre. Supprimé d'un côté mais modifié de l'autre : la version modifiée revient. Modifié des deux côtés : les contenus sont comparés, et s'ils diffèrent, c'est un conflit (filet de sécurité ci-dessous).
+- Juste avant chaque transfert ou suppression, le fichier est revérifié des deux côtés : s'il a bougé depuis le relevé (frappe en cours), il est laissé au cycle suivant.
+- Garde-fou : si un des deux côtés n'a plus aucun fichier alors que l'index en connaît (disque démonté, dossier du NAS vidé, mauvais réglage), l'index est ignoré et les deux côtés sont fusionnés sans rien supprimer.
+- Le NAS ne distingue pas les majuscules des minuscules. Un changement de casse (« courses » devenu « Courses ») est appliqué par un renommage, jamais par une suppression suivie d'un envoi. Deux noms qui ne diffèrent que par la casse sont laissés de côté et signalés.
+- Ne sont jamais transportés : les verrous `.lock`, les fichiers temporaires d'une écriture en cours (`.nom.xxxx.tmp`), la corbeille `.trash/` du NAS, et les fichiers du poste dont le nom serait refusé par SMB (signalés dans le détail de la sync).
+- Toute écriture sur le NAS passe par un fichier temporaire du même dossier, renommé ensuite : l'autre appareil ne lit jamais un fichier à moitié écrit.
+- Une erreur réseau arrête le cycle, l'index garde ce qui a été fait. Des identifiants refusés arrêtent les essais automatiques jusqu'à la prochaine modification des réglages, pour ne pas faire verrouiller le compte par le NAS.
+
 ### Verrou distant par page
 
 Fichier `.lock` (holder, pid, heartbeat) dans le dossier de la page sur le NAS. Les `.lock` ne sont jamais copiés dans le vault local.
@@ -299,6 +312,8 @@ Fichier `.lock` (holder, pid, heartbeat) dans le dossier de la page sur le NAS. 
 | Verrou de cet appareil | Reprise normale |
 | Verrou d'un autre appareil, heartbeat < 90 s | Lecture seule ; bouton « Forcer l'édition » sur desktop uniquement |
 | Verrou périmé (> 90 s) | Reprise automatique |
+
+Le `.lock` est un petit JSON : identifiant de l'appareil (tiré au hasard à l'installation et gardé dans les réglages locaux), nom de la machine, pid, heartbeat en date ISO. Un verrou illisible compte comme périmé. Le heartbeat est rafraîchi à chaque cycle.
 
 Le desktop ne garde le verrou que pendant l'édition active : posé à la première frappe, relâché après 60 s sans frappe une fois la page poussée sur le NAS. Sans cette règle, une liste de courses laissée ouverte dans un onglet à la maison resterait verrouillée et le téléphone ne pourrait rien cocher. Une page ouverte mais inactive est rechargée si le cycle détecte une version distante plus récente.
 
@@ -317,9 +332,11 @@ Pour une retouche de texte, le verrou est tenu avec heartbeat le temps de la sai
 
 En cas de divergence détectée, la version distante est sauvegardée en `page.conflit-[date].md`. Jamais d'écrasement silencieux.
 
+La sauvegarde est posée à côté du fichier sur le poste, puis la version du poste part sur le NAS, sauvegarde comprise : au cycle suivant, l'autre appareil a les deux versions. La même règle vaut pour tout fichier synchronisé (`.order.conflit-[date]`, `theme.conflit-[date].toml`). Les sauvegardes présentes dans le dossier des notes sont listées dans le détail de la sync, avec un bouton qui les montre dans le gestionnaire de fichiers. On les supprime à la main une fois les deux versions comparées.
+
 ### Hors ligne
 
-Le desktop continue de fonctionner sur le vault local. Indicateur d'état dans la barre de statut : synchronisé, en cours, en attente, injoignable, conflit. Sur Android, la consultation continue sur le cache et les contrôles de modification sont désactivés.
+Le desktop continue de fonctionner sur le vault local. Indicateur d'état dans la barre de statut : synchronisé, en cours, en attente, injoignable, conflit, plus « désactivée » tant que le NAS ou le mot de passe ne sont pas réglés. Un clic ouvre le détail : dernière synchronisation, sauvegardes de conflit, fichiers en souffrance, bouton « Synchroniser ». Sur Android, la consultation continue sur le cache et les contrôles de modification sont désactivés.
 
 ### Point de vigilance
 
@@ -664,6 +681,8 @@ Sur Android, cache des pages, index et réglages vivent dans le stockage privé 
 
 Chaque jalon est livrable et testable indépendamment. L'ordre suit les dépendances techniques (stockage, éditeur, sync) et termine par Android, une fois le desktop complet.
 
+Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md`, avec ce qu'Eloi doit vérifier lui-même et les questions auxquelles il n'a pas encore répondu. Un jalon ne passe à « Fait » qu'une fois cette recette rapportée OK et ses questions tranchées. Le jalon suivant ne commence pas avant : pas de développement qui s'empile sur un jalon non vérifié.
+
 | Jalon | Objet | Critère de sortie | État |
 |---|---|---|---|
 | J0 | Socle monorepo, Electron, preuve SMB | Fenêtre ouverte sous Linux, fichier test écrit et relu sur le NAS en SMB 3 depuis le poste (preuve côté téléphone déjà faite) | Fait |
@@ -671,7 +690,7 @@ Chaque jalon est livrable et testable indépendamment. L'ordre suit les dépenda
 | J2 | Éditeur de base | Aller-retour Markdown sans perte | Fait |
 | J3 | Gestion des blocs (clavier) | Page restructurable sans souris | Fait |
 | J4 | Thème | Modif du TOML visible à chaud, hiérarchie lisible | Fait |
-| J5 | Sync SMB | Deux machines pendant une journée sans perte ni écrasement | À faire |
+| J5 | Sync SMB | Deux machines pendant une journée sans perte ni écrasement | En cours |
 | J6 | Blocs riches (code, images, tableaux, callouts) | Page technique complète rédigée confortablement | À faire |
 | J7 | Navigation avancée | Raccourci global et sommaire toujours à jour | À faire |
 | J8 | Liens et icônes | Renommage sans mention cassée | À faire |
@@ -772,6 +791,15 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-01 | Lib SMB Android : `smbj`, dans un plugin Capacitor maison. Validé par un POC sur le téléphone (SMB 3 chiffré : écriture, lecture, liste, suppression). POC supprimé ensuite. |
 | 2026-10-03 | Le trait sous un titre prend la couleur du titre et une épaisseur proportionnée à sa taille (demande d'Eloi), au lieu d'un gris fixe de 1 px. La couleur d'un réglage ne se choisit plus que dans la liste à pastilles, sans carré à côté. |
 | 2026-10-03 | Couleurs des titres : palette « Feux », choisie par Eloi parmi huit propositions (`~/demo-claude/notes/couleurs-titres/`). Titres 1 à 5 en `#f87171`, `#fb923c`, `#facc15`, `#4ade80` et gris, puces en rouge, orange, vert, accent `#60a5fa`, coloration du code assortie. C'est le thème par défaut, et les mêmes couleurs ont été reportées dans le fichier de thème d'Eloi, qui passait devant. |
+| 2026-10-03 | Sync (J5) : un fichier a changé d'un côté si sa date ou sa taille diffère de l'index ; l'empreinte SHA-256 (calculée en TypeScript pur dans `core`) évite les transferts et les faux conflits quand seul l'horodatage a bougé. |
+| 2026-10-03 | Sync : en conflit, la version du NAS est gardée à côté sous le nom `page.conflit-[date].md` (même forme pour tout fichier) puis envoyée avec la version du poste. Les sauvegardes sont listées dans le détail de la sync et se suppriment à la main. |
+| 2026-10-03 | Sync : garde-fou contre les suppressions en masse. Un côté sans aucun fichier alors que l'index en connaît fait ignorer l'index : fusion sans suppression. |
+| 2026-10-03 | Sync : le NAS ignore la casse. Un changement de casse devient un renommage ; deux noms qui ne diffèrent que par la casse sont laissés de côté et signalés. |
+| 2026-10-03 | Écriture atomique sur le NAS dans le compagnon : fichier temporaire `.nom.xxxx.tmp` puis renommage. La sync ignore ce motif. |
+| 2026-10-03 | Verrou `.lock` en JSON (holder, nom de la machine, pid, heartbeat ISO). Identifiant d'appareil tiré au hasard et gardé dans `settings.json`. Sans NAS ou NAS injoignable, l'édition n'est jamais bloquée sur desktop. |
+| 2026-10-03 | Barre de statut en bas de la fenêtre, avec un sixième état « désactivée » (NAS ou mot de passe pas réglés). Après des identifiants refusés, plus d'essai automatique avant un changement de réglages. |
+| 2026-10-03 | Chaque jalon livré a sa recette `docs/recettes/J<n>.md` (ce qu'Eloi vérifie, questions en attente). Le jalon suivant ne commence qu'après la recette rapportée OK (demande d'Eloi). |
+| 2026-10-03 | Version 0.5.8 : J5 livré pour la recette. La version 0.6.0 viendra quand le critère aura été vérifié sur les deux machines. |
 
 ---
 
@@ -873,3 +901,4 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-03 | 0.5.5 | Trait de titre, liste seule |
 | 2026-10-03 | 0.5.6 | Palette Feux |
 | 2026-10-03 | 0.5.7 | Cases à cocher alignées |
+| 2026-10-03 | 0.5.8 | J5 : sync écrite, en recette |
