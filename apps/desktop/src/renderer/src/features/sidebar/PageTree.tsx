@@ -1,4 +1,4 @@
-import { dossierParent, trouverNoeud } from '@notes/core';
+import { dossierParent, titreParDefaut, trouverNoeud } from '@notes/core';
 import type { TreeNode } from '@notes/core';
 import { ArrowDownToLine, Copy, FilePlus, Pencil } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -20,6 +20,11 @@ export interface PageTreeProps {
   surRenommage: (cle: string | null) => void;
   /** Crée une page sous ce parent (vide pour la racine) et la met en renommage. */
   surCreation: (parent: TreeNode | null) => void;
+  /**
+   * Échap sur le nom d'une page encore « Sans titre » : la supprime si elle est vide. Rend la clé
+   * de la ligne à focaliser ensuite, null si la page reste.
+   */
+  surAbandon: (noeud: TreeNode) => Promise<string | null>;
 }
 
 interface Survol {
@@ -238,6 +243,10 @@ export function PageTree(props: PageTreeProps) {
             surMenu={(x, y) => definirMenu({ noeud, x, y })}
             surAjoutDeSousPage={() => props.surCreation(noeud)}
             surAbandonDuRenommage={() => {
+              // Avant la fin du renommage : une page abandonnée ne doit pas recevoir le curseur.
+              if (noeud.importe && noeud.titre === titreParDefaut) {
+                void props.surAbandon(noeud).then((suivante) => suivante !== null && definirAFocaliser(suivante));
+              }
               props.surRenommage(null);
               definirAFocaliser(cle);
             }}

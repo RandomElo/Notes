@@ -66,7 +66,8 @@ export function useVault() {
     recharger,
     ouvrirDossier,
     creerPage: useCallback(
-      async (parent: string, titre: string) => appliquer(await api.creerPage({ parent, titre })),
+      async (parent: string, titre: string, index?: number) =>
+        appliquer(await api.creerPage({ parent, titre, ...(index === undefined ? {} : { index }) })),
       [appliquer],
     ),
     renommerPage: useCallback(
@@ -78,6 +79,14 @@ export function useVault() {
       [appliquer],
     ),
     dupliquerPage: useCallback(async (chemin: string) => appliquer(await api.dupliquerPage({ chemin })), [appliquer]),
+    /** Supprime une page restée vide. null si elle a quelque chose : ce refus n'est pas une erreur à montrer. */
+    supprimerPageVide: useCallback(
+      async (chemin: string) => {
+        const resultat = await api.supprimerPageVide({ chemin });
+        return !resultat.ok && resultat.erreur.code === 'page_non_vide' ? null : appliquer(resultat);
+      },
+      [appliquer],
+    ),
     importer: useCallback(async (chemin: string) => appliquer(await api.importer({ chemin })), [appliquer]),
   };
 }

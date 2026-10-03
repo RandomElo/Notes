@@ -168,6 +168,29 @@ export async function deplacerPage(
 }
 
 /**
+ * Supprime une page qui vient d'être créée et n'a servi à rien : ni contenu, ni sous-page, ni
+ * autre fichier dans son dossier. Sans corbeille (J10), c'est la seule suppression permise :
+ * toute page qui contient quelque chose est refusée, rien n'est écrit.
+ */
+export async function supprimerPageVide(contexte: VaultContext, chemin: string): Promise<PageLocation> {
+  const { fs } = contexte;
+  const { texte, meta } = await chargerPage(fs, chemin);
+  // Les fichiers cachés (ordre des sous-pages, sans sous-page) ne comptent pas.
+  const autres = (await fs.lister(chemin)).filter((entree) => entree.nom !== fichierPage && !entree.nom.startsWith('.'));
+  if (analyserPage(texte).corps.trim() !== '' || autres.length > 0) {
+    throw new VaultError('page_non_vide', "Cette page n'est pas vide : elle n'est pas supprimée.");
+  }
+
+  const parent = dossierParent(chemin);
+  await fs.supprimer(chemin);
+  const ordre = await lireOrdre(fs, parent);
+  if (ordre.includes(meta.id)) {
+    await ecrireOrdre(fs, parent, ordre.filter((id) => id !== meta.id));
+  }
+  return { chemin: parent, id: meta.id };
+}
+
+/**
  * Duplique une page et toute sa descendance, juste après l'original. Chaque
  * copie reçoit un nouvel identifiant. Les liens internes des copies pointent
  * toujours vers les pages d'origine.

@@ -13,6 +13,8 @@ export interface SyncStatus {
   message: string;
   /** Fin du dernier cycle réussi, en millisecondes depuis l'époque Unix. */
   derniereSync: number | null;
+  /** Premier échec de la série en cours quand le NAS ne répond pas, null sinon. */
+  injoignableDepuis: number | null;
   /** Sauvegardes de conflit présentes dans le dossier des notes. */
   sauvegardes: string[];
   erreurs: { chemin: string; message: string }[];
@@ -21,7 +23,7 @@ export interface SyncStatus {
 }
 
 export function etatDesactive(message: string): SyncStatus {
-  return { etat: 'desactivee', message, derniereSync: null, sauvegardes: [], erreurs: [], refuses: [] };
+  return { etat: 'desactivee', message, derniereSync: null, injoignableDepuis: null, sauvegardes: [], erreurs: [], refuses: [] };
 }
 
 export function etatEnCours(precedent: SyncStatus): SyncStatus {
@@ -29,7 +31,7 @@ export function etatEnCours(precedent: SyncStatus): SyncStatus {
 }
 
 export function etatApresCycle(rapport: CycleReport, fin: number): SyncStatus {
-  const base = { derniereSync: fin, sauvegardes: rapport.sauvegardes, erreurs: rapport.erreurs, refuses: rapport.refuses };
+  const base = { derniereSync: fin, injoignableDepuis: null, sauvegardes: rapport.sauvegardes, erreurs: rapport.erreurs, refuses: rapport.refuses };
   if (rapport.sauvegardes.length > 0) {
     const nombre = rapport.sauvegardes.length;
     return { ...base, etat: 'conflit', message: nombre === 1 ? 'Une version en conflit gardée à côté' : `${nombre} versions en conflit gardées à côté` };
@@ -40,6 +42,9 @@ export function etatApresCycle(rapport: CycleReport, fin: number): SyncStatus {
   return { ...base, etat: 'synchronise', message: 'Synchronisé' };
 }
 
+/** Message de l'état injoignable quand le NAS ne répond simplement pas. */
+export const messageInjoignable = 'NAS injoignable';
+
 const messagesDEchec: Partial<Record<RemoteFsErrorCode, string>> = {
   identifiants_refuses: 'Identifiants refusés par le NAS',
   partage_introuvable: 'Partage introuvable sur le NAS',
@@ -47,7 +52,11 @@ const messagesDEchec: Partial<Record<RemoteFsErrorCode, string>> = {
   acces_refuse: 'Accès refusé par le NAS',
 };
 
-/** Le cycle n'a pas pu aller au bout : NAS injoignable ou session refusée. Le reste de l'état précédent est gardé. */
-export function etatApresEchec(code: RemoteFsErrorCode, precedent: SyncStatus): SyncStatus {
-  return { ...precedent, etat: 'injoignable', message: messagesDEchec[code] ?? 'NAS injoignable' };
+/**
+ * Le cycle n'a pas pu aller au bout : NAS injoignable ou session refusée. Le
+ * reste de l'état précédent est gardé, et l'heure du premier échec d'une
+ * série aussi (« NAS injoignable depuis 19:02 »).
+ */
+export function etatApresEchec(code: RemoteFsErrorCode, precedent: SyncStatus, instant: number): SyncStatus {
+  return { ...precedent, etat: 'injoignable', message: messagesDEchec[code] ?? messageInjoignable, injoignableDepuis: precedent.injoignableDepuis ?? instant };
 }

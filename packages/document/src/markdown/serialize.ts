@@ -1,6 +1,7 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { blocCanonique, marqueurDuTexte, marqueurLibre } from './canonical';
 import type { ListMarker } from './canonical';
+import { schema } from '../schema/extensions';
 import { lireMarkdown } from './parse';
 import type { FinDeLigne, PageSource } from './types';
 
@@ -13,9 +14,13 @@ import type { FinDeLigne, PageSource } from './types';
  * document non modifié redonne donc exactement le fichier lu.
  *
  * Sans source, tout est écrit en forme canonique.
+ *
+ * Le document peut venir d'un éditeur, dont le schéma est construit à part :
+ * ProseMirror compare les types de nœud par identité, il est donc d'abord
+ * ramené au schéma du paquet, celui des blocs de la source.
  */
 export function ecrireMarkdown(document: ProseMirrorNode, source: PageSource | null = null): string {
-  const blocs = blocsAEcrire(document);
+  const blocs = blocsAEcrire(document.type.schema === schema ? document : schema.nodeFromJSON(document.toJSON()));
   const finDeLigne = source?.finDeLigne ?? '\n';
   if (source === null || source.blocs.length === 0) {
     // Corps vide ou fait de lignes vides : il reste tel quel tant que rien n'est écrit dans la page.

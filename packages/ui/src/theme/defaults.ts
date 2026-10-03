@@ -30,7 +30,24 @@ export interface Theme {
   code: {
     background: string;
     font_size: string;
-    syntax: { comment: string; keyword: string; string: string; number: string; function: string; type: string; variable: string };
+    /** Numéro de chaque ligne dans la marge des blocs de code. */
+    line_numbers: boolean;
+    /** Les lignes longues passent à la ligne au lieu de faire défiler le bloc. */
+    wrap: boolean;
+    syntax: {
+      text: string;
+      comment: string;
+      keyword: string;
+      control: string;
+      string: string;
+      regex: string;
+      number: string;
+      function: string;
+      type: string;
+      variable: string;
+      tag: string;
+      attribute: string;
+    };
   };
   callout: { info: string; success: string; warning: string; danger: string };
   table: { border: string; header_background: string };
@@ -72,14 +89,22 @@ export const themeParDefaut: Theme = {
   code: {
     background: 'surface',
     font_size: '0.875rem',
+    line_numbers: false,
+    wrap: true,
+    // Couleurs du thème « Dark+ » de VS Code, celui qu'utilise Eloi.
     syntax: {
-      comment: 'muted',
-      keyword: '#f87171',
-      string: '#4ade80',
-      number: '#fb923c',
-      function: 'accent',
-      type: '#2ac3de',
-      variable: 'text',
+      text: '#d4d4d4',
+      comment: '#6a9955',
+      keyword: '#569cd6',
+      control: '#c586c0',
+      string: '#ce9178',
+      regex: '#d16969',
+      number: '#b5cea8',
+      function: '#dcdcaa',
+      type: '#4ec9b0',
+      variable: '#9cdcfe',
+      tag: '#569cd6',
+      attribute: '#9cdcfe',
     },
   },
   callout: { info: 'accent', success: 'success', warning: 'warning', danger: 'error' },

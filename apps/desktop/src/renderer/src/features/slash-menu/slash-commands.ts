@@ -1,4 +1,4 @@
-import { CalendarDays, FilePlus, Heading1, Heading2, Heading3, Heading4, Heading5, List, ListOrdered, ListTodo, Pilcrow, SquareCode } from 'lucide-react';
+import { CalendarDays, FilePlus, Heading1, Heading2, Heading3, Heading4, Heading5, List, ListOrdered, ListTodo, MessageSquareText, Pilcrow, SquareCode, Table, Image } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 /** Ce que fait une commande du menu « / ». */
@@ -7,6 +7,9 @@ export type SlashAction =
   | { genre: 'titre'; niveau: 1 | 2 | 3 | 4 | 5 }
   | { genre: 'liste'; liste: 'bulletList' | 'orderedList' | 'taskList' }
   | { genre: 'code' }
+  | { genre: 'tableau' }
+  | { genre: 'image' }
+  | { genre: 'callout' }
   | { genre: 'date' }
   | { genre: 'sousPage' };
 
@@ -26,9 +29,9 @@ const titre = (niveau: 1 | 2 | 3 | 4 | 5, icone: LucideIcon): SlashCommand => ({
 });
 
 /**
- * Commandes du menu « / » (README §6). Tableau, image, callout et lien
- * arriveront avec leur jalon (J6, J8) : ils ne sont pas montrés avant.
- * Citation et séparateur n'y sont pas : Eloi n'en veut pas.
+ * Commandes du menu « / » (README §6). Le lien arrivera avec son jalon (J8) :
+ * il n'est pas montré avant. Citation et séparateur n'y sont pas : Eloi n'en
+ * veut pas.
  */
 export const commandes: SlashCommand[] = [
   { libelle: 'Texte', alias: ['paragraphe', 'paragraph', 'text', 'p'], icone: Pilcrow, action: { genre: 'paragraphe' } },
@@ -41,6 +44,9 @@ export const commandes: SlashCommand[] = [
   { libelle: 'Liste numérotée', alias: ['ordonnee', 'numeros', 'numbered list', 'ordered', 'ol', '1.'], icone: ListOrdered, action: { genre: 'liste', liste: 'orderedList' } },
   { libelle: 'Tâche', alias: ['case a cocher', 'a faire', 'todo', 'to-do', 'task', 'checkbox', '[]'], icone: ListTodo, action: { genre: 'liste', liste: 'taskList' } },
   { libelle: 'Code', alias: ['bloc de code', 'code block', '```'], icone: SquareCode, action: { genre: 'code' } },
+  { libelle: 'Tableau', alias: ['table', 'grille', 'grid', '|'], icone: Table, action: { genre: 'tableau' } },
+  { libelle: 'Image', alias: ['photo', 'img', 'picture', 'capture', '![]'], icone: Image, action: { genre: 'image' } },
+  { libelle: 'Callout', alias: ['encadre', 'note', 'info', 'alerte', 'attention', 'admonition'], icone: MessageSquareText, action: { genre: 'callout' } },
   { libelle: 'Page enfant', alias: ['sous-page', 'nouvelle page', 'subpage', 'child page', 'page'], icone: FilePlus, action: { genre: 'sousPage' } },
   { libelle: 'Date', alias: ["aujourd'hui", 'jour', 'today', 'date'], icone: CalendarDays, action: { genre: 'date' } },
 ];

@@ -87,8 +87,47 @@ export const sectionsDuFormulaire: FormSection[] = [
     titre: 'Code',
     avance: true,
     champs: [
+      { chemin: 'code.line_numbers', libelle: 'Numéros de ligne' },
+      { chemin: 'code.wrap', libelle: 'Retour à la ligne', aide: 'Sans retour à la ligne, une ligne trop longue fait défiler le bloc de côté.' },
       { chemin: 'code.background', libelle: 'Fond' },
       { chemin: 'code.font_size', libelle: 'Taille' },
+    ],
+  },
+  {
+    titre: 'Coloration du code',
+    avance: true,
+    champs: [
+      { chemin: 'code.syntax.text', libelle: 'Texte' },
+      { chemin: 'code.syntax.keyword', libelle: 'Mots-clés' },
+      { chemin: 'code.syntax.control', libelle: 'Contrôle', aide: 'if, return, import… : les mots qui changent le cours du programme.' },
+      { chemin: 'code.syntax.string', libelle: 'Chaînes' },
+      { chemin: 'code.syntax.regex', libelle: 'Expressions régulières' },
+      { chemin: 'code.syntax.number', libelle: 'Nombres' },
+      { chemin: 'code.syntax.function', libelle: 'Fonctions' },
+      { chemin: 'code.syntax.type', libelle: 'Types' },
+      { chemin: 'code.syntax.variable', libelle: 'Variables' },
+      { chemin: 'code.syntax.tag', libelle: 'Balises' },
+      { chemin: 'code.syntax.attribute', libelle: 'Attributs' },
+      { chemin: 'code.syntax.comment', libelle: 'Commentaires' },
+    ],
+  },
+  {
+    titre: 'Callouts',
+    aide: 'Couleur de chaque nature de callout : son fond, léger, et sa barre à gauche.',
+    avance: true,
+    champs: [
+      { chemin: 'callout.info', libelle: 'Info' },
+      { chemin: 'callout.success', libelle: 'Succès' },
+      { chemin: 'callout.warning', libelle: 'Attention' },
+      { chemin: 'callout.danger', libelle: 'Danger' },
+    ],
+  },
+  {
+    titre: 'Tableaux',
+    avance: true,
+    champs: [
+      { chemin: 'table.border', libelle: 'Bordures' },
+      { chemin: 'table.header_background', libelle: "Fond de l'en-tête" },
     ],
   },
   {
@@ -156,12 +195,6 @@ export function policeDeValeur(valeur: string, famille: FontFamilyKind): string 
   const nom = /^'([^']+)', (?:sans-serif|monospace)$/.exec(valeur)?.[1];
   return nom !== undefined && policesProposees[famille].includes(nom) ? nom : null;
 }
-
-/**
- * Réglages qui n'ont pas encore d'effet (coloration du code, callouts et
- * tableaux arrivent en J6) : ils restent dans le fichier, pas dans le formulaire.
- */
-export const prefixesMasques = ['code.syntax.', 'callout.', 'table.'];
 
 export const unitesDeTaille = ['rem', 'px', 'em', '%'] as const;
 

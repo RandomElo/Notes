@@ -73,20 +73,39 @@ export function fermerSlash(editor: Editor): void {
   }
 }
 
+/** Ce que l'éditeur fait des commandes qui demandent plus qu'une transformation du texte. */
+export interface SlashActions {
+  /** Crée une sous-page de la page ouverte (« Page enfant »). */
+  surSousPage: () => void;
+  /** Ouvre la grille de taille du tableau, au curseur. */
+  surTableau: () => void;
+  /** Ouvre le sélecteur de fichiers et insère les images choisies au curseur. */
+  surImage: () => void;
+}
+
 /**
  * Applique une commande : le « /recherche » est retiré, puis le bloc vide est
  * transformé sur place. S'il contient déjà du texte, la commande crée un
  * nouveau bloc en dessous, pour ne pas changer la nature de ce qui est écrit.
  */
-export function appliquerCommande(editor: Editor, action: SlashAction, plage: SlashTrigger, surSousPage: () => void): void {
+export function appliquerCommande(editor: Editor, action: SlashAction, plage: SlashTrigger, actions: SlashActions): void {
   editor.chain().focus().deleteRange({ from: plage.de, to: plage.a }).run();
-  if (action.genre === 'date') {
-    editor.chain().insertContent(dateEnToutesLettres(new Date())).run();
-    return;
-  }
-  if (action.genre === 'sousPage') {
-    surSousPage();
-    return;
+  switch (action.genre) {
+    case 'date':
+      editor.chain().insertContent(dateEnToutesLettres(new Date())).run();
+      return;
+    case 'sousPage':
+      actions.surSousPage();
+      return;
+    case 'tableau':
+      actions.surTableau();
+      return;
+    case 'image':
+      actions.surImage();
+      return;
+    case 'callout':
+      insererCallout(editor);
+      return;
   }
 
   const bloc = editor.state.selection.$from;
@@ -112,4 +131,20 @@ export function appliquerCommande(editor: Editor, action: SlashAction, plage: Sl
       break;
   }
   chaine.run();
+}
+
+/** Callout : le paragraphe vide du curseur y entre. S'il contient du texte, le callout vient en dessous. */
+function insererCallout(editor: Editor): void {
+  const { $from } = editor.state.selection;
+  if ($from.parent.type.name === 'paragraph' && $from.parent.content.size === 0) {
+    editor.chain().focus().wrapIn('callout', { type: 'info' }).run();
+    return;
+  }
+  const apres = $from.after();
+  editor
+    .chain()
+    .focus()
+    .insertContentAt(apres, { type: 'callout', attrs: { type: 'info' }, content: [{ type: 'paragraph' }] })
+    .setTextSelection(apres + 2)
+    .run();
 }

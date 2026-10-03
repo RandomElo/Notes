@@ -1,8 +1,11 @@
 import type { TreeNode } from '@notes/core';
-import { ecrireMarkdown, extensionsDuSchema, lireMarkdown } from '@notes/document';
-import { classeDePage, variablesDeSurcharge } from '@notes/ui';
+import { ecrireMarkdown, lireMarkdown } from '@notes/document';
+import type { ImageAttributes } from '@notes/document';
+import { classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
+import { Node as NoeudTiptap } from '@tiptap/core';
+import type { AnyExtension } from '@tiptap/core';
 import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions';
-import { EditorContent, useEditor } from '@tiptap/react';
+import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import type { Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
 import { Lock, X } from 'lucide-react';
@@ -12,9 +15,25 @@ import type { CSSProperties } from 'react';
 import { api } from '../../lib/ipc';
 import { BlockHandle } from '../blocks/BlockHandle';
 import { BlockKeys } from '../blocks/block-extension';
+import { CodeBlockView } from '../code-block/CodeBlockView';
+import { CodePaste } from '../code-block/code-paste';
+import { ConflictNotice, useConflits } from '../conflicts/ConflictNotice';
+import { ImageFiles, ajouterEnWebp } from '../images/image-files';
+import { ImageLinkPrompt } from '../images/ImageLinkPrompt';
+import { ImageResizeHandles } from '../images/ImageResizeHandles';
+import { adresseDImage } from '../images/image-url';
+import { ImageToolbar } from '../images/ImageToolbar';
+import { ImageViewer } from '../images/ImageViewer';
+import { insererImages } from '../images/insert-images';
 import { SlashMenu } from '../slash-menu/SlashMenu';
 import { SlashKeys } from '../slash-menu/slash-extension';
+import type { SlashActions } from '../slash-menu/slash-extension';
+import { TableGridPicker } from '../tables/TableGridPicker';
+import { RowColumnGrips } from '../tables/RowColumnGrips';
+import { TableHandles } from '../tables/TableHandles';
+import { TableKeys } from '../tables/table-keys';
 import { FloatingToolbar } from '../toolbar/FloatingToolbar';
+import { allerALaFin } from './end-click';
 import { PageSaver } from './page-saver';
 import type { SaveState } from './page-saver';
 import { PageTitle } from './PageTitle';
@@ -26,19 +45,39 @@ import { usePageLock } from './usePageLock';
 const delaiEnregistrementMs = 800;
 const delaiDeRepriseMs = 5000;
 
-// Ce que l'éditeur ajoute au schéma partagé : gestion des blocs au clavier, menu « / », annuler et rétablir,
-// curseur entre deux blocs, repère de dépôt, invite.
-const extensions = [
-  ...extensionsDuSchema,
-  BlockKeys,
-  SlashKeys,
-  UndoRedo,
-  Gapcursor,
-  Dropcursor.configure({ color: 'var(--color-accent)', width: 2 }),
-  Placeholder.configure({
-    placeholder: 'Écris ici, ou tape / pour choisir un bloc',
-  }),
-];
+interface ExtensionsDeLEditeur {
+  /** Chemin actuel de la page, lu au moment où il sert (la page peut être renommée pendant qu'elle est ouverte). */
+  chemin: () => string;
+  agrandir: (attributs: ImageAttributes, adresse: string) => void;
+  surErreurDImage: (message: string) => void;
+  surLienDImage: (adresse: string, position: number) => void;
+}
+
+/**
+ * Ce que l'éditeur ajoute au schéma partagé et à son affichage : barre des
+ * blocs de code, gestion des blocs au clavier, menu « / », tableaux, images
+ * collées ou déposées, annuler et rétablir, curseur entre deux blocs, repère
+ * de dépôt, invite.
+ */
+function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage }: ExtensionsDeLEditeur): AnyExtension[] {
+  const affichage = extensionsDAffichage({ resoudre: (src) => adresseDImage(chemin(), src), agrandir });
+  return [
+    ...affichage.map((extension) =>
+      extension instanceof NoeudTiptap && extension.name === 'codeBlock' ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(CodeBlockView) }) : extension,
+    ),
+    BlockKeys,
+    SlashKeys,
+    TableKeys,
+    CodePaste,
+    ImageFiles.configure({ chemin, surErreur: surErreurDImage, surLienDImage }),
+    UndoRedo,
+    Gapcursor,
+    Dropcursor.configure({ color: 'var(--color-accent)', width: 2 }),
+    Placeholder.configure({
+      placeholder: 'Écris ici, ou tape / pour choisir un bloc',
+    }),
+  ];
+}
 
 type Chargement = { etat: 'lecture' } | { etat: 'pret'; corps: string; surcharges: Record<string, string> } | { etat: 'erreur'; message: string };
 
@@ -54,10 +93,12 @@ interface PageEditorProps {
   surEntree: () => void;
   /** Le thème appliqué : les couleurs propres à la page s'y ajoutent. */
   theme: Theme;
+  /** Ouvre l'écran de résolution d'une version en conflit de cette page. */
+  surConflit: (sauvegarde: string) => void;
 }
 
 /** Page ouverte : fil d'Ariane, titre, puis l'éditeur de son contenu. */
-export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme }: PageEditorProps) {
+export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit }: PageEditorProps) {
   // Entrée ou flèche bas dans le titre : le curseur passe au début du contenu.
   const [descentes, descendre] = useState(0);
   const [chargement, definirChargement] = useState<Chargement>({ etat: 'lecture' });
@@ -67,6 +108,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   const cheminDeDepart = useRef(noeud.chemin);
   const verrou = usePageLock(noeud.chemin);
   const lectureSeule = verrou.verrou.etat === 'autre';
+  const conflits = useConflits(noeud.chemin);
 
   useEffect(() => {
     let actif = true;
@@ -93,7 +135,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   );
 
   return (
-    <div style={couleurs as CSSProperties} className="bg-fond text-texte -mx-6 min-h-full px-6">
+    <div data-zone-page style={couleurs as CSSProperties} className="bg-fond text-texte -mr-6 -ml-12 min-h-full pr-6 pl-12">
       <article className="mx-auto max-w-(--ui-largeur-contenu) pb-24">
         {/* Reste visible quand la page défile : c'est là que s'affiche le résultat de l'enregistrement. */}
         <div className="bg-fond sticky top-0 z-10 -mx-2 flex items-center justify-between gap-4 px-2 py-2">
@@ -104,6 +146,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
         <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} lectureSeule={lectureSeule} />
 
         {verrou.verrou.etat === 'autre' && <LockNotice nom={verrou.verrou.nom} surForcage={verrou.forcer} />}
+        <ConflictNotice conflits={conflits} surResolution={surConflit} />
 
         {chargement.etat === 'erreur' && (
           <p role="alert" className="bg-erreur/10 rounded-md p-3 text-sm">
@@ -148,7 +191,12 @@ interface EditorSurfaceProps {
 }
 
 function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe }: EditorSurfaceProps) {
-  const [conflit, definirConflit] = useState<string | null>(null);
+  const [erreurDImage, definirErreurDImage] = useState<string | null>(null);
+  // Position où ouvrir la grille de taille d'un tableau (`/tableau`), null quand elle est fermée.
+  const [grille, definirGrille] = useState<number | null>(null);
+  const [visionneuse, definirVisionneuse] = useState<{ attributs: ImageAttributes; adresse: string } | null>(null);
+  // Lien d'image collé, en attente de la réponse : télécharger ou garder le lien.
+  const [lienColle, definirLienColle] = useState<{ adresse: string; position: number } | null>(null);
   const depart = useMemo(() => lireMarkdown(corps), [corps]);
   // Texte d'origine de chaque bloc : c'est ce qui permet de ne réécrire que les blocs modifiés.
   const source = useRef(depart.source);
@@ -172,14 +220,23 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
             corpsDeBase,
           }),
         surEtat,
-        surEnregistre: (ecrit, sauvegardeDeConflit) => {
+        // Une version gardée à côté se signale par le bandeau des conflits, relu au changement du dossier.
+        surEnregistre: (ecrit) => {
           source.current = lireMarkdown(ecrit).source;
-          if (sauvegardeDeConflit !== null) {
-            definirConflit(sauvegardeDeConflit);
-          }
         },
       }),
     [corps, surEtat],
+  );
+
+  const extensions = useMemo(
+    () =>
+      extensionsDeLEditeur({
+        chemin: () => cheminActuel.current,
+        agrandir: (attributs, adresse) => definirVisionneuse({ attributs, adresse }),
+        surErreurDImage: definirErreurDImage,
+        surLienDImage: (adresse, position) => definirLienColle({ adresse, position }),
+      }),
+    [],
   );
 
   const editeur = useEditor({
@@ -215,11 +272,15 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
 
   // ProseMirror n'écoute plus le clavier d'un éditeur non modifiable : raccourcis des blocs compris.
   // Sans le second argument, TipTap émettrait une mise à jour et la page se croirait modifiée.
+  // La dernière frappe part sur le disque avant le passage en lecture seule : la sync la gardera si l'autre appareil a écrit aussi.
   useEffect(() => {
     if (editeur.isEditable === lectureSeule) {
+      if (lectureSeule) {
+        void sauvegarde.vider();
+      }
       editeur.setEditable(!lectureSeule, false);
     }
-  }, [editeur, lectureSeule]);
+  }, [editeur, lectureSeule, sauvegarde]);
   useEffect(() => {
     editeurActuel.current = editeur;
   }, [editeur]);
@@ -244,7 +305,9 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
     const retirer = inscrireVidage(() => sauvegarde.vider());
     return () => {
       retirer();
-      void sauvegarde.vider();
+      // Une fois la dernière frappe écrite, le verrou de la page est rendu dès qu'elle est sur le NAS.
+      const page = cheminActuel.current;
+      void sauvegarde.vider().finally(() => void api.quitterPage({ chemin: page }));
       sauvegarde.arreter();
     };
   }, [sauvegarde]);
@@ -275,17 +338,58 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
     [editeur, sauvegarde, surSurcharges],
   );
 
+  // Clic dans le vide sous le dernier bloc : le curseur va à la fin, dans un paragraphe vide créé s'il le faut.
+  useEffect(() => {
+    const surClic = (evenement: MouseEvent): void => {
+      const cible = evenement.target;
+      if (evenement.button !== 0 || lectureSeule || !(cible instanceof Element) || cible.closest('[data-zone-page]') === null) {
+        return;
+      }
+      // Seulement le fond : ni le contenu, ni un bouton, un champ ou un message.
+      if (editeur.view.dom.contains(cible) || cible.closest('button, a, input, textarea, [role="alert"], [contenteditable]') !== null) {
+        return;
+      }
+      if (evenement.clientY <= editeur.view.dom.getBoundingClientRect().bottom) {
+        return;
+      }
+      evenement.preventDefault();
+      editeur.view.dispatch(allerALaFin(editeur.state));
+      editeur.view.focus();
+    };
+    document.addEventListener('mousedown', surClic);
+    return () => document.removeEventListener('mousedown', surClic);
+  }, [editeur, lectureSeule]);
+
+  const actions = useMemo<SlashActions>(
+    () => ({
+      surSousPage,
+      surTableau: () => definirGrille(editeur.state.selection.from),
+      surImage: () => {
+        const position = editeur.state.selection.from;
+        void api.choisirImages().then(async (resultat) => {
+          if (!resultat.ok) {
+            definirErreurDImage(`L'image n'a pas été ajoutée : ${resultat.erreur.message}`);
+            return;
+          }
+          const { adresses, erreurs } = await ajouterEnWebp(cheminActuel.current, resultat.fichiers);
+          if (erreurs.length > 0) {
+            definirErreurDImage(erreurs.join(' '));
+          }
+          insererImages(editeur, adresses, position);
+        });
+      },
+    }),
+    [editeur, surSousPage],
+  );
+
   return (
     <>
-      {conflit !== null && (
-        <div role="alert" className="bg-alerte/15 mb-4 flex items-start gap-3 rounded-md p-3 text-sm">
-          <p className="flex-1">
-            Cette page a été modifiée ailleurs pendant que tu écrivais. Ta version est enregistrée. L'autre est gardée à côté, dans le dossier de la page, sous le nom{' '}
-            <span className="font-mono text-xs">{conflit}</span>.
-          </p>
+      {erreurDImage !== null && (
+        <div role="alert" className="bg-erreur/10 mb-4 flex items-start gap-3 rounded-md p-3 text-sm">
+          <p className="flex-1">{erreurDImage}</p>
           <button
             type="button"
-            onClick={() => definirConflit(null)}
+            onClick={() => definirErreurDImage(null)}
             aria-label="Fermer le message"
             className="text-discret hover:bg-texte/10 hover:text-texte shrink-0 rounded p-0.5"
           >
@@ -298,8 +402,32 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
         <>
           <BlockHandle editor={editeur} />
           <FloatingToolbar editor={editeur} />
-          <SlashMenu editor={editeur} surSousPage={surSousPage} />
+          <ImageToolbar
+            editor={editeur}
+            surAgrandir={(attributs) => {
+              const adresse = adresseDImage(cheminActuel.current, attributs.src);
+              if (adresse !== null) {
+                definirVisionneuse({ attributs, adresse });
+              }
+            }}
+          />
+          <ImageResizeHandles editor={editeur} />
+          <TableHandles editor={editeur} />
+          <RowColumnGrips editor={editeur} />
+          <SlashMenu editor={editeur} actions={actions} />
+          {grille !== null && <TableGridPicker editor={editeur} position={grille} surFermeture={() => definirGrille(null)} />}
         </>
+      )}
+      {lienColle !== null && <PastedImageLink editeur={editeur} lien={lienColle} chemin={() => cheminActuel.current} surFin={() => definirLienColle(null)} surErreur={definirErreurDImage} />}
+      {visionneuse !== null && (
+        <ImageViewer
+          attributs={visionneuse.attributs}
+          adresse={visionneuse.adresse}
+          surFermeture={() => {
+            definirVisionneuse(null);
+            editeur.commands.focus();
+          }}
+        />
       )}
     </>
   );
@@ -333,5 +461,49 @@ function LockNotice({ nom, surForcage }: LockNoticeProps) {
         Forcer l'édition
       </button>
     </div>
+  );
+}
+
+interface PastedImageLinkProps {
+  editeur: Editor;
+  lien: { adresse: string; position: number };
+  chemin: () => string;
+  surFin: () => void;
+  surErreur: (message: string) => void;
+}
+
+/** La question sur un lien d'image collé, placée au curseur, et ce que fait chaque réponse. */
+function PastedImageLink({ editeur, lien, chemin, surFin, surErreur }: PastedImageLinkProps) {
+  const position = Math.min(lien.position, editeur.state.doc.content.size);
+  const coordonnees = editeur.view.coordsAtPos(position);
+  const garderLeLien = (): void => {
+    editeur.chain().focus().insertContentAt(Math.min(lien.position, editeur.state.doc.content.size), lien.adresse).run();
+    surFin();
+  };
+  return (
+    <ImageLinkPrompt
+      adresse={lien.adresse}
+      gauche={coordonnees.left}
+      haut={coordonnees.bottom + 6}
+      surRefus={garderLeLien}
+      surTelechargement={async () => {
+        const resultat = await api.telechargerImage({ adresse: lien.adresse });
+        if (editeur.isDestroyed) {
+          return null;
+        }
+        // Une image téléchargée est convertie en WebP comme toute image reçue, puis copiée dans la page.
+        const ajout = resultat.ok ? await ajouterEnWebp(chemin(), resultat.fichiers) : null;
+        if (ajout !== null && ajout.adresses.length > 0) {
+          insererImages(editeur, ajout.adresses, Math.min(lien.position, editeur.state.doc.content.size));
+          surFin();
+          return null;
+        }
+        // Sans réseau ou sans image au bout du lien : le lien reste en texte, rien n'est bloqué.
+        const message = resultat.ok ? (ajout?.erreurs[0] ?? "L'image n'a pas été ajoutée.") : `L'image n'a pas été téléchargée : ${resultat.erreur.message}`;
+        surErreur(`${message} Le lien est gardé en texte.`);
+        garderLeLien();
+        return message;
+      }}
+    />
   );
 }

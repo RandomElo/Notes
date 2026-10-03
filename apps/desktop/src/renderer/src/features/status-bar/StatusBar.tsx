@@ -19,7 +19,7 @@ const icones: Record<SyncStatusKind, { icone: LucideIcon; couleur: string }> = {
  * Barre de statut en bas de la fenêtre (README §7). Pour l'instant elle ne
  * porte que l'état de la sync ; un clic ouvre le détail au-dessus.
  */
-export function StatusBar() {
+export function StatusBar({ surResolution }: { surResolution: (sauvegarde: string) => void }) {
   const etat = useSyncStatus();
   const [ouvert, definirOuvert] = useState(false);
   const [maintenant, definirMaintenant] = useState(() => Date.now());
@@ -85,6 +85,10 @@ export function StatusBar() {
             surFermeture={() => {
               definirOuvert(false);
               bouton.current?.focus();
+            }}
+            surResolution={(sauvegarde) => {
+              definirOuvert(false);
+              surResolution(sauvegarde);
             }}
           />}
       </div>

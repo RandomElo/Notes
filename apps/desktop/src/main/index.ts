@@ -1,7 +1,11 @@
 import { join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { BrowserWindow, app, dialog, session, shell } from 'electron';
+import { extensionsDImage } from '@notes/core';
+import { BrowserWindow, app, dialog, net, session, shell } from 'electron';
 import { evenements } from '../shared/ipc-contract';
+import { declarerSchemaDesImages, servirLesImages } from './images/asset-protocol';
+import { telechargerImage } from './images/download';
+import { creerHandlersImages } from './ipc/images';
 import { cleMotDePasse, creerHandlersNas } from './ipc/nas';
 import { enregistrerCanaux } from './ipc/register';
 import { creerHandlersTheme } from './ipc/theme';
@@ -17,6 +21,7 @@ import { CompanionRemoteFs } from './smb/companion-remote-fs';
 import { identiteDuPoste } from './sync/device';
 import { IndexFile } from './sync/index-file';
 import { SyncScheduler } from './sync/scheduler';
+import { creerFileDAttente } from './vault/serial-queue';
 import { VaultService } from './vault/vault-service';
 
 const urlDeveloppement = app.isPackaged ? undefined : process.env['ELECTRON_RENDERER_URL'];
@@ -43,6 +48,20 @@ async function choisirDossierVault(dossierPropose: string): Promise<string | nul
     properties: ['openDirectory', 'createDirectory'],
   });
   return choix.canceled ? null : (choix.filePaths[0] ?? null);
+}
+
+/** Sélecteur de fichiers du système pour insérer des images. Liste vide si l'utilisateur annule. */
+async function choisirImages(): Promise<string[]> {
+  if (fenetre === null) {
+    return [];
+  }
+  const choix = await dialog.showOpenDialog(fenetre, {
+    title: 'Insérer une image',
+    buttonLabel: 'Insérer',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Images', extensions: extensionsDImage }],
+  });
+  return choix.canceled ? [] : choix.filePaths;
 }
 
 function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
@@ -86,6 +105,7 @@ function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
 }
 
 app.enableSandbox();
+declarerSchemaDesImages();
 
 // Une application installée ne doit pas pouvoir être pilotée de l'extérieur par le port de débogage de Chromium.
 if (app.isPackaged) {
@@ -110,14 +130,23 @@ if (!app.requestSingleInstanceLock()) {
 
     const donnees = app.getPath('userData');
     const reglages = new SettingsStore(join(donnees, 'settings.json'));
-    const vault = new VaultService(reglages, () => fenetre?.webContents.send(evenements.vaultModifie));
+    // Toute modification du dossier des notes est montrée au renderer et part au NAS peu après (README §5).
+    let surModificationLocale = (): void => undefined;
+    const vault = new VaultService(reglages, () => {
+      fenetre?.webContents.send(evenements.vaultModifie);
+      surModificationLocale();
+    });
     await vault.demarrer();
     app.on('will-quit', () => vault.arreter());
+    servirLesImages(() => vault.fsOuNull());
 
     const lancerCompagnon = lanceurDeBinaire(cheminCompagnon());
     const secrets = new SecretStore(join(donnees, 'secrets.enc'), chiffreSafeStorage);
+    // Enregistrements de pages et écritures de la sync passent par la même file : aucun ne se glisse entre la vérification et l'écriture de l'autre.
+    const fileDuVault = creerFileDAttente();
     const sync = new SyncScheduler({
       reglages,
+      enSerie: fileDuVault.enSerie,
       lireMotDePasse: () => secrets.lire(cleMotDePasse),
       localFs: () => vault.fsOuNull(),
       creerConnexion: (identifiants) => new CompanionRemoteFs(new CompanionProcess(lancerCompagnon), identifiants),
@@ -125,6 +154,19 @@ if (!app.requestSingleInstanceLock()) {
       appareil: identiteDuPoste(reglages),
       surEtat: (etat) => fenetre?.webContents.send(evenements.etatSyncModifie, etat),
     });
+    surModificationLocale = () => sync.signalerModificationLocale();
+    // Câble débranché ou wifi coupé : « NAS injoignable » tout de suite, cycle relancé au retour du réseau.
+    let enLigne = net.isOnline();
+    if (!enLigne) {
+      sync.signalerReseau(false);
+    }
+    const surveillanceReseau = setInterval(() => {
+      if (net.isOnline() !== enLigne) {
+        enLigne = !enLigne;
+        sync.signalerReseau(enLigne);
+      }
+    }, 1_000);
+    app.on('will-quit', () => clearInterval(surveillanceReseau));
     vault.surChangementDeDossier(() => void sync.reconfigurer());
     // Dernier cycle à la fermeture (README §5) : la fenêtre est déjà fermée, l'application attend la fin de la sync.
     let syncTerminee = false;
@@ -139,7 +181,7 @@ if (!app.requestSingleInstanceLock()) {
       });
     });
 
-    const handlersVault = creerHandlersVault({ vault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
+    const handlersVault = creerHandlersVault({ vault, file: fileDuVault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
     const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
     enregistrerCanaux({
       fenetre: handlersFenetre,
@@ -159,6 +201,13 @@ if (!app.requestSingleInstanceLock()) {
             shell.showItemInFolder(join(dossier, ...chemin.split('/')));
           }
         },
+      }),
+      images: creerHandlersImages({
+        vault,
+        enSerie: handlersVault.enSerie,
+        choisirFichiers: choisirImages,
+        // Une session à part, sans cookies ni cache partagés avec la fenêtre.
+        telecharger: (adresse) => telechargerImage(adresse, (url, options) => session.fromPartition('telechargements-images').fetch(url, options)),
       }),
       expediteurAutorise: (evenement) =>
         fenetre !== null &&

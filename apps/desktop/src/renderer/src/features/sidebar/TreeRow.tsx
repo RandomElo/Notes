@@ -29,10 +29,10 @@ export interface TreeRowProps {
   enregistrer: (element: HTMLDivElement | null) => void;
 }
 
-const stylesDeZone: Record<DropZone, string> = {
-  avant: 'shadow-[inset_0_2px_0_var(--color-accent)]',
-  apres: 'shadow-[inset_0_-2px_0_var(--color-accent)]',
-  dedans: 'bg-accent/20',
+// Dépôt avant ou après : un trait plat de 2 px, aux bouts droits, posé sur le bord de la ligne.
+const traitsDeZone: Partial<Record<DropZone, string>> = {
+  avant: '-top-px',
+  apres: '-bottom-px',
 };
 
 /** Une ligne de l'arborescence : chevron, icône, titre (ou champ de renommage) et actions au survol. */
@@ -66,10 +66,21 @@ export function TreeRow(props: TreeRowProps) {
       style={{ paddingLeft: 8 + profondeur * 16 }}
       // Les états se distinguent par le fond seul, jamais par un contour : survol (gris léger),
       // focus clavier (gris plus marqué), page ouverte (bleu), page ouverte au focus (bleu plus marqué).
-      className={`group flex h-7 cursor-pointer items-center gap-1 rounded-md pr-1 text-sm outline-0 select-none ${
-        selectionne ? 'bg-accent/25 focus-visible:bg-accent/40' : 'hover:bg-texte/10 focus-visible:bg-texte/20'
-      } ${zoneDeDepot === null ? '' : stylesDeZone[zoneDeDepot]}`}
+      className={`group relative flex h-7 cursor-pointer items-center gap-1 rounded-md pr-1 text-sm outline-0 select-none ${
+        zoneDeDepot === 'dedans'
+          ? 'bg-accent/20'
+          : selectionne
+            ? 'bg-accent/25 focus-visible:bg-accent/40'
+            : 'hover:bg-texte/10 focus-visible:bg-texte/20'
+      }`}
     >
+      {zoneDeDepot !== null && zoneDeDepot !== 'dedans' && (
+        <span
+          aria-hidden="true"
+          className={`bg-accent pointer-events-none absolute right-0 h-0.5 ${traitsDeZone[zoneDeDepot]}`}
+          style={{ left: 8 + profondeur * 16 }}
+        />
+      )}
       {aDesEnfants ? (
         <button
           type="button"

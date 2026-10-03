@@ -1,4 +1,11 @@
 export { extensionsDuSchema, niveauxDeTitre, schema } from './schema/extensions';
+export { Callout, iconeDuCallout, iconesParDefaut, typeDuCallout, typesDeCallout } from './schema/nodes/callout';
+export type { CalloutType } from './schema/nodes/callout';
+export { Image, alignementsDImage, estLargeurDImage, largeurMaxDImage, largeurMinDImage, taillesDImage } from './schema/nodes/image';
+export type { ImageAlign, ImageAttributes, ImageWidth } from './schema/nodes/image';
+export type { TableAlign } from './schema/nodes/table';
 export { lireMarkdown } from './markdown/parse';
 export { ecrireMarkdown } from './markdown/serialize';
 export type { FinDeLigne, PageSource, ParsedMarkdown, SourceBlock } from './markdown/types';
+export { assemblerTexte, assemblerVersions, comparerVersions } from './merge/conflict';
+export type { ConflictRow } from './merge/conflict';

@@ -1,12 +1,12 @@
 import { champsDuTheme, themeParDefaut } from '@notes/ui';
 import { describe, expect, it } from 'vitest';
-import { decouperTaille, policeDeValeur, prefixesMasques, sectionsDuFormulaire, surSixChiffres, valeurDePolice } from './theme-form-model';
+import { decouperTaille, policeDeValeur, sectionsDuFormulaire, surSixChiffres, valeurDePolice } from './theme-form-model';
 
 describe('formulaire du thème', () => {
   it('montre chaque réglage du thème une fois, sauf ceux qui n’ont pas encore d’effet', () => {
     const montres = sectionsDuFormulaire.flatMap((section) => section.champs.map((champ) => champ.chemin));
     expect(new Set(montres).size).toBe(montres.length);
-    const attendus = champsDuTheme.map((champ) => champ.chemin).filter((chemin) => !prefixesMasques.some((prefixe) => chemin.startsWith(prefixe)));
+    const attendus = champsDuTheme.map((champ) => champ.chemin);
     expect([...montres].sort()).toEqual([...attendus].sort());
   });
 

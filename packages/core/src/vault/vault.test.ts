@@ -4,7 +4,7 @@ import { analyserPage } from '../page/page-file';
 import { MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
 import { VaultError } from './context';
 import { importer } from './import';
-import { creerPage, deplacerPage, dupliquerPage, renommerPage } from './operations';
+import { creerPage, deplacerPage, dupliquerPage, renommerPage, supprimerPageVide } from './operations';
 import { indexerTitres } from './titles-index';
 import { lireArbre, trouverNoeud } from './tree';
 import type { TreeNode } from './tree';
@@ -173,6 +173,43 @@ describe('deplacerPage', () => {
     }
     await expect(deplacerPage(contexte, 'Absente', { parent: '' })).rejects.toMatchObject({ code: 'introuvable' });
     expect(fs.ecritures).toBe(ecritures);
+  });
+});
+
+describe('supprimerPageVide', () => {
+  it('retire le dossier et la ligne de l’ordre du parent', async () => {
+    const { fs, contexte, projets, site } = await vaultNeuf();
+    const vide = await creerPage(contexte, { parent: projets.chemin, titre: 'Sans titre', index: 1 });
+    const resultat = await supprimerPageVide(contexte, vide.chemin);
+    expect(resultat).toEqual({ chemin: 'Projets', id: vide.id });
+    expect(fs.contenu()['Projets/Sans titre/page.md']).toBeUndefined();
+    expect(fs.contenu()['Projets/.order']).not.toContain(vide.id);
+    expect(fs.contenu()['Projets/.order']).toContain(site.id);
+    expect(apercu(await lireArbre(fs))).toEqual([['Projets', ['Refonte du NAS', 'Site perso']], 'Idées']);
+  });
+
+  it('refuse une page qui a un contenu, une sous-page ou un autre fichier, sans rien écrire', async () => {
+    const fs = MemoryLocalFs.depuis({
+      'Texte/page.md': page('1', 'Sans titre', 'Une phrase.\n'),
+      'Parent/page.md': page('2', 'Sans titre'),
+      'Parent/Enfant/page.md': page('3', 'Enfant'),
+      'Image/page.md': page('4', 'Sans titre'),
+      'Image/assets/photo.png': 'binaire',
+      'Brut/page.md': 'sans front-matter',
+    });
+    const contexte = contexteDeTest(fs);
+    for (const chemin of ['Texte', 'Parent', 'Image']) {
+      await expect(supprimerPageVide(contexte, chemin)).rejects.toMatchObject({ code: 'page_non_vide' });
+    }
+    await expect(supprimerPageVide(contexte, 'Brut')).rejects.toMatchObject({ code: 'non_importee' });
+    await expect(supprimerPageVide(contexte, '')).rejects.toMatchObject({ code: 'introuvable' });
+    expect(fs.ecritures).toBe(0);
+  });
+
+  it('accepte un corps fait seulement de lignes vides', async () => {
+    const fs = MemoryLocalFs.depuis({ 'Vide/page.md': page('1', 'Sans titre', '\n\n') });
+    await supprimerPageVide(contexteDeTest(fs), 'Vide');
+    expect(Object.keys(fs.contenu())).toEqual([]);
   });
 });
 

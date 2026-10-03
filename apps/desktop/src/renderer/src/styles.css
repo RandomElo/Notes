@@ -104,3 +104,62 @@ body {
   color: var(--color-texte);
   font-family: var(--font-sans);
 }
+
+/*
+ * Bloc de code dans l'éditeur : une barre (langage, copier) au-dessus du
+ * code, sur le même fond. Le bloc entier porte le fond et l'arrondi, le
+ * <pre> seulement le texte.
+ */
+.notes-page .bloc-de-code {
+  border-radius: 0.5em;
+  background-color: var(--page-fond-code);
+}
+
+.notes-page .bloc-de-code > pre {
+  border-radius: 0 0 0.5em 0.5em;
+  background-color: transparent;
+  padding-top: 0.2em;
+}
+
+.notes-page .barre-du-code {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5em;
+  color: var(--color-discret);
+  font-family: var(--font-sans);
+  font-size: 0.75rem;
+  line-height: 1.4;
+  padding: 0.35em 0.5em 0;
+  user-select: none;
+}
+
+/* Blocs hauts (code, tableau, image, callout) : leur fond de sélection ne déborde pas. */
+.notes-page .bloc-de-code.bloc-selectionne,
+.notes-page .tableWrapper.bloc-selectionne,
+.notes-page figure.bloc-selectionne,
+.notes-page div[data-callout].bloc-selectionne {
+  --debord: 0px;
+}
+
+/* Pastilles de couleur du menu des callouts. */
+.callout-pastille-info {
+  background-color: var(--callout-info);
+}
+
+.callout-pastille-success {
+  background-color: var(--callout-succes);
+}
+
+.callout-pastille-warning {
+  background-color: var(--callout-alerte);
+}
+
+.callout-pastille-danger {
+  background-color: var(--callout-danger);
+}
+
+/* Image sélectionnée d'un clic : par le fond autour d'elle, jamais par un contour. */
+.notes-page figure[data-image].ProseMirror-selectednode {
+  background-color: var(--page-selection);
+}

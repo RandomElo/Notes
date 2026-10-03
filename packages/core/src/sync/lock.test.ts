@@ -91,11 +91,39 @@ describe('LockManager', () => {
     expect(await portable.prendre('Alpha')).toEqual({ ok: true });
   });
 
-  it('garde le verrou d’une page poussée tant que la dernière frappe a moins de 60 s', async () => {
+  it('garde le verrou d’une page poussée tant que la dernière frappe a moins de 10 s', async () => {
     const { poste } = monter();
     await poste.prendre('Alpha');
     expect((await poste.entretenir(async () => 'poussee')).relachees).toEqual([]);
     expect(poste.pagesTenues()).toEqual(['Alpha']);
+  });
+
+  it('relâche le verrou d’une page poussée 10 s après la dernière frappe', async () => {
+    const { horloge, poste } = monter();
+    await poste.prendre('Alpha');
+    horloge.avancer(9_000);
+    expect((await poste.entretenir(async () => 'poussee')).relachees).toEqual([]);
+    horloge.avancer(1_000);
+    expect((await poste.entretenir(async () => 'poussee')).relachees).toEqual(['Alpha']);
+  });
+
+  it('relâche le verrou d’une page quittée dès qu’elle est poussée, sans attendre', async () => {
+    const { poste, portable } = monter();
+    await poste.prendre('Alpha');
+    expect(poste.quitter('Alpha')).toBe(true);
+    expect(poste.quitter('Beta')).toBe(false);
+    // Pas encore sur le NAS : le verrou reste.
+    expect((await poste.entretenir(async () => 'en_attente')).relachees).toEqual([]);
+    expect((await poste.entretenir(async () => 'poussee')).relachees).toEqual(['Alpha']);
+    expect(await portable.prendre('Alpha')).toEqual({ ok: true });
+  });
+
+  it('garde le verrou d’une page quittée puis rouverte où l’on tape à nouveau', async () => {
+    const { poste } = monter();
+    await poste.prendre('Alpha');
+    poste.quitter('Alpha');
+    await poste.prendre('Alpha');
+    expect((await poste.entretenir(async () => 'poussee')).relachees).toEqual([]);
   });
 
   it('relâche aussitôt le verrou d’une page renommée, sans recréer son dossier', async () => {

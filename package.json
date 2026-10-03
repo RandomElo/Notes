@@ -1,6 +1,6 @@
 {
   "name": "notes",
-  "version": "0.5.8",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "description": "Éditeur de notes local-first avec synchronisation SMB",

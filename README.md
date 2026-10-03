@@ -9,10 +9,10 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 | | |
 |---|---|
 | Dernière mise à jour | 2026-10-03 |
-| Version | 0.5.8 |
-| Avancement | J0 à J4 terminés, J5 écrit et testé sans NAS, en recette |
-| Jalon en cours | J5 (sync SMB), en attente de la vérification d'Eloi. J6 ne commence pas avant. |
-| Points bloquants | Recette J5 à dérouler sur le NAS et les deux machines (`docs/recettes/J5.md`) |
+| Version | 0.7.0 |
+| Avancement | J0 à J6 terminés : recettes J5 et J6 validées par Eloi le 2026-10-03, retouches comprises |
+| Jalon en cours | J7 (navigation avancée), à lancer par `/jalon J7` |
+| Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
 
@@ -23,27 +23,28 @@ Ce qui fonctionne aujourd'hui :
 - la barre de titre de l'application, avec ses boutons de fenêtre, à la place du cadre du système ;
 - l'arborescence : créer, renommer, déplacer, réordonner et dupliquer des pages, à la souris et au clavier, avec import à la demande des notes venues d'un autre outil ;
 - la persistance : l'arbre, les pages dépliées et la page ouverte se retrouvent après redémarrage ;
-- l'éditeur de base : paragraphes, titres de niveau 1 à 5, listes à puces, ordonnées et de tâches, blocs de code, gras, italique, barré, souligné, code, surlignage, avec les raccourcis de saisie Markdown et les raccourcis clavier ;
+- l'éditeur de base : paragraphes, titres de niveau 1 à 5, listes à puces, ordonnées et de tâches, blocs de code, gras, italique, barré, souligné, code, avec les raccourcis de saisie Markdown et les raccourcis clavier ;
 - l'enregistrement automatique en Markdown, sans perte : une page ouverte sans être modifiée ne change pas d'un octet, et seuls les blocs modifiés sont réécrits ;
 - l'aperçu en lecture seule d'une note venue d'un autre outil, avant son import ;
-- la gestion des blocs au clavier : `Échap` sélectionne le bloc du curseur (puis toute la liste, puis rien), les flèches parcourent, `Shift+↑/↓` étend, `Ctrl+Shift+↑/↓` déplace, `Ctrl+D` duplique, `Suppr` supprime, `Tab` indente. Dans une liste, un élément emmène ses sous-éléments avec lui. Une poignée apparaît sur la sélection pour la glisser ou ouvrir son menu ;
+- la gestion des blocs au clavier : `Échap` sélectionne le bloc du curseur (puis toute la liste, puis rien), les flèches parcourent, `Shift+↑/↓` étend, `Ctrl+Shift+↑/↓` déplace, `Ctrl+D` duplique, `Suppr` supprime, `Tab` indente. Dans une liste, un élément emmène ses sous-éléments avec lui. Une poignée apparaît au survol d'un bloc ou sur la sélection pour la glisser ou ouvrir son menu ;
 - le menu `/` (texte, titres, listes, tâche, code, page enfant, date), la barre d'outils flottante et le titre de page modifiable sur place ;
 - la création d'une page depuis le texte (`/page`) ou l'arborescence : on tape son nom, puis le curseur est dans son contenu.
 - le thème : il se règle dans les réglages, avec un aperçu en direct, et s'enregistre dans `.notes/theme.toml`, qu'on peut aussi modifier à la main. Couleurs, polices, titres, puces et largeurs. Le fichier est relu dès qu'il est enregistré, une valeur fausse est ignorée et signalée sans rien bloquer, et une page peut avoir ses propres couleurs.
-- la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 30 secondes et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail.
+- les blocs riches : blocs de code colorés (langage choisi dans une liste avec recherche ou deviné au collage, bouton copier, numéros de ligne et retour à la ligne réglables dans le thème), tableaux (grille de taille au `/tableau`, poignées pour ajouter ou retirer colonnes et lignes, navigation au clavier, alignement des colonnes), images (insertion, collage ou dépôt, copie dans `assets/`, largeur, alignement, texte alternatif, légende, visionneuse, liste des images inutilisées), callouts (nature, icône, texte mis en forme) ;
+- la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 10 secondes, une seconde après chaque modification et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail ; NAS injoignable, elle dit depuis quand, et une coupure du réseau se voit dans la seconde.
+- l'écran de résolution des conflits : la page et la version mise de côté face à face, bloc par bloc, avec garder A, B ou les deux, poignées pour placer une version ailleurs, aperçu et validation.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
-Ce qui n'existe pas encore : les tableaux, les images et les callouts (affichés tels quels en attendant J6), la suppression de page, l'application Android.
+Ce qui n'existe pas encore : les liens et mentions de page (J8), la suppression de page, l'application Android.
 
 Reste à faire :
 
-- dérouler la recette de J5 (`docs/recettes/J5.md`) sur le NAS, le PC fixe et le portable : c'est elle qui ferme le jalon ;
-- commiter le travail de J5 (version 0.5.8), qui ne l'est pas encore ;
-- créer le fichier `.env` à partir de `.env.example` pour pouvoir lancer `npm run test:nas` ;
-- dérouler les parties 3 à 5 de `docs/recettes/J0.md` (refus de connexion, relance, test d'intégration), non rapportées à ce jour.
+- commiter le travail de J6 et des retouches (versions 0.5.9 à 0.7.0), qui ne l'est pas encore ;
+- l'intervalle de sync reste à 10 s : les durées de cycle de la partie 8 de la recette J5 n'ont pas été relevées. Le passage à 5 s se décidera quand elles le seront (elles s'écrivent dans la console du main) ;
+- lancer J7.
 
-Pour reprendre : `npm install`, puis `npm run dev`. Le jalon suivant se lance avec `/jalon J5`.
+Pour reprendre : `npm install`, puis `npm run dev`. J7 se lancera avec `/jalon J7` une fois les recettes de J5 et J6 rapportées OK.
 
 ## Sommaire
 
@@ -111,7 +112,7 @@ Windows, iOS, bases de données relationnelles, vidéos embarquées, publication
 
 - Édition : paragraphe, titres H1 à H5, listes (puces, ordonnées, tâches), code, image, tableau, lien de page, lien externe, callout ; raccourcis Markdown ; menu `/` ; barre d'outils flottante ; gestion des blocs au clavier.
 - Organisation : arborescence réordonnable, icônes (emoji, Lucide, image), onglets multiples, recherche `Ctrl+K` et raccourci global, sommaire latéral et modal.
-- Persistance : Markdown avec front-matter YAML, assets par page, sync par cycle de 30 s avec verrou distant, corbeille NAS (rétention 30 jours).
+- Persistance : Markdown avec front-matter YAML, assets par page, sync par cycle de 10 s avec verrou distant, corbeille NAS (rétention 30 jours).
 - Export : PDF (sauts de page propres), Markdown, HTML autonome, ZIP.
 - Assistance : correction FR (LanguageTool), relecture et mise au propre (LiteLLM, avec estimation de coût), dictée vocale (Whisper).
 
@@ -241,7 +242,7 @@ Markdown standard : titres, gras, italique, barré, code, listes, tâches `- [ ]
 - Blocs avancés sans équivalent Markdown : bloc code fencé `notes-callout` contenant du YAML (type, icône, texte). Reste lisible dans n'importe quel éditeur.
 - Liens internes : syntaxe Markdown standard avec cible `notes://uuid`, résolue en titre courant à l'affichage, réécrite en chemin relatif à l'export. Lien cassé affiché barré.
 - Liens externes : label nettoyé si identique à l'URL (`https://www.google.com/` devient `google.com`).
-- Couleurs de texte : non supportées en v1 (pas de syntaxe Markdown propre ; couvert par thème, callouts et surlignage).
+- Couleurs de texte : non supportées en v1 (pas de syntaxe Markdown propre ; couvert par thème et callouts).
 - Ordre manuel : fichier `.order` (liste d'UUID) dans chaque dossier qui a des enfants.
 
 ### Import de `.md` externes
@@ -284,7 +285,7 @@ Le vault local est la source de travail. Client SMB intégré, pas de montage sy
 |---|---|---|
 | Copie locale | Vault complet | Cache des pages (texte complet, assets à la demande) |
 | Sens | Bidirectionnel | Descendant, plus écriture directe à chaque modification |
-| Déclenchement | Toutes les 30 s, au démarrage, à la fermeture | À l'ouverture, au retour au premier plan, au tirer pour rafraîchir, toutes les 30 s au premier plan |
+| Déclenchement | Toutes les 10 s, une seconde après chaque modification du dossier des notes, au démarrage, à la fermeture | À l'ouverture, au retour au premier plan, au tirer pour rafraîchir, toutes les 30 s au premier plan |
 | Édition hors ligne | Oui, poussée au cycle suivant | Non |
 
 ### Cycle
@@ -315,7 +316,7 @@ Fichier `.lock` (holder, pid, heartbeat) dans le dossier de la page sur le NAS. 
 
 Le `.lock` est un petit JSON : identifiant de l'appareil (tiré au hasard à l'installation et gardé dans les réglages locaux), nom de la machine, pid, heartbeat en date ISO. Un verrou illisible compte comme périmé. Le heartbeat est rafraîchi à chaque cycle.
 
-Le desktop ne garde le verrou que pendant l'édition active : posé à la première frappe, relâché après 60 s sans frappe une fois la page poussée sur le NAS. Sans cette règle, une liste de courses laissée ouverte dans un onglet à la maison resterait verrouillée et le téléphone ne pourrait rien cocher. Une page ouverte mais inactive est rechargée si le cycle détecte une version distante plus récente.
+Le desktop ne garde le verrou que pendant l'édition active : posé à la première frappe, relâché une fois la page poussée sur le NAS, dès qu'on quitte la page ou après 10 s sans frappe. Quitter la page lance un cycle tout de suite. L'autre appareil le voit à son cycle suivant, 10 s au plus. Sans cette règle, une liste de courses laissée ouverte dans un onglet à la maison resterait verrouillée et le téléphone ne pourrait rien cocher. Une page ouverte mais inactive est rechargée si le cycle détecte une version distante plus récente.
 
 ### Écriture depuis Android
 
@@ -332,11 +333,24 @@ Pour une retouche de texte, le verrou est tenu avec heartbeat le temps de la sai
 
 En cas de divergence détectée, la version distante est sauvegardée en `page.conflit-[date].md`. Jamais d'écrasement silencieux.
 
-La sauvegarde est posée à côté du fichier sur le poste, puis la version du poste part sur le NAS, sauvegarde comprise : au cycle suivant, l'autre appareil a les deux versions. La même règle vaut pour tout fichier synchronisé (`.order.conflit-[date]`, `theme.conflit-[date].toml`). Les sauvegardes présentes dans le dossier des notes sont listées dans le détail de la sync, avec un bouton qui les montre dans le gestionnaire de fichiers. On les supprime à la main une fois les deux versions comparées.
+Sur le desktop, l'enregistrement d'une page et les écritures de la sync dans le dossier des notes passent par une même file d'attente : la sync vérifie que le fichier n'a pas bougé depuis son relevé et l'écrit sans qu'un enregistrement puisse tomber entre les deux. Une page qui passe en lecture seule (verrou forcé par l'autre appareil) enregistre d'abord sa dernière frappe.
+
+La sauvegarde est posée à côté du fichier sur le poste, puis la version du poste part sur le NAS, sauvegarde comprise : au cycle suivant, l'autre appareil a les deux versions. La même règle vaut pour tout fichier synchronisé (`.order.conflit-[date]`, `theme.conflit-[date].toml`). Les sauvegardes présentes dans le dossier des notes sont listées dans le détail de la sync, avec un bouton qui les montre dans le gestionnaire de fichiers.
+
+### Résolution d'un conflit
+
+Une page qui a une version mise de côté l'annonce par un bandeau en tête de page. Son bouton « Résoudre », comme celui du détail de la sync, ouvre l'écran de résolution à la place de la page. La page (A) et la version mise de côté (B) y sont comparées bloc par bloc, dans la typographie de la page :
+
+- bloc identique : affiché tel quel ;
+- bloc présent d'un seul côté : « Garder » ou « Retirer » ;
+- bloc entièrement différent : « Garder A », « Garder B » ou « Les deux », B placé après A ;
+- paragraphe ou titre dont seul un passage diffère : les deux passages dans le texte, B après A, chacun avec une poignée pour le placer entre deux autres mots et un × pour le retirer. Les passages vont d'une ponctuation à l'autre (« 18 km, » face à « 20 km, »), au mot près s'il n'y en a pas.
+
+Chaque version de bloc a aussi une poignée pour la poser ailleurs dans la page (glisser, ou `Ctrl+Shift+↑/↓`). La version restée en place est alors gardée d'office, sauf si elle avait été écartée. « Tout A » et « Tout B » règlent tout d'un côté, « Aperçu » montre la page qui sortira. « Valider » reste grisé tant qu'une différence n'est pas réglée. Il prend le verrou de la page (refusé si un autre appareil l'édite), enregistre la page, puis supprime la version mise de côté ; si la page a changé entre-temps, sa version du disque est gardée à son tour. « Retour » revient à la page sans rien changer. Pris en entier d'un côté, le résultat est ce fichier à l'octet près ; sinon chaque bloc garde son Markdown d'origine, séparé du suivant par une ligne vide.
 
 ### Hors ligne
 
-Le desktop continue de fonctionner sur le vault local. Indicateur d'état dans la barre de statut : synchronisé, en cours, en attente, injoignable, conflit, plus « désactivée » tant que le NAS ou le mot de passe ne sont pas réglés. Un clic ouvre le détail : dernière synchronisation, sauvegardes de conflit, fichiers en souffrance, bouton « Synchroniser ». Sur Android, la consultation continue sur le cache et les contrôles de modification sont désactivés.
+Le desktop continue de fonctionner sur le vault local. Indicateur d'état dans la barre de statut : synchronisé, en cours, en attente, injoignable, conflit, plus « désactivée » tant que le NAS ou le mot de passe ne sont pas réglés. Injoignable, la barre dit depuis quand : « NAS injoignable depuis 19:02 », heure du premier échec. Le desktop surveille la connexion du poste (une fois par seconde) : câble débranché ou wifi coupé, le cycle en cours est abandonné et le NAS montré injoignable tout de suite ; au retour du réseau, un cycle part. Un clic ouvre le détail : dernière synchronisation, sauvegardes de conflit, fichiers en souffrance, bouton « Synchroniser ». Sur Android, la consultation continue sur le cache et les contrôles de modification sont désactivés.
 
 ### Point de vigilance
 
@@ -360,7 +374,7 @@ Section desktop. Sur Android, le même schéma TipTap sert au rendu en lecture s
 
 ### Raccourcis de saisie Markdown
 
-`#` à `#####` (titres), `-` ou `*` (puces), `1.` (ordonnée), `[]` ou `[ ]` (case à cocher), ` ``` ` (code), `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``, `==surlignage==`.
+`#` à `#####` (titres), `-` ou `*` (puces), `1.` (ordonnée), `[]` ou `[ ]` (case à cocher), ` ``` ` (code), `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``. `==texte==` reste du texte : le surlignage n'est plus proposé.
 
 Ni citation ni séparateur : Eloi n'en veut pas dans ses notes. `>` et `---` tapés restent du texte, et rien dans l'application n'en crée. Un fichier qui en contient déjà (note venue d'un autre outil) les affiche et les garde tels quels.
 
@@ -380,7 +394,7 @@ Le titre affiché en haut de la page est celui du front-matter. Il se modifie su
 
 ### Syntaxe non gérée
 
-Ce que l'éditeur ne sait pas encore modifier s'affiche tel quel, en texte brut, dans un bloc à part qu'on ne peut pas modifier : tableaux et images jusqu'à J6, titres de niveau 6, définitions de liens par référence. Ce texte est réécrit à l'identique dans le fichier. Le HTML n'est jamais interprété : il reste du texte. Seule exception, `<u>texte</u>`, lu comme du souligné. Un callout est pour l'instant un bloc de code `notes-callout`.
+Ce que l'éditeur ne sait pas modifier s'affiche tel quel, en texte brut, dans un bloc à part qu'on ne peut pas modifier : titres de niveau 6, définitions de liens par référence, image au milieu d'une phrase, image dans une cellule de tableau (le tableau entier reste alors brut). Ce texte est réécrit à l'identique dans le fichier. Le HTML n'est jamais interprété : il reste du texte. Seule exception, `<u>texte</u>`, lu comme du souligné. Un bloc `notes-callout` mal formé (YAML invalide, clé inconnue, nature inconnue, liste dans le texte) reste un bloc de code, qu'on corrige à la main.
 
 Une liste à puces dont certains items seulement ont une case à cocher reste une liste à puces, la case y est du texte.
 
@@ -392,7 +406,8 @@ Titres, paragraphe, listes, tâche, code, tableau, image, callout, page enfant, 
 - Flèches pour choisir, `Entrée` ou `Tab` pour valider, `Échap` pour fermer sans toucher au texte.
 - Dans un bloc vide, la commande transforme le bloc. Dans un bloc qui contient déjà du texte, elle crée le nouveau bloc en dessous.
 - « Page enfant » crée une sous-page de la page ouverte et l'ouvre : on tape son nom dans l'arborescence, et une fois le nom validé le curseur est dans son contenu. C'est vrai de toute page qu'on vient de créer (`Ctrl+N`, bouton, menu). « Date » écrit la date du jour en toutes lettres (« 2 octobre 2026 »).
-- Tableau, image, callout et lien n'y figurent pas tant que leur jalon n'est pas fait (J6, J8).
+- « Tableau » ouvre une grille : on survole la taille voulue (en-tête compris), on clique ou on valide par `Entrée`. « Image » ouvre le sélecteur de fichiers. « Callout » transforme le paragraphe vide en callout « Info », ou en ajoute un dessous.
+- Le lien n'y figure pas tant que son jalon n'est pas fait (J8).
 
 ### Gestion des blocs au clavier
 
@@ -407,25 +422,55 @@ Comportement Notion, absent d'AppFlowy : `Échap` sélectionne le bloc, puis le 
 - `Ctrl+Shift+↑/↓` et `Ctrl+D` marchent aussi sans sélection, sur le bloc du curseur, qui reste dans son texte.
 - Déplacer : le bloc passe de l'autre côté de son voisin, une liste entière comptant pour un voisin. Le premier ou le dernier item d'une liste en sort pour franchir le bloc d'à côté, et rejoint une liste de même nature s'il en trouve une. Un sous-item au bord de sa sous-liste garde son niveau et change de parent : en montant il devient le dernier sous-item de l'item du dessus, en descendant le premier sous-item de l'item du dessous. Si son parent n'a pas de voisin de ce côté, il sort au niveau de son parent.
 - `Tab` et `Shift+Tab` n'agissent que sur les items de liste. Ailleurs ils ne font rien, Markdown n'ayant pas de retrait pour un paragraphe, mais ne font pas sortir de l'éditeur.
-- La poignée n'apparaît pas au survol. Elle existe tant que des blocs sont sélectionnés, à gauche du premier, et reste là où que soit la souris. On la tire pour déplacer la sélection, on clique dessus pour ouvrir son menu : dupliquer, monter, descendre, supprimer.
+- La poignée apparaît à gauche du bloc que la souris survole (elle reste quand la souris va vers elle) et, sans survol, à gauche du premier bloc sélectionné. On la tire pour déplacer le bloc, ou toute la sélection s'il en fait partie ; un clic sélectionne le bloc et ouvre son menu : dupliquer, monter, descendre, supprimer.
+- Un clic dans le vide sous le dernier bloc met le curseur dans un paragraphe vide en fin de page, créé si le dernier bloc n'en est pas un. Tant qu'il reste vide, le fichier ne change pas.
 
 ### Barre d'outils flottante
 
-Apparaît au clic (pas seulement à la sélection de texte), disparaît à la frappe, au clic ailleurs ou sur `Échap`. Contenu adapté au type de bloc (texte, titre, cellule, image, code, callout).
+Apparaît quand du texte est sélectionné, à la souris ou au clavier ; un simple clic dans le texte ne la montre pas. Dans une cellule de tableau ou un callout, elle vient aussi au clic, pour leurs menus. Elle disparaît à la frappe, au clic ailleurs ou sur `Échap`. Contenu adapté au type de bloc (texte, titre, cellule, image, code, callout).
 
-Elle se place au-dessus de la ligne du curseur et revient quand du texte est sélectionné au clavier. Elle porte la nature du bloc (texte, titres, listes, code), qu'on change dans une liste déroulante, puis gras, italique, souligné, barré, code et surlignage. Dans un bloc de code, seule la nature du bloc est proposée. Les contenus propres aux cellules, images et callouts viendront avec J6.
+Elle se place au-dessus de la ligne du curseur. Elle porte la nature du bloc (texte, titres, listes, code), qu'on change dans une liste déroulante, puis gras, italique, souligné, barré et code. Dans un bloc de code, seule la nature du bloc est proposée. Dans une cellule, la nature du bloc laisse la place à l'étiquette « Tableau », à ses menus d'ajout et de suppression et à l'alignement de la colonne. Dans un callout, elle laisse la place à sa nature (Info, Succès, Attention, Danger, ou retirer le callout) et à son icône. Une image sélectionnée a sa propre barre (voir Images).
 
 ### Tableaux
 
-Mise en page uniquement (pas de types, filtres ni tri). Création de lignes et colonnes par cliquer-glisser avec aperçu en temps réel. Navigation `Tab`, `Ctrl+↑/↓`, `Ctrl+←/→` (mot en appui bref, cellule en appui long > 350 ms).
+Mise en page uniquement (pas de types, filtres ni tri). Tableaux GFM : la première ligne est toujours l'en-tête, une cellule tient sur une ligne (pas de saut de ligne, `Maj+Entrée` ne fait rien), sans cellules fusionnées ni largeur de colonne, que Markdown ne sait pas écrire.
+
+- Création par `/tableau` et sa grille de taille. Ensuite, une poignée « + » au bord droit et une au bord bas, chacune visible seulement quand la souris approche de son bord : un clic ajoute une colonne ou une ligne, un glissement en ajoute plusieurs pendant le geste, et en retire en revenant. Seule une colonne ou une ligne vide est retirée, et il reste toujours l'en-tête et une colonne : tirer une poignée ne fait jamais perdre de texte.
+- Navigation : `Tab` et `Maj+Tab` passent à la cellule suivante ou précédente (`Tab` dans la dernière cellule ajoute une ligne), `Ctrl+↑/↓` à la cellule du dessus ou du dessous, `Ctrl+←/→` saute un mot en appui bref et passe à la cellule voisine en appui long (plus de 350 ms, puis une cellule de plus à chaque délai). `Entrée` descend d'une cellule, et sous la dernière ligne en ajoute une. Depuis la dernière ligne, `↓` sort du tableau.
+- Au survol d'une cellule, une poignée à gauche de sa ligne et une au-dessus de sa colonne, comme dans Notion. Un clic sélectionne toute la ligne ou la colonne et ouvre son menu : mettre en en-tête (une ligne qui n'est pas la première), insérer au-dessus, en dessous, à gauche, à droite, supprimer. Un glissement la déplace, un trait bleu montre où elle tombera. Une ligne glissée en premier devient l'en-tête : GFM n'a d'en-tête que la première ligne, pas de colonne d'en-tête.
+- Dans la barre d'outils, une cellule montre l'étiquette « Tableau », un « + » qui ouvre les ajouts (ligne au-dessus, en dessous, colonne à gauche, à droite), une corbeille qui ouvre les suppressions (ligne, colonne, tableau), puis l'alignement.
+- L'alignement est celui de la colonne (`:--`, `:-:`, `--:` dans le fichier), réglé depuis la barre d'outils. Il suit la colonne quand elle est déplacée.
+- Écrit en colonnes alignées par des espaces, pour rester lisible dans un éditeur de texte. Un tableau qu'on n'a pas modifié garde son texte d'origine.
 
 ### Blocs de code
 
-Coloration `lowlight` (highlight.js), large liste de langages, sélecteur avec recherche, détection auto au collage, bouton copier, numérotation optionnelle, retour à la ligne, `Tab` indente.
+Coloration `lowlight` (highlight.js), limitée aux langages choisis par Eloi, un nom par entrée (pas de « / ») : Arduino, Assembleur ARM, Assembleur x86, Bash, C, C#, C++, CSS, Diff, Dockerfile, Excel, Go, HTML, INI, Java, JavaScript, JSON, JSX, Kotlin, Makefile, Markdown, Nginx, PHP, PowerShell, Python, Rust, Shell, SQL, TOML, TSX, TypeScript, XML, YAML. Deux noms d'une même grammaire (HTML et XML, JavaScript et JSX, TypeScript et TSX, TOML et INI, Bash et Shell) sont deux entrées qui colorent pareil. Un autre langage déjà écrit dans un fichier reste tel quel, sans couleur. Couleurs du thème « Dark+ » de VS Code ; les mots de contrôle (`if`, `return`, `import`…) ont leur propre couleur. Une barre au-dessus du code donne le langage, qu'on change dans une liste avec recherche (nom, identifiant ou alias comme `ts`, sans accents ni casse ; « Texte brut » retire le langage), et un bouton « Copier ». Du code collé dans un bloc vide sans langage lui donne son langage s'il se reconnaît nettement. `Tab` et `Maj+Tab` indentent de deux espaces. Les numéros de ligne et le retour à la ligne se règlent dans le thème pour tous les blocs (`[code] line_numbers`, `wrap`), rien n'est ajouté au fichier de la page. Avec le retour à la ligne, la suite d'une ligne longue reste alignée sur son texte. Le numéro d'une dernière ligne vide n'est pas affiché.
 
 ### Images
 
-Insertion par `/image`, glisser-déposer ou collage, copie dans `assets/`, redimensionnement (33, 66, 100 %), alignement, alt text, légende, visionneuse plein écran. Pas de vidéo. Détection des assets orphelins.
+Insertion par `/image` (sélecteur de fichiers, plusieurs à la fois), glisser-déposer ou collage. L'image est copiée dans le dossier `assets/` de la page, jamais en remplaçant un fichier : le nom d'origine est gardé sans espaces ni caractères gênants (`Capture d'écran (2).png` devient `Capture-d-écran-2.png`), un nom pris reçoit un numéro, une image collée prend la date (`image-2026-10-03-143005.png`). Sa nature est vérifiée par ses premiers octets (PNG, JPEG, GIF, WebP, AVIF, SVG). Toute image reçue (collée, déposée, choisie, téléchargée) est enregistrée en WebP compressé (qualité 82 %), réduite à 1920 px de large au plus, avec l'extension `.webp` ; un GIF (souvent animé) et un SVG (vectoriel) restent tels quels. Une image reçue peut faire jusqu'à 200 Mo, la version enregistrée 50 Mo. Dans les réglages, « Images en WebP » convertit les images déjà dans le dossier des notes : chaque page renvoie à la nouvelle version, l'ancien fichier reste et passe dans les images inutilisées. Une image va au premier niveau de la page, pas dans une cellule, un callout ou un item. Pas de vidéo.
+
+- Dans le fichier : `![texte alternatif](assets/x.png#largeur=66&align=centre "Légende")`. La largeur (un pourcentage entier de 10 à 100) et l'alignement (gauche, centre, droite) vont dans le fragment de l'adresse, que les autres outils ignorent. Pleine largeur et centrage sont les valeurs par défaut, qui ne s'écrivent pas.
+- Au survol, une barre sur chaque bord de l'image, comme dans Notion (curseur de redimensionnement) : tirée, elle règle la largeur de 10 à 100 %, l'image suit le geste avec son pourcentage affiché, et le fichier ne change qu'au lâcher. Une image centrée grandit des deux côtés.
+- Un clic sélectionne l'image et montre sa barre : taille (Petit 33 %, Moyen 66 %, Grand pour toute la page), alignement, texte alternatif et légende (dans un petit formulaire), agrandir. Un clic dans le vide du bloc, à côté de l'image ou sous sa légende, la quitte et ferme sa barre. Un double-clic ouvre la visionneuse plein écran, légende en bas de l'écran, fermée par `Échap`, le bouton ou un clic à côté.
+- Seules les images du dossier des notes s'affichent, servies par le main (protocole `notes-asset:`), qui vérifie le chemin et la nature du fichier. Une image d'Internet n'est jamais chargée : un cadre le dit à sa place.
+- Coller le lien d'une image d'Internet (`https://…/x.png`) demande s'il faut la télécharger dans la page. « Télécharger » : le main la récupère (http et https seulement, sans cookies, 20 s et 200 Mo au plus, nature vérifiée par les premiers octets), puis elle est convertie en WebP et copiée dans `assets/` sous le nom de l'adresse. Seul un lien qui finit par une extension d'image déclenche la question. « Garder le lien » ou `Échap` : le lien est collé comme du texte. Sans réseau, ou si le lien ne mène pas à une image, un message le dit et le lien reste en texte.
+- Images inutilisées : les réglages listent les fichiers des dossiers `assets/` dont la page ne parle plus, avec « Montrer » pour les voir dans le gestionnaire de fichiers. Rien n'est supprimé par l'application.
+- Limite connue : une image copiée d'une page et collée dans une autre garde son adresse relative et ne s'affiche plus. À traiter avec les liens (J8).
+
+### Callouts
+
+Encadré coloré avec une icône, qui contient un ou plusieurs paragraphes mis en forme (gras, italique, code, liens), sans listes ni titres. Quatre natures, chacune avec sa couleur du thème (`[callout]`) et son icône par défaut : Info 💡, Succès ✅, Attention ⚠️, Danger 🛑. L'icône se change parmi une quinzaine d'emojis ; une icône choisie reste quand la nature change, celle de la nature suit. `Entrée` sur le dernier paragraphe vide sort du callout, `Retour arrière` au début de son premier paragraphe le sort du callout.
+
+Dans le fichier, un bloc fencé `notes-callout` en YAML, clés facultatives, l'icône seulement si elle n'est pas celle de la nature :
+
+```notes-callout
+type: warning
+text: |-
+  Couper le **wifi** avant.
+
+  Deuxième paragraphe.
+```
 
 ### Liens et mentions
 
@@ -443,7 +488,8 @@ Section desktop. L'interface Android est décrite en §15.
 
 - Barre de titre : la fenêtre n'a pas le cadre du système. L'application dessine sa propre barre, comme Firefox : nom et version à gauche, boutons réduire, agrandir et fermer à droite. Toute la barre sert à déplacer la fenêtre.
 - Disposition : onglets en haut, barre latérale (arborescence) à gauche, éditeur au centre, sommaire à droite, barre de statut en bas (sync, corrections, coût IA du jour).
-- Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, exporter, supprimer), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
+- Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, exporter, supprimer), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Pendant un glisser-déposer, un trait plat de 2 px à la couleur d'accent montre où la page tombera, un fond bleu qu'elle deviendra sous-page. `Ctrl+N` crée une page sœur de la page ouverte, juste après elle (à la racine si aucune n'est ouverte), `Ctrl+Shift+N` une page à la racine. `Échap` dans le nom d'une page encore « Sans titre » la supprime si elle n'a ni contenu, ni sous-page, ni fichier, et la page ouverte avant revient ; sinon il annule seulement le renommage. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
+- Réglages : `Échap` les ferme et rend la page ; depuis l'écran du thème, il revient d'abord aux réglages.
 - Onglets : multiples dans une seule fenêtre, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+1` à `9`, restaurés au démarrage, point si non synchronisé.
 - Recherche `Ctrl+K` : sur les titres de page uniquement (pas de full-text en v1), floue, insensible aux accents, pages récentes par défaut, proposition de création si aucun résultat.
 - Raccourci global : `Ctrl+Alt+Espace` par défaut, configurable, ramène la fenêtre au premier plan et ouvre la recherche depuis n'importe où dans le système. Les postes visés sont en session X11 (Cinnamon), où `globalShortcut` d'Electron fonctionne ; Wayland n'est pas pris en charge.
@@ -457,13 +503,12 @@ Thème défini dans `.notes/theme.toml`, converti en variables CSS, rechargé à
 
 Le point clé est la hiérarchie H1 à H5, nettement différenciée (taille, graisse, italique, trait), le titre de la page tenant lieu de niveau 1 (détail en §6). C'est la correction principale par rapport à AppFlowy.
 
-- Thème par défaut : l'apparence arrêtée à la fin de J3 (titres choisis sur comparatif, puces et numérotation par niveau, fond de code, surlignage). Sans fichier de thème, c'est lui qui s'applique. J4 n'a pas changé l'apparence, il l'a rendue réglable.
+- Thème par défaut : l'apparence arrêtée à la fin de J3 (titres choisis sur comparatif, puces et numérotation par niveau, fond de code). Sans fichier de thème, c'est lui qui s'applique. J4 n'a pas changé l'apparence, il l'a rendue réglable.
 - Réglage dans l'application : l'éditeur de thème a son propre écran, pour ne pas se mélanger aux autres réglages. La page des réglages dit seulement où en est le thème (par défaut, personnalisé, réglages ignorés) et porte le bouton « Modifier le thème » qui y mène, un bouton de retour en ramène. Cet écran a un formulaire du thème (couleurs, texte, chaque niveau de titre, puces, code, interface) avec un aperçu d'une page d'exemple à côté. Chaque réglage s'applique tout de suite à l'écran, puis est écrit dans le fichier après un court délai, ou tout de suite si on quitte les réglages ou ferme la fenêtre. Une saisie refusée est signalée sous son champ, n'est pas appliquée et n'est pas écrite. Chaque réglage a son retour au défaut, et tout le thème aussi, après confirmation.
 - Le fichier reste la référence, et l'application ne l'écrit que sur un geste : un réglage dans le formulaire, ou le bouton « Créer le fichier de thème ». Il n'est jamais créé tout seul. L'application l'écrit en entier, toutes les valeurs, commentées par section : un commentaire ou un réglage inconnu ajouté à la main disparaît donc au prochain réglage fait dans le formulaire. Le bouton « Ouvrir le fichier de thème » l'ouvre dans l'éditeur de texte du système.
 - Ordre du formulaire, celui où on s'en sert : les cinq niveaux de titre d'abord (couleur, taille, graisse, espace au-dessus, italique, trait), puis le texte (interligne, taille, polices), puis la palette. Puces, code et interface sont repliés sous « Autres réglages ».
 - Une couleur qui peut renvoyer à la palette (celle d'un titre, par exemple) se règle dans une seule liste où chaque couleur a sa pastille : un nom de la palette, qui suit la palette, ou « Couleur choisie… », qui ouvre le sélecteur de couleur du système et donne une couleur propre à ce réglage. Cette liste est dessinée par l'application (une liste déroulante du système n'affiche que du texte) et se manie au clavier comme une liste ordinaire : flèches, `Entrée`, `Échap`. Un « i » entouré, à côté du libellé ou du titre d'une section, explique au survol (ou au focus clavier) comment marchent les couleurs, la palette et l'interligne.
 - Les polices se choisissent dans une liste : la police du système d'abord, puis les polices courantes sous Linux qui sont installées sur le poste (détectées en mesurant du texte, sans rien demander au système). Une police choisie s'écrit avec son repli (`'Noto Sans', sans-serif`), pour le téléphone qui ne l'aurait pas. Une police écrite à la main dans le fichier reste affichée telle quelle.
-- Le formulaire ne montre pas les réglages encore sans effet (coloration du code, callouts, tableaux, voir plus bas) : ils sont dans le fichier.
 - Rechargement à chaud : le fichier est relu à chaque modification du dossier des notes, et ses valeurs deviennent des variables CSS posées sur la racine. Une ligne supprimée reprend sa valeur par défaut, un fichier supprimé rend le thème par défaut.
 - Citations et séparateurs gardent un affichage fixe, hors du thème : l'application n'en crée plus (§6).
 - Surcharges par page : `theme_overrides` dans le front-matter peut redéfinir des couleurs de la palette (`accent: "#ff8800"`), pas la typo, les tailles ni les espacements, pour garder une cohérence globale. Elles s'appliquent à la page ouverte seulement, pas à l'arborescence, et suivent le fichier à chaud. Ce qui n'est pas une couleur de la palette est ignoré.
@@ -478,12 +523,12 @@ Sections du fichier :
 | `[typography]` | `font`, `mono`, `size`, `line_height` |
 | `[heading.h1]` à `[heading.h5]` | `size`, `weight`, `italic`, `underline`, `color`, `margin_top`. `h1` est le `#` du texte, le titre de la page n'en fait pas partie |
 | `[list]` | `bullet_1`, `bullet_2`, `bullet_3` : couleur des puces par niveau |
-| `[code]` et `[code.syntax]` | `background`, `font_size`, puis `comment`, `keyword`, `string`, `number`, `function`, `type`, `variable` |
+| `[code]` et `[code.syntax]` | `background`, `font_size`, `line_numbers`, `wrap`, puis `text`, `comment`, `keyword`, `control`, `string`, `regex`, `number`, `function`, `type`, `variable`, `tag`, `attribute` |
 | `[callout]` | `info`, `success`, `warning`, `danger` |
 | `[table]` | `border`, `header_background` |
 | `[ui]` | `content_width`, `sidebar_width`, `radius`, `transition` |
 
-La coloration du code, les callouts et les tableaux arrivent en J6 : leurs réglages sont déjà lus et leurs variables déjà posées, mais rien ne s'en sert encore.
+Depuis J6, la coloration du code, les callouts et les tableaux se servent de leurs réglages, et le formulaire les montre sous « Autres réglages ». `[code]` a deux réglages de plus : `line_numbers` (faux par défaut) et `wrap` (vrai par défaut depuis 0.5.14).
 
 Exemple :
 
@@ -523,6 +568,8 @@ Desktop uniquement.
 ## 10. Corbeille
 
 Desktop uniquement. La corbeille est sur le NAS (`.trash/`), sans copie locale. Supprimer une page déplace son dossier complet (enfants inclus) vers un dossier horodaté, avec un `.trashmeta.yaml` (chemin d'origine, date, UUID du parent).
+
+Une image retirée d'une page (son fichier dans `assets/` n'étant plus utilisé) part aussi dans la corbeille, à la demande d'Eloi (2026-10-03).
 
 Rétention de 30 jours, purge automatique au démarrage. Interface : liste, prévisualisation, restaurer, supprimer définitivement (confirmation requise), vider. Si le NAS est injoignable, corbeille locale temporaire transférée au cycle suivant.
 
@@ -690,8 +737,8 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J2 | Éditeur de base | Aller-retour Markdown sans perte | Fait |
 | J3 | Gestion des blocs (clavier) | Page restructurable sans souris | Fait |
 | J4 | Thème | Modif du TOML visible à chaud, hiérarchie lisible | Fait |
-| J5 | Sync SMB | Deux machines pendant une journée sans perte ni écrasement | En cours |
-| J6 | Blocs riches (code, images, tableaux, callouts) | Page technique complète rédigée confortablement | À faire |
+| J5 | Sync SMB | Deux machines pendant une journée sans perte ni écrasement | Fait |
+| J6 | Blocs riches (code, images, tableaux, callouts) | Page technique complète rédigée confortablement | Fait |
 | J7 | Navigation avancée | Raccourci global et sommaire toujours à jour | À faire |
 | J8 | Liens et icônes | Renommage sans mention cassée | À faire |
 | J9 | Export | 20 pages en PDF sans coupure incorrecte | À faire |
@@ -800,6 +847,47 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-03 | Barre de statut en bas de la fenêtre, avec un sixième état « désactivée » (NAS ou mot de passe pas réglés). Après des identifiants refusés, plus d'essai automatique avant un changement de réglages. |
 | 2026-10-03 | Chaque jalon livré a sa recette `docs/recettes/J<n>.md` (ce qu'Eloi vérifie, questions en attente). Le jalon suivant ne commence qu'après la recette rapportée OK (demande d'Eloi). |
 | 2026-10-03 | Version 0.5.8 : J5 livré pour la recette. La version 0.6.0 viendra quand le critère aura été vérifié sur les deux machines. |
+| 2026-10-03 | J6 commence avant la recette de J5, reportée par Eloi. Exception à la règle d'un jalon vérifié avant le suivant : J5 reste « En cours » jusqu'à sa recette. |
+| 2026-10-03 | Images (choix d'Eloi) : la légende est le titre Markdown de l'image, la largeur et l'alignement vont dans un fragment de l'adresse, valeurs par défaut omises : `![texte](assets/x.png#largeur=66&align=centre "Légende")`. Les autres outils affichent l'image et ignorent le fragment. |
+| 2026-10-03 | Callouts (choix d'Eloi) : texte mis en forme seulement (paragraphes, gras, italique, code, surlignage, liens), écrit en Markdown dans la clé `text` du YAML, en bloc littéral `|` dès qu'il fait plusieurs lignes. Pas de listes ni de titres dedans. |
+| 2026-10-03 | Blocs de code (choix d'Eloi) : numérotation des lignes et retour à la ligne se règlent dans le thème pour tous les blocs (`[code] line_numbers`, `wrap`), rien n'est ajouté au fichier de la page. |
+| 2026-10-03 | Tableaux (choix d'Eloi) : `/tableau` ouvre une grille où l'on choisit la taille au survol, puis des poignées aux bords droit et bas ajoutent ou retirent colonnes et lignes pendant qu'on les tire. |
+| 2026-10-03 | Tableaux : une poignée ne retire qu'une colonne ou une ligne vide, pour ne jamais perdre de texte. `Entrée` dans une cellule descend d'une cellule et ajoute une ligne sous la dernière. Une cellule tient sur une ligne. Écrits en colonnes alignées par des espaces. |
+| 2026-10-03 | Images : copiées dans `assets/` avec un nom assaini et jamais écrasé, nature vérifiée par les premiers octets, servies au renderer par un protocole `notes-asset:` du main limité aux images du dossier des notes. Les images d'Internet ne sont jamais chargées. Les images inutilisées sont listées dans les réglages, pas supprimées. |
+| 2026-10-03 | Callouts : quatre natures (info, succès, attention, danger), icône parmi une liste courte en attendant le choix d'icône de J8. Un `notes-callout` mal formé reste un bloc de code. YAML écrit par la lib `yaml` (schéma « failsafe » : tout reste du texte). |
+| 2026-10-03 | Blocs de code : toutes les langues de highlight.js, langage deviné au collage dans un bloc vide. Numéro de ligne porté par le premier caractère de la ligne et affiché en marge : un élément ajouté au début des lignes déplaçait les lettres tapées. |
+| 2026-10-03 | Correction de fond (présente depuis J2) : l'éditeur a son propre schéma, et ProseMirror compare les types de nœud par identité. Aucun bloc n'était donc reconnu comme inchangé à l'enregistrement, toute la page était réécrite en forme canonique. Les essais ne le voyaient pas, la page d'exemple étant déjà canonique. Le document est maintenant ramené au schéma du paquet avant l'écriture. |
+| 2026-10-03 | Le bouton « Copier » demande l'écriture dans le presse-papiers : seule permission accordée par la session, la lecture reste refusée. |
+| 2026-10-03 | Retours de la recette J5 (Eloi) : la sync était trop lente et le verrou trop long à disparaître. Cycle toutes les 10 s au lieu de 30, et un cycle une seconde après toute modification du dossier des notes. Verrou relâché dès qu'on quitte la page (une fois la page poussée), ou après 20 s sans frappe au lieu de 60. |
+| 2026-10-03 | Retours d'Eloi sur J6 : surlignage retiré du projet (plus rien pour en créer, un fichier qui en contient le garde, comme la citation) ; barre d'outils des tableaux avec étiquette « Tableau », boutons `+` et poubelle ; images en Petit, Moyen, Grand plus un curseur de largeur (pourcentage de 10 à 100 dans le fichier). Prévu dans `.claude/PLAN-RETOUCHES.md`, pas encore fait. |
+| 2026-10-03 | Questions de la recette J6 tranchées par Eloi, toutes acceptées : `Entrée` descend d'une cellule, une poignée ne retire qu'une colonne ou une ligne vide, seize icônes de callout en attendant J8, images d'Internet jamais chargées d'elles-mêmes (un lien collé proposera de la télécharger, prévu), images inutilisées listées sans suppression, numéros de ligne désactivés par défaut. Ses autres retours sur J6 sont prévus dans `.claude/PLAN-RETOUCHES.md`. |
+| 2026-10-03 | Dernière question de la recette J5 tranchée par Eloi : le verrou met encore trop longtemps à se libérer, les délais seront raccourcis encore (prévu, pas encore fait). |
+| 2026-10-03 | Questions de la recette J5 tranchées par Eloi : les conflits auront un écran de résolution dans l'application (bloc par bloc, A, B ou les deux, morceaux de texte déplaçables), au lieu d'une comparaison à la main ; la barre de statut lui va, avec « NAS injoignable depuis HH:MM » quand le NAS ne répond pas. Prévu, pas encore fait, comme le passage immédiat à « injoignable » quand le réseau est coupé. |
+| 2026-10-03 | Prévu à la demande d'Eloi, pas encore fait : ne plus perdre de texte non enregistré au « Forcer l'édition », et raccourcir encore le délai de sync après mesure de la durée d'un cycle. |
+| 2026-10-03 | Prévu à la demande d'Eloi, pas encore fait : `Ctrl+N` crée une page sœur au lieu d'une sous-page, `Échap` sur le nom d'une page qu'on vient de créer l'annule, barre de dépôt de l'arborescence en trait plat. |
+| 2026-10-03 | Version 0.5.9 : J6 livré pour la recette. J5 attend toujours la sienne : 0.6.0 viendra avec J5 validé. |
+| 2026-10-03 | Version 0.5.11, retouches de sync (lot 1 du plan) : verrou relâché 10 s après la dernière frappe au lieu de 20 ; perte du réseau vue par `net.isOnline()` interrogé chaque seconde, cycle abandonné et NAS injoignable aussitôt ; barre de statut « NAS injoignable depuis HH:MM » (heure du premier échec, gardée dans l'état de la sync) ; durée de chaque cycle écrite dans la console du main, pour décider du passage à 5 s. |
+| 2026-10-03 | Texte perdu au « Forcer l'édition » : reproduit dans un essai. Sur le main, l'enregistrement d'une page pouvait tomber entre la vérification et l'écriture d'un fichier tiré du NAS, et être écrasé sans sauvegarde. Enregistrements et écritures de la sync dans le vault local partagent maintenant une file d'attente ; la page qui passe en lecture seule enregistre d'abord sa frappe en attente. |
+| 2026-10-03 | Écran des conflits, précisé avec Eloi sur maquette : l'écran s'affiche dans la page, avec sa typographie. Chaque version d'un bloc et chaque morceau de texte a une poignée pour être placé ailleurs (dans la page pour un bloc, entre deux mots pour un texte) ; par défaut B suit A. Quand une version est sortie d'un bloc par sa poignée, celle qui reste en place est gardée d'office, sauf si elle avait déjà été écartée. |
+| 2026-10-03 | Écran des conflits, suite (Eloi) : il s'ouvre par un bouton « Résoudre » dans le détail de la sync et par un bandeau sur la page qui a une version en conflit ; « Valider » reste grisé tant qu'une différence n'est pas réglée ; pas de jalon à part, c'est une retouche de J5 avec sa partie dans la recette J5. |
+| 2026-10-03 | Version 0.5.12 : écran de résolution des conflits. Comparaison sur les blocs de premier niveau (une liste entière est un bloc), appariés sur leur texte exact ; les passages d'un paragraphe sont montrés en Markdown tel qu'il est écrit. Le message « modifiée ailleurs » de l'éditeur est remplacé par le bandeau de la page, qui reste tant que la version mise de côté existe. |
+| 2026-10-03 | Recette J5, questions de l'écran des conflits (Eloi) : si les deux versions ne diffèrent que par le titre ou les métadonnées, l'écran dit que le contenu est le même, « Valider » supprime la sauvegarde et le titre de A est gardé ; « Les deux » sur deux listes à puces les réunit en une seule liste, sur les autres blocs B devient un bloc séparé après A. |
+| 2026-10-03 | Recette J5, suite (Eloi) : une liste entière reste un seul bloc dans l'écran des conflits (on garde toute la liste A, B ou les deux, pas ligne par ligne) ; les passages d'un paragraphe restent montrés tels qu'ils sont écrits, avec les `**` du gras. |
+| 2026-10-03 | Recette J0 supprimée à la demande d'Eloi : ses parties 3 à 5 ne seront pas rapportées. J0 rejoint J1 à J4, vérifiés au fil des séances sans recette. Le `.env` est créé. |
+| 2026-10-03 | Version 0.5.13, retouches de l'arborescence (lot 2) : `Ctrl+N` crée une page sœur juste après la page ouverte (remplace la décision du 2026-10-01) ; `Échap` sur le nom d'une page encore « Sans titre » la supprime, refusé par le core si elle a un contenu, une sous-page ou un autre fichier (c'est alors un simple abandon du renommage, sans message) ; barre de dépôt en trait plat de 2 px ; `Échap` ferme les réglages. |
+| 2026-10-03 | Version 0.5.14, blocs de code (lot 3, choix d'Eloi) : liste courte de 33 langages, un nom par entrée sans « / » (HTML et XML, JavaScript et JSX, TypeScript et TSX, TOML et INI, Bash et Shell séparés ; ni SCSS ni Lua) ; couleurs Dark+ de VS Code, avec cinq catégories de plus dans le thème (`text`, `control`, `regex`, `tag`, `attribute`) ; mots de contrôle repérés par une liste, faute de classe highlight.js ; retour à la ligne par défaut ; marge des numéros réduite. Le `theme.toml` d'Eloi passé en Dark+ avec son accord. Bouton « Réglages » : focus montré par le fond, sans contour. |
+| 2026-10-03 | Version 0.5.15, éditeur (lot 4, demandes d'Eloi) : la poignée revient au survol d'un bloc, en plus de la sélection (remplace la décision du 2026-10-02) ; un clic sous le dernier bloc crée au besoin un paragraphe vide de fin et y met le curseur, sans rien écrire tant qu'il est vide ; dans la barre d'outils, la nature du callout montre sa pastille de couleur. |
+| 2026-10-03 | Version 0.5.16, tableaux (lot 5, validé par Eloi) : poignées « + » seulement à l'approche des bords droit et bas, plus épaisses (16 px) ; barre d'outils avec l'étiquette « Tableau », un menu d'ajouts et un menu de suppressions ; poignées de ligne et de colonne : sélection entière, menu, déplacement par glissement, « Mettre en en-tête » qui place la ligne en premier. La poignée de bloc d'un tableau se décale pour laisser la place à celle de la première ligne (corrigé en 0.5.17). |
+| 2026-10-03 | Essais de bout en bout sous Xvfb (`xvfb-run`, demande d'Eloi) : les fenêtres de l'application ne s'affichent plus sur son écran et ne lui prennent plus le focus. Une fenêtre cachée a été essayée : des essais échouaient. |
+| 2026-10-03 | Version 0.5.17 (retour d'Eloi) : la poignée de bloc d'un tableau débordait sur le panneau latéral à la taille d'ouverture et n'était pas à la hauteur de celle de la première ligne. Elle reste dans la marge de 24 px, centrée sur la première ligne ; la poignée de ligne, plus fine (12 px), est posée sur le bord gauche, un peu vers l'intérieur. |
+| 2026-10-03 | Version 0.5.18 (retour d'Eloi, capture) : la poignée collait encore au panneau latéral. La zone centrale a une marge gauche de 48 px au lieu de 24 (la droite reste à 24) : les poignées des blocs, à 24 px du texte, gardent un espace net avec le panneau. |
+| 2026-10-03 | Version 0.5.19, retrait du surlignage (lot 5 bis, demande d'Eloi) : plus de bouton, de `Ctrl+Shift+H`, de raccourci de saisie `==texte==` ni de règle de collage ; retiré de la page d'exemple, de l'aperçu du thème et de ce README. Comme la citation et le séparateur, la marque reste dans le schéma : un fichier qui contient `==texte==` l'affiche surligné et le réécrit tel quel. Tapé dans l'application, `==texte==` reste du texte, écrit `\==texte\==`. |
+| 2026-10-03 | Version 0.5.20, images (lot 6, validé par Eloi) : tailles Petit, Moyen, Grand (33, 66, 100) et glissière de largeur dans la barre de l'image ; dans le fichier, un pourcentage entier de 10 à 100 (`#largeur=45`), rien pour Grand ; une largeur hors de ces bornes reste dans l'adresse, telle quelle. Légende de la visionneuse en bas de l'écran. Un lien d'image collé propose de la télécharger dans `assets/`, par une session réseau à part. L'image supprimée qui part à la corbeille attend J10. Fin des retouches des recettes J5 et J6 : le plan `.claude/PLAN-RETOUCHES.md` est supprimé, chaque décision est dans ce journal. |
+| 2026-10-03 | Version 0.5.21 (retour d'Eloi) : la largeur d'une image se règle par ses bords, comme dans Notion, au lieu d'une glissière dans la barre (qui garde Petit, Moyen, Grand). Un clic dans le vide du bloc image ferme sa barre, le curseur va dans le texte voisin. |
+| 2026-10-03 | Version 0.5.22 (demande d'Eloi) : la barre d'outils du texte n'apparaît plus qu'à la sélection, plus au simple clic (remplace la décision de J3). Exception : dans une cellule de tableau ou un callout, elle vient encore au clic, car elle porte leurs menus. |
+| 2026-10-03 | Réponses d'Eloi (recette J5, partie 15) : téléchargement d'une image abandonné après 20 s ; nom du fichier tiré de l'adresse, question posée seulement pour un lien qui finit par une extension d'image ; la barre d'outils garde son apparition au clic dans une cellule ou un callout ; le travail depuis 0.5.9 sera commité après la recette J5. |
+| 2026-10-03 | Version 0.5.23, images en WebP (demande d'Eloi) : toute image reçue est enregistrée en WebP qualité 82 %, réduite à 1920 px de large ; GIF et SVG gardés tels quels. Conversion faite dans le renderer par le moteur d'images de Chromium (aucune dépendance), le main ne fait que lire et écrire. Une image reçue peut faire 200 Mo, la version enregistrée 50. Les images déjà présentes se convertissent depuis les réglages (« Images en WebP ») : la page renvoie à la version WebP, l'adresse seule est remplacée dans le fichier, l'ancienne image reste pour être supprimée à la main. |
+| 2026-10-03 | Recettes J5 et J6 validées par Eloi, retouches comprises (parties 1 à 17 de la recette J5) : J5 et J6 passent à « Fait », version 0.7.0 (0.6.0 pour J5, 0.7.0 pour J6, livrés ensemble). L'intervalle de sync reste à 10 s faute de mesure du cycle. |
 
 ---
 
@@ -818,8 +906,10 @@ Desktop uniquement.
 | Raccourci | Action |
 |---|---|
 | `Ctrl+K` | Palette de recherche |
-| `Ctrl+N` | Nouvelle sous-page de la page ouverte (à la racine si aucune page n'est ouverte) |
+| `Ctrl+N` | Nouvelle page juste après la page ouverte, au même niveau (à la racine si aucune page n'est ouverte) |
 | `Ctrl+Shift+N` | Nouvelle page à la racine |
+| `Échap` (nom d'une page « Sans titre ») | Supprimer la page si elle est vide, sinon annuler le renommage |
+| `Échap` (réglages) | Revenir aux réglages depuis le thème, puis à la page |
 | `Ctrl+T` / `Ctrl+W` | Nouvel onglet / fermer |
 | `Ctrl+Tab` | Onglet suivant |
 | `Ctrl+1` à `Ctrl+9` | Onglet n |
@@ -835,7 +925,6 @@ Desktop uniquement.
 | `Ctrl+U` | Souligné |
 | `Ctrl+Shift+S` | Barré |
 | `Ctrl+E` | Code inline |
-| `Ctrl+Shift+H` | Surlignage |
 | `Ctrl+Alt+1` à `5` | Titre H1 à H5 |
 | `Ctrl+Alt+0` | Paragraphe |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Annuler / rétablir |
@@ -863,7 +952,8 @@ Desktop uniquement.
 | `Ctrl+↑/↓` | Cellule au-dessus / en dessous |
 | `Ctrl+←/→` (bref) | Mot précédent / suivant |
 | `Ctrl+←/→` (long) | Cellule précédente / suivante |
-| `Entrée` (dernière cellule) | Nouvelle ligne |
+| `Entrée` | Cellule du dessous, nouvelle ligne sous la dernière |
+| `↓` (dernière ligne) | Sortie du tableau |
 
 ---
 
@@ -902,3 +992,20 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-03 | 0.5.6 | Palette Feux |
 | 2026-10-03 | 0.5.7 | Cases à cocher alignées |
 | 2026-10-03 | 0.5.8 | J5 : sync écrite, en recette |
+| 2026-10-03 | 0.5.9 | J6 : blocs riches, en recette |
+| 2026-10-03 | 0.5.10 | Sync plus rapide, verrou rendu |
+| 2026-10-03 | 0.5.11 | Sync : réseau, forçage, délais |
+| 2026-10-03 | 0.5.12 | Écran de résolution des conflits |
+| 2026-10-03 | 0.5.13 | Arborescence : Ctrl+N, Échap |
+| 2026-10-03 | 0.5.14 | Code : langages, couleurs Dark+ |
+| 2026-10-03 | 0.5.15 | Poignée au survol, clic final |
+| 2026-10-03 | 0.5.16 | Tableaux : poignées, menus |
+| 2026-10-03 | 0.5.17 | Poignée du tableau alignée |
+| 2026-10-03 | 0.5.18 | Marge gauche de la page élargie |
+| 2026-10-03 | 0.5.19 | Surlignage retiré |
+| 2026-10-03 | 0.5.20 | Images : tailles, lien collé |
+| 2026-10-03 | 0.5.21 | Image redimensionnée par ses bords |
+| 2026-10-03 | 0.5.22 | Barre du texte à la sélection |
+| 2026-10-03 | 0.5.23 | Images converties en WebP |
+| 2026-10-03 | 0.6.0 | J5 : sync validée |
+| 2026-10-03 | 0.7.0 | J6 : blocs riches validés |

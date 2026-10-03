@@ -4,7 +4,7 @@ import type { LockView } from '../../shared/ipc-contract';
 import type { SyncScheduler } from '../sync/scheduler';
 
 export interface SyncHandlersDependencies {
-  sync: Pick<SyncScheduler, 'etat' | 'synchroniser' | 'etatVerrou' | 'prendreVerrou'>;
+  sync: Pick<SyncScheduler, 'etat' | 'synchroniser' | 'etatVerrou' | 'prendreVerrou' | 'quitterPage'>;
   /** Montre un fichier du vault (chemin relatif déjà vérifié) dans le gestionnaire de fichiers. */
   montrerFichier: (chemin: string) => void;
 }
@@ -31,6 +31,14 @@ export function creerHandlersSync({ sync, montrerFichier }: SyncHandlersDependen
       }
       const forcer = (demande as { forcer?: unknown }).forcer === true;
       return sync.prendreVerrou(chemin, forcer);
+    },
+
+    quitterPage: async (demande: unknown): Promise<void> => {
+      const chemin = cheminDe(demande);
+      if (chemin !== null) {
+        // Le cycle peut prendre quelques secondes : le renderer n'a pas à l'attendre.
+        void sync.quitterPage(chemin).catch(() => undefined);
+      }
     },
 
     montrerFichier: async (demande: unknown): Promise<void> => {

@@ -10,10 +10,11 @@ describe('filtrerCommandes', () => {
   it('rend toutes les commandes sans recherche, et seulement celles qui existent déjà', () => {
     expect(libelles('')).toEqual(commandes.map((commande) => commande.libelle));
     expect(libelles('')).toEqual([
-      'Texte', 'Titre 1', 'Titre 2', 'Titre 3', 'Titre 4', 'Titre 5', 'Liste à puces', 'Liste numérotée', 'Tâche', 'Code', 'Page enfant', 'Date',
+      'Texte', 'Titre 1', 'Titre 2', 'Titre 3', 'Titre 4', 'Titre 5', 'Liste à puces', 'Liste numérotée', 'Tâche', 'Code',
+      'Tableau', 'Image', 'Callout', 'Page enfant', 'Date',
     ]);
-    // Tableau, image, callout et lien arrivent en J6 et J8. Citation et séparateur ne sont pas proposés.
-    for (const absente of ['tableau', 'image', 'callout', 'lien', 'citation', 'quote', 'separateur', 'divider', '---']) {
+    // Le lien arrive en J8. Citation et séparateur ne sont pas proposés.
+    for (const absente of ['lien', 'citation', 'quote', 'separateur', 'divider', '---']) {
       expect(libelles(absente)).toEqual([]);
     }
   });
@@ -29,11 +30,13 @@ describe('filtrerCommandes', () => {
     expect(libelles('h3')).toEqual(['Titre 3']);
     expect(libelles('bullet')).toEqual(['Liste à puces']);
     expect(libelles('today')).toEqual(['Date']);
+    expect(libelles('table')).toEqual(['Tableau']);
+    expect(libelles('encadré')).toEqual(['Callout']);
     expect(libelles('###')).toEqual(['Titre 3', 'Titre 4', 'Titre 5']);
   });
 
   it('met d’abord les noms qui commencent par la recherche', () => {
-    expect(libelles('ti')).toEqual(['Titre 1', 'Titre 2', 'Titre 3', 'Titre 4', 'Titre 5']);
+    expect(libelles('ti').slice(0, 5)).toEqual(['Titre 1', 'Titre 2', 'Titre 3', 'Titre 4', 'Titre 5']);
     expect(libelles('li')[0]).toBe('Liste à puces');
     expect(libelles('c')).toEqual(expect.arrayContaining(['Code', 'Tâche']));
     expect(libelles('c')[0]).toBe('Code');

@@ -132,7 +132,8 @@ describe('variablesDuTheme', () => {
     expect(variables['--color-accent']).toBe('#60a5fa');
     expect(variables['--page-h1-couleur']).toBe('#f87171');
     expect(variables['--page-h5-couleur']).toBe('var(--color-discret)');
-    expect(variables['--code-fonction']).toBe('var(--color-accent)');
+    expect(variables['--code-fonction']).toBe('#dcdcaa');
+    expect(variables['--page-fond-code']).toBe('var(--color-surface)');
     expect(variables['--page-puce-2']).toBe('#fb923c');
     expect(variables['--page-h2-trait']).toBe('underline');
     expect(variables['--page-h3-style']).toBe('italic');
@@ -160,7 +161,8 @@ describe('variablesDeSurcharge', () => {
     expect(prises.avertissements).toEqual([]);
     expect(prises.variables).toMatchObject({ '--color-accent': '#ff8800', '--color-fond': '#000' });
     // Ce qui renvoie à la palette est reposé au même endroit, pour suivre la nouvelle couleur. Le reste n'y est pas.
-    expect(prises.variables['--code-fonction']).toBe('var(--color-accent)');
+    expect(prises.variables['--page-fond-code']).toBe('var(--color-surface)');
+    expect(prises.variables['--code-fonction']).toBeUndefined();
     expect(prises.variables['--page-h5-couleur']).toBe('var(--color-discret)');
     expect(prises.variables['--page-puce-1']).toBeUndefined();
     expect(prises.variables['--page-h1-taille']).toBeUndefined();

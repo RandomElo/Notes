@@ -1,23 +1,22 @@
-import { LocalFsError, VaultError, creerPage, deplacerPage, dupliquerPage, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
+import { LocalFsError, VaultError, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
 import type { PageLocation, TreeNode, VaultContext } from '@notes/core';
-import type { PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
+import type { ConflictReadResult, PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
+import { creerFileDAttente } from '../vault/serial-queue';
+import type { SerialQueue } from '../vault/serial-queue';
 import type { VaultService } from '../vault/vault-service';
 
 export interface VaultHandlersDependencies {
   vault: VaultService;
   /** Ouvre le sélecteur de dossier du système. null si l'utilisateur annule. */
   choisirDossier: () => Promise<string | null>;
+  /** File partagée avec la sync. Par défaut, une file propre à ces handlers. */
+  file?: SerialQueue;
 }
 
 /** Handlers des canaux « vault: ». Les entrées viennent du renderer : rien n'est supposé valide. */
-export function creerHandlersVault({ vault, choisirDossier }: VaultHandlersDependencies) {
+export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAttente() }: VaultHandlersDependencies) {
   // Les opérations s'exécutent une par une : deux déplacements simultanés se marcheraient dessus.
-  let file: Promise<unknown> = Promise.resolve();
-  const enSerie = <T>(tache: () => Promise<T>): Promise<T> => {
-    const resultat = file.then(tache, tache);
-    file = resultat.catch(() => undefined);
-    return resultat;
-  };
+  const { enSerie } = file;
 
   const operation = (action: (contexte: VaultContext) => Promise<PageLocation>): Promise<VaultOperationResult> =>
     enSerie(async () => {
@@ -72,6 +71,11 @@ export function creerHandlersVault({ vault, choisirDossier }: VaultHandlersDepen
       return estChemin(chemin) ? operation((contexte) => dupliquerPage(contexte, chemin)) : Promise.resolve(requeteInvalide());
     },
 
+    supprimerPageVide: (demande: unknown) => {
+      const { chemin } = champs(demande);
+      return estChemin(chemin) ? operation((contexte) => supprimerPageVide(contexte, chemin)) : Promise.resolve(requeteInvalide());
+    },
+
     importer: (demande: unknown) => {
       const { chemin } = champs(demande);
       return estChemin(chemin) ? operation((contexte) => importer(contexte, chemin)) : Promise.resolve(requeteInvalide());
@@ -105,10 +109,47 @@ export function creerHandlersVault({ vault, choisirDossier }: VaultHandlersDepen
       });
     },
 
-    /** Se termine quand toutes les opérations déjà demandées sont finies. Sert à ne pas quitter au milieu d'une écriture. */
-    attendre: async (): Promise<void> => {
-      await file;
+    listerConflits: (demande: unknown): Promise<string[]> => {
+      const { chemin } = champs(demande);
+      if (!estChemin(chemin)) {
+        return Promise.resolve([]);
+      }
+      return enSerie(async () => listerConflits(vault.contexte().fs, chemin).catch(() => []));
     },
+
+    lireConflit: (demande: unknown): Promise<ConflictReadResult> => {
+      const { sauvegarde } = champs(demande);
+      if (!estChemin(sauvegarde)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          return { ok: true, ...(await lireConflit(vault.contexte().fs, sauvegarde)) };
+        } catch (erreur) {
+          return { ok: false, erreur: versErreur(erreur) };
+        }
+      });
+    },
+
+    resoudreConflit: (demande: unknown): Promise<PageSaveResult> => {
+      const { sauvegarde, corps, corpsDeBase } = champs(demande);
+      if (!estChemin(sauvegarde) || !estCorps(corps) || !estCorps(corpsDeBase)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          return { ok: true, ...(await resoudreConflit(vault.contexte(), sauvegarde, { corps, corpsDeBase })) };
+        } catch (erreur) {
+          return { ok: false, erreur: versErreur(erreur) };
+        }
+      });
+    },
+
+    /** Exécute une tâche à la suite des opérations sur le vault : les images s'ajoutent aussi une par une. */
+    enSerie,
+
+    /** Se termine quand toutes les opérations déjà demandées sont finies. Sert à ne pas quitter au milieu d'une écriture. */
+    attendre: file.attendre,
   };
 }
 
@@ -129,11 +170,11 @@ async function definir(vault: VaultService, dossier: string): Promise<EchecOuEta
   }
 }
 
-function champs(demande: unknown): Record<string, unknown> {
+export function champs(demande: unknown): Record<string, unknown> {
   return typeof demande === 'object' && demande !== null ? (demande as Record<string, unknown>) : {};
 }
 
-function estChemin(valeur: unknown): valeur is string {
+export function estChemin(valeur: unknown): valeur is string {
   return typeof valeur === 'string' && verifierCheminRelatif(valeur) === null;
 }
 
@@ -146,11 +187,11 @@ function estIndex(valeur: unknown): valeur is number | undefined {
   return valeur === undefined || (typeof valeur === 'number' && Number.isInteger(valeur) && valeur >= 0 && valeur < 1_000_000);
 }
 
-function requeteInvalide(): VaultFailure {
+export function requeteInvalide(): VaultFailure {
   return { ok: false, erreur: { code: 'requete_invalide', message: 'Demande invalide.' } };
 }
 
-function versErreur(erreur: unknown): VaultFailure['erreur'] {
+export function versErreur(erreur: unknown): VaultFailure['erreur'] {
   if (erreur instanceof VaultError || erreur instanceof LocalFsError) {
     return { code: erreur.code, message: erreur.message };
   }

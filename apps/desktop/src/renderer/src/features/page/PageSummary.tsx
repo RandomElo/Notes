@@ -1,8 +1,9 @@
 import type { TreeNode } from '@notes/core';
 import { PageView } from '@notes/ui';
 import { ArrowDownToLine, FilePlus } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/ipc';
+import { adresseDImage, dossierDeLaPage } from '../images/image-url';
 
 interface PageSummaryProps {
   noeud: TreeNode | null;
@@ -55,13 +56,14 @@ export function PageSummary({ noeud, surCreation, surImport }: PageSummaryProps)
         </div>
       )}
 
-      {!noeud.importe && noeud.genre !== 'dossier' && <ForeignPreview chemin={noeud.chemin} />}
+      {!noeud.importe && noeud.genre !== 'dossier' && <ForeignPreview chemin={noeud.chemin} dossier={dossierDeLaPage(noeud.chemin, noeud.genre)} />}
     </article>
   );
 }
 
 /** Contenu d'un élément non importé, en lecture seule : on voit ce qu'on s'apprête à importer, sans rien écrire. */
-function ForeignPreview({ chemin }: { chemin: string }) {
+function ForeignPreview({ chemin, dossier }: { chemin: string; dossier: string }) {
+  const resoudreImage = useCallback((src: string) => adresseDImage(dossier, src), [dossier]);
   const [corps, definirCorps] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ function ForeignPreview({ chemin }: { chemin: string }) {
 
   return corps === null || corps.trim() === '' ? null : (
     <section aria-label="Aperçu du contenu" className="mt-8">
-      <PageView corps={corps} />
+      <PageView corps={corps} resoudreImage={resoudreImage} />
     </section>
   );
 }

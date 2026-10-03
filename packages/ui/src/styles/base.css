@@ -125,7 +125,7 @@
   font-size: var(--page-code-taille);
   line-height: 1.55;
   padding: 0.8em 1em;
-  white-space: pre;
+  white-space: var(--code-retour, pre);
 }
 
 .notes-page pre code {
@@ -134,7 +134,7 @@
   padding: 0;
 }
 
-/* Bloc gardé tel quel (tableau, image... pas encore gérés) : du texte brut, visiblement à part. */
+/* Bloc gardé tel quel (titre de niveau 6, image au milieu du texte...) : du texte brut, visiblement à part. */
 .notes-page pre[data-raw-block] {
   background-color: transparent;
   background-image: linear-gradient(to right, var(--color-bordure) 3px, transparent 3px);
@@ -288,4 +288,246 @@
   color: var(--color-discret);
   content: attr(data-placeholder);
   pointer-events: none;
+}
+
+/*
+ * Blocs de code : numéros de ligne (affichés selon le thème) et coloration.
+ * Le premier caractère de chaque ligne porte son numéro, posé dans la marge
+ * à la hauteur de la ligne : avec le retour à la ligne, la suite d'une ligne
+ * longue reste alignée sur son texte.
+ */
+.notes-page pre {
+  position: relative;
+}
+
+.notes-page pre .debut-de-ligne::before {
+  display: var(--code-numeros, none);
+  position: absolute;
+  left: 0;
+  width: calc(var(--code-marge-numeros, 0em) + 0.4em);
+  color: var(--color-discret);
+  content: attr(data-numero);
+  /* Le numéro est porté par le premier caractère : il ne prend ni l'italique d'un commentaire ni le gras. */
+  font-style: normal;
+  font-weight: 400;
+  opacity: 0.6;
+  pointer-events: none;
+  text-align: right;
+  user-select: none;
+}
+
+/* La marge des numéros (`--code-marge-numeros`) vaut zéro quand le thème ne les affiche pas. */
+.notes-page pre {
+  padding-left: calc(1em + var(--code-marge-numeros, 0em));
+}
+
+.notes-page pre code {
+  color: var(--code-texte, inherit);
+}
+
+.notes-page .hljs-comment,
+.notes-page .hljs-quote {
+  color: var(--code-commentaire);
+  font-style: italic;
+}
+
+.notes-page .hljs-keyword,
+.notes-page .hljs-literal,
+.notes-page .hljs-doctag {
+  color: var(--code-mot-cle);
+}
+
+/* Après les mots-clés : un mot de contrôle porte les deux classes. Les directives (#include) suivent VS Code. */
+.notes-page .hljs-controle,
+.notes-page .hljs-meta,
+.notes-page .hljs-meta .hljs-keyword {
+  color: var(--code-controle);
+}
+
+.notes-page .hljs-string,
+.notes-page .hljs-symbol,
+.notes-page .hljs-char.escape_,
+.notes-page .hljs-meta .hljs-string,
+.notes-page .hljs-deletion {
+  color: var(--code-chaine);
+}
+
+.notes-page .hljs-regexp {
+  color: var(--code-regex);
+}
+
+.notes-page .hljs-number,
+.notes-page .hljs-addition {
+  color: var(--code-nombre);
+}
+
+.notes-page .hljs-title,
+.notes-page .hljs-title.function_,
+.notes-page .hljs-section,
+.notes-page .hljs-selector-id,
+.notes-page .hljs-selector-class,
+.notes-page .hljs-selector-pseudo {
+  color: var(--code-fonction);
+}
+
+.notes-page .hljs-type,
+.notes-page .hljs-built_in,
+.notes-page .hljs-title.class_,
+.notes-page .hljs-title.class_.inherited__ {
+  color: var(--code-type);
+}
+
+.notes-page .hljs-variable,
+.notes-page .hljs-template-variable,
+.notes-page .hljs-params,
+.notes-page .hljs-property,
+.notes-page .hljs-variable.language_ {
+  color: var(--code-variable);
+}
+
+/* Balises HTML et XML (le nom, les chevrons gardent la couleur du texte), sélecteurs de balise en CSS. */
+.notes-page .hljs-name,
+.notes-page .hljs-selector-tag {
+  color: var(--code-balise);
+}
+
+/* Attributs HTML, propriétés CSS, clés JSON et YAML. */
+.notes-page .hljs-attr,
+.notes-page .hljs-attribute {
+  color: var(--code-attribut);
+}
+
+/* Le contenu d'un attribut reste une chaîne, même dans une balise. */
+.notes-page .hljs-tag .hljs-string {
+  color: var(--code-chaine);
+}
+
+.notes-page .hljs-emphasis {
+  font-style: italic;
+}
+
+.notes-page .hljs-strong {
+  font-weight: 700;
+}
+
+/* Tableaux : défilement horizontal s'ils sont trop larges, en-tête sur fond. */
+.notes-page .tableWrapper {
+  overflow-x: auto;
+}
+
+.notes-page table {
+  border-collapse: collapse;
+  min-width: 50%;
+  margin: 0;
+  table-layout: auto;
+}
+
+.notes-page th,
+.notes-page td {
+  min-width: 4em;
+  border: 1px solid var(--tableau-bordure);
+  padding: 0.35em 0.7em;
+  vertical-align: top;
+}
+
+.notes-page th {
+  background-color: var(--tableau-entete);
+  font-weight: 600;
+  text-align: left;
+}
+
+.notes-page th > p,
+.notes-page td > p {
+  margin: 0;
+}
+
+/* Cellules sélectionnées à la souris ou au clavier : par le fond. */
+.notes-page .selectedCell {
+  background-color: var(--page-selection);
+}
+
+/* Callouts : barre et fond légers de la couleur de leur nature. */
+.notes-page div[data-callout] {
+  --callout-couleur: var(--callout-info);
+
+  display: flex;
+  gap: 0.7em;
+  border-left: 3px solid var(--callout-couleur);
+  border-radius: 0.4em;
+  background-color: color-mix(in srgb, var(--callout-couleur) 12%, transparent);
+  padding: 0.7em 1em;
+}
+
+.notes-page div[data-callout][data-type='success'] {
+  --callout-couleur: var(--callout-succes);
+}
+
+.notes-page div[data-callout][data-type='warning'] {
+  --callout-couleur: var(--callout-alerte);
+}
+
+.notes-page div[data-callout][data-type='danger'] {
+  --callout-couleur: var(--callout-danger);
+}
+
+.notes-page .callout-icone {
+  flex: none;
+  line-height: inherit;
+  user-select: none;
+}
+
+.notes-page .callout-contenu {
+  flex: 1;
+  min-width: 0;
+}
+
+.notes-page .callout-contenu > * + * {
+  margin-top: 0.5em;
+}
+
+/* Images : largeur et alignement réglés dans le fichier, légende dessous. */
+.notes-page figure[data-image] {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-right: 0;
+  margin-left: 0;
+  border-radius: 0.4em;
+  padding: 0.25em;
+}
+
+.notes-page figure[data-image][data-alignement='gauche'] {
+  align-items: flex-start;
+}
+
+.notes-page figure[data-image][data-alignement='droite'] {
+  align-items: flex-end;
+}
+
+.notes-page figure[data-image] img {
+  max-width: 100%;
+  height: auto;
+  border-radius: 0.3em;
+  cursor: zoom-in;
+}
+
+.notes-page figure[data-image] img {
+  width: var(--largeur-image, 100%);
+}
+
+.notes-page figure[data-image] figcaption {
+  margin-top: 0.4em;
+  color: var(--color-discret);
+  font-size: 0.9em;
+  text-align: center;
+}
+
+.notes-page .image-absente:not(:empty) {
+  width: 100%;
+  border-radius: 0.3em;
+  background-color: var(--page-fond-code);
+  color: var(--color-discret);
+  font-size: 0.9em;
+  padding: 1.5em 1em;
+  text-align: center;
 }

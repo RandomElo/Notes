@@ -44,6 +44,8 @@ describe('handlers vault', () => {
     await handlers.creerPage({ parent: 'Projets', titre: 'Refonte du NAS' });
     await handlers.deplacerPage({ chemin: 'Idées', parent: '', index: 0 });
     await handlers.renommerPage({ chemin: 'Projets', titre: 'Chantiers' });
+    const vide = await handlers.creerPage({ parent: 'Chantiers', titre: 'Sans titre' });
+    expect(vide.ok && (await handlers.supprimerPageVide({ chemin: vide.page.chemin })).ok).toBe(true);
     const derniere = await handlers.dupliquerPage({ chemin: 'Idées' });
 
     const attendu = ['Idées', 'Idées (copie)', ['Chantiers', ['Refonte du NAS']]];
@@ -82,6 +84,7 @@ describe('handlers vault', () => {
       handlers.deplacerPage({ chemin: '/etc', parent: '' }),
       handlers.deplacerPage({ chemin: 'a', parent: 'b/../..' }),
       handlers.dupliquerPage({ chemin: ['a'] }),
+      handlers.supprimerPageVide({ chemin: '../a' }),
       handlers.importer('texte'),
     ];
     for (const resultat of await Promise.all(mauvaises)) {

@@ -69,7 +69,7 @@ describe('vault d’exemple', () => {
     document.forEach((bloc) => types.push(bloc.type.name));
     expect(types).toEqual([
       'heading', 'paragraph', 'heading', 'paragraph', 'paragraph', 'heading', 'bulletList', 'orderedList', 'taskList',
-      'heading', 'blockquote', 'horizontalRule', 'heading', 'codeBlock', 'rawBlock', 'codeBlock',
+      'heading', 'blockquote', 'horizontalRule', 'heading', 'codeBlock', 'table', 'callout', 'image',
     ]);
   });
 });

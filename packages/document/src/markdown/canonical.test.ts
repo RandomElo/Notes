@@ -187,6 +187,6 @@ describe('forme canonique', () => {
   });
 
   it('garde le texte d’un bloc brut', () => {
-    expect(attendreAllerRetour({ type: 'rawBlock', attrs: { source: '| a |\n|---|\n| b |' } })).toBe('| a |\n|---|\n| b |');
+    expect(attendreAllerRetour({ type: 'rawBlock', attrs: { source: '###### six' } })).toBe('###### six');
   });
 });

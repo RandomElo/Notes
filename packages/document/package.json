@@ -1,6 +1,6 @@
 {
   "name": "@notes/document",
-  "version": "0.5.8",
+  "version": "0.7.0",
   "private": true,
   "type": "module",
   "exports": {
@@ -28,11 +28,13 @@
     "@tiptap/extension-list": "^3.31.4",
     "@tiptap/extension-paragraph": "^3.31.4",
     "@tiptap/extension-strike": "^3.31.4",
+    "@tiptap/extension-table": "^3.31.4",
     "@tiptap/extension-text": "^3.31.4",
     "@tiptap/extension-underline": "^3.31.4",
     "@tiptap/pm": "^3.31.4",
     "markdown-it": "^14.3.2",
     "markdown-it-mark": "^4.0.0",
-    "prosemirror-markdown": "^1.13.8"
+    "prosemirror-markdown": "^1.13.8",
+    "yaml": "^2.9.1"
   }
 }

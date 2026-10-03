@@ -127,7 +127,7 @@ test('le menu « / » se filtre sans accents, se ferme sur Échap et insère tit
   const menu = page.getByRole('listbox', { name: 'Commandes' });
 
   await taper(page, '/');
-  await expect(menu.getByRole('option')).toHaveCount(12);
+  await expect(menu.getByRole('option')).toHaveCount(15);
   // Ni citation ni séparateur dans le menu.
   await taper(page, 'sepa');
   await expect(menu.getByRole('option')).toHaveCount(0);
@@ -166,7 +166,7 @@ test('le menu « / » se filtre sans accents, se ferme sur Échap et insère tit
   await fermer(session);
 });
 
-test('la barre d’outils apparaît au clic, met en forme, change la nature du bloc et disparaît à la frappe', async () => {
+test('la barre d’outils apparaît sur une sélection, met en forme, change la nature du bloc et disparaît à la frappe', async () => {
   const session = await lancer(await preparer());
   const { page, vault } = session;
   await ouvrirPage(page, 'Courses');
@@ -186,7 +186,11 @@ test('la barre d’outils apparaît au clic, met en forme, change la nature du b
   await touche(page, 'End');
   await taper(page, ' cerises');
   await expect(barre).toBeHidden();
+  // Un simple clic dans le texte ne la montre pas.
   await editeur(page).locator('li', { hasText: 'Pâtes' }).locator('p').click();
+  await page.waitForTimeout(200);
+  await expect(barre).toBeHidden();
+  await editeur(page).locator('li', { hasText: 'Pâtes' }).locator('p').dblclick({ position: { x: 20, y: 10 } });
   await expect(barre).toBeVisible();
   await touche(page, 'Escape');
   await expect(barre).toBeHidden();
@@ -199,7 +203,7 @@ test('la barre d’outils apparaît au clic, met en forme, change la nature du b
   await ouvrirPage(page, 'Projets');
   await editeur(page).click();
   await taper(page, 'Un titre');
-  await editeur(page).locator('p').click();
+  await editeur(page).locator('p').dblclick({ position: { x: 10, y: 10 } });
   await barre.getByRole('button', { name: /Nature du bloc/ }).click();
   await barre.getByRole('option', { name: 'Titre 2' }).click();
   await expect(editeur(page).locator('h2')).toHaveText('Un titre');
@@ -278,11 +282,11 @@ test('« /page » crée une sous-page : on la nomme, puis le curseur est dans so
   await fermer(session);
 });
 
-test('la poignée n’existe que sur une sélection de blocs, ouvre son menu et la déplace par glisser-déposer', async () => {
+test('la poignée apparaît au survol d’un bloc ou sur une sélection, ouvre son menu et déplace par glisser-déposer', async () => {
   const session = await lancer(await preparer());
   const { page, vault } = session;
   await ouvrirPage(page, 'Courses');
-  const poignee = page.getByRole('button', { name: 'Déplacer la sélection ou ouvrir son menu' });
+  const poignee = page.getByRole('button', { name: 'Déplacer le bloc ou ouvrir son menu' });
   /** Place le curseur dans une ligne, puis la sélectionne. Courte attente : l'éditeur suit le clic avec un temps de retard. */
   const selectionnerLigne = async (texte: string) => {
     await editeur(page).locator('li', { hasText: texte }).first().locator('p').click();
@@ -290,14 +294,22 @@ test('la poignée n’existe que sur une sélection de blocs, ouvre son menu et 
     await touche(page, 'Escape');
   };
 
-  // Sans sélection de blocs, pas de poignée, même au survol.
-  await editeur(page).locator('li', { hasText: 'Tomates' }).locator('p').hover();
+  // Au survol d'un bloc, la poignée apparaît à sa hauteur, et disparaît quand la souris quitte la page.
+  const tomates = editeur(page).locator('li', { hasText: 'Tomates' }).locator('p');
+  await tomates.hover();
+  await expect(poignee).toBeVisible();
+  const ligneTomates = await tomates.boundingBox();
+  const placePoignee = await poignee.boundingBox();
+  expect(Math.abs((placePoignee?.y ?? 0) - (ligneTomates?.y ?? 0))).toBeLessThan(8);
+  await page.mouse.move(5, 300);
   await expect(poignee).toHaveCount(0);
-  await selectionnerLigne('Tomates');
+  // Sur une sélection de blocs, elle reste quand la souris est ailleurs.
+  await selectionnerLigne('Café');
+  await page.mouse.move(5, 300);
   await expect(poignee).toBeVisible();
-  // Elle reste là quand la souris est ailleurs.
-  await page.mouse.move(600, 500);
-  await expect(poignee).toBeVisible();
+  // Un clic sur la poignée d'un bloc survolé le sélectionne et ouvre le menu.
+  await tomates.hover();
+  await poignee.hover();
   await poignee.click();
   await expect(selectionnes(page)).toHaveCount(1);
   await expect(selectionnes(page)).toContainText('Tomates');
@@ -320,5 +332,33 @@ test('la poignée n’existe que sur une sélection de blocs, ouvre son menu et 
   await page.mouse.up();
   await attendreEnregistrement(page);
   expect(await lireCorps(vault, 'Courses')).toBe('- [x] Café\n- [ ] Pâtes\n- [ ] Tomates\n- [ ] Tomates\n');
+  await fermer(session);
+});
+
+test('un clic sous le dernier bloc met le curseur dans un paragraphe vide, sans rien écrire', async () => {
+  const session = await lancer(await preparer());
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Courses');
+  const avant = await lireCorps(vault, 'Courses');
+  const cliquerSous = async () => {
+    const cadre = await editeur(page).boundingBox();
+    if (cadre === null) {
+      throw new Error('éditeur introuvable');
+    }
+    await page.mouse.click(cadre.x + 100, cadre.y + cadre.height + 40);
+    await page.waitForTimeout(150);
+  };
+
+  await cliquerSous();
+  await expect(editeur(page).locator('> p')).toHaveCount(1);
+  await page.waitForTimeout(1200);
+  expect(await lireCorps(vault, 'Courses')).toBe(avant);
+  // Un second clic garde ce paragraphe vide au lieu d'en créer un autre.
+  await cliquerSous();
+  await expect(editeur(page).locator('> p')).toHaveCount(1);
+  // Ce qu'on tape va dans ce paragraphe, après la liste.
+  await taper(page, 'Pain');
+  await attendreEnregistrement(page);
+  expect(await lireCorps(vault, 'Courses')).toBe(`${avant}\nPain\n`);
   await fermer(session);
 });

@@ -2,12 +2,12 @@ import type { Editor } from '@tiptap/react';
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { filtrerCommandes } from './slash-commands';
 import { appliquerCommande, fermerSlash, slashOuvert } from './slash-extension';
-import type { SlashKey, SlashStorage } from './slash-extension';
+import type { SlashActions, SlashKey, SlashStorage } from './slash-extension';
 
 interface SlashMenuProps {
   editor: Editor;
-  /** Crée une sous-page de la page ouverte (commande « Page enfant »). */
-  surSousPage: () => void;
+  /** Les commandes qui demandent l'application (sous-page, tableau, image). */
+  actions: SlashActions;
 }
 
 /**
@@ -15,7 +15,7 @@ interface SlashMenuProps {
  * tapé. Flèches pour choisir, Entrée ou Tab pour valider, Échap pour fermer.
  * Le focus reste dans l'éditeur : les touches arrivent par l'extension.
  */
-export function SlashMenu({ editor, surSousPage }: SlashMenuProps) {
+export function SlashMenu({ editor, actions }: SlashMenuProps) {
   const [, rafraichir] = useReducer((compteur: number) => compteur + 1, 0);
   const [choix, definirChoix] = useState(0);
   const liste = useRef<HTMLDivElement>(null);
@@ -54,7 +54,7 @@ export function SlashMenu({ editor, surSousPage }: SlashMenuProps) {
       if (touche === 'valider') {
         const commande = trouvees[rang];
         if (commande !== undefined) {
-          appliquerCommande(editor, commande.action, ouvert, surSousPage);
+          appliquerCommande(editor, commande.action, ouvert, actions);
         }
       } else {
         definirChoix((rang + (touche === 'bas' ? 1 : -1) + trouvees.length) % trouvees.length);
@@ -106,7 +106,7 @@ export function SlashMenu({ editor, surSousPage }: SlashMenuProps) {
           // Le clic ne doit pas retirer le focus à l'éditeur.
           onMouseDown={(evenement) => evenement.preventDefault()}
           onMouseEnter={() => definirChoix(index)}
-          onClick={() => appliquerCommande(editor, commande.action, ouvert, surSousPage)}
+          onClick={() => appliquerCommande(editor, commande.action, ouvert, actions)}
           className={`flex w-full items-center gap-3 px-3 py-1.5 text-left text-sm ${index === rang ? 'bg-accent/25' : ''}`}
         >
           <commande.icone className="text-discret size-4 shrink-0" aria-hidden="true" />

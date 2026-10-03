@@ -25,6 +25,13 @@ export interface SyncContext {
   maintenant(): number;
   /** Cet appareil : ses propres verrous restés dans un dossier à supprimer sont retirés. */
   appareil: string;
+  /**
+   * File d'attente partagée avec l'enregistrement des pages. Chaque écriture
+   * de la sync dans le vault local s'y range avec la vérification qui la
+   * précède : un enregistrement ne peut pas tomber entre les deux et être
+   * écrasé sans sauvegarde. Par défaut, rien n'est mis en file.
+   */
+  exclusion?: <T>(tache: () => Promise<T>) => Promise<T>;
 }
 
 export interface CycleReport {
@@ -43,6 +50,8 @@ export interface CycleReport {
   refuses: string[];
   /** L'index a été mis de côté parce qu'un côté était vide (voir delta.ts). */
   indexIgnore: boolean;
+  /** Durées en millisecondes (horloge du contexte) : relevé du NAS et cycle entier, pour régler l'intervalle. */
+  durees: { releveDistant: number; total: number };
 }
 
 /** Erreurs qui arrêtent le cycle entier : le NAS ne répond plus ou refuse la session. */
@@ -61,10 +70,13 @@ class Reporte extends Error {}
  */
 export async function synchroniser(contexte: SyncContext): Promise<CycleReport> {
   const { local, distant } = contexte;
+  const debut = contexte.maintenant();
   const index = await chargerIndex(contexte.index, contexte.cle);
   const indexAuDepart = JSON.stringify(index);
   const { releve: releveLocal, refuses } = await releverLocal(local);
+  const debutReleveDistant = contexte.maintenant();
   const releveDistant = await releverDistant(distant);
+  const dureeReleveDistant = contexte.maintenant() - debutReleveDistant;
   // Le NAS ne distingue pas les majuscules : deux noms qui ne diffèrent que par la casse sont laissés de côté,
   // et un changement de casse devient un renommage (voir case.ts).
   const exclus = [...new Set([...collisionsDeCasse(releveLocal), ...collisionsDeCasse(releveDistant)])];
@@ -83,6 +95,7 @@ export async function synchroniser(contexte: SyncContext): Promise<CycleReport> 
     erreurs: exclus.map((chemin) => ({ chemin, message: 'Un autre nom ne diffère de celui-ci que par les majuscules : le NAS ne sait pas les distinguer.' })),
     refuses,
     indexIgnore: delta.indexIgnore,
+    durees: { releveDistant: dureeReleveDistant, total: 0 },
   };
   for (const { cote, vers } of renommages) {
     (cote === 'local' ? rapport.tires : rapport.pousses).push(vers);
@@ -180,6 +193,7 @@ export async function synchroniser(contexte: SyncContext): Promise<CycleReport> 
   rapport.sauvegardes = [...releveLocal.keys(), ...rapport.tires, ...rapport.conflits]
     .filter((chemin, position, tous) => estSauvegardeDeConflit(chemin) && !supprimes.has(chemin) && tous.indexOf(chemin) === position)
     .sort();
+  rapport.durees.total = contexte.maintenant() - debut;
   return rapport;
 }
 
@@ -235,27 +249,32 @@ class Transferts {
   async tirer(chemin: string, octets?: Uint8Array): Promise<void> {
     const contenu = octets ?? (await this.contexte.distant.lire(chemin));
     const distant = await this.verifierDistant(chemin);
-    const local = await this.verifierLocal(chemin);
-    if (distant === null || distant === 'change' || local === 'change') {
+    if (distant === null || distant === 'change') {
       throw new Reporte();
     }
     const hash = sha256(contenu);
-    const connu = this.index.fichiers[chemin];
-    // Seule la date a changé sur le NAS : rien à recevoir.
-    if (connu !== undefined && connu.hash === hash && local !== null && memeTampon(local, connu.local)) {
-      this.index.fichiers[chemin] = { ...connu, distant };
-      return;
-    }
-    const parent = dossierParent(chemin);
-    if (parent !== '') {
-      await this.contexte.local.creerDossier(parent);
-    }
-    await this.contexte.local.ecrireOctets(chemin, contenu);
-    const apres = await this.contexte.local.infos(chemin);
-    if (apres === null) {
-      throw new LocalFsError('interne', `Le fichier reçu n'est pas sur le disque : ${chemin}`);
-    }
-    this.index.fichiers[chemin] = { local: tampon(apres), distant, hash };
+    await this.enExclusion(async () => {
+      const local = await this.verifierLocal(chemin);
+      if (local === 'change') {
+        throw new Reporte();
+      }
+      const connu = this.index.fichiers[chemin];
+      // Seule la date a changé sur le NAS : rien à recevoir.
+      if (connu !== undefined && connu.hash === hash && local !== null && memeTampon(local, connu.local)) {
+        this.index.fichiers[chemin] = { ...connu, distant };
+        return;
+      }
+      const parent = dossierParent(chemin);
+      if (parent !== '') {
+        await this.contexte.local.creerDossier(parent);
+      }
+      await this.contexte.local.ecrireOctets(chemin, contenu);
+      const apres = await this.contexte.local.infos(chemin);
+      if (apres === null) {
+        throw new LocalFsError('interne', `Le fichier reçu n'est pas sur le disque : ${chemin}`);
+      }
+      this.index.fichiers[chemin] = { local: tampon(apres), distant, hash };
+    });
   }
 
   /**
@@ -289,7 +308,7 @@ class Transferts {
     }
     const dossier = dossierParent(chemin);
     const prisSurLeNas = [...this.releveDistant.keys()].filter((autre) => dossierParent(autre) === dossier).map(nomDeBase);
-    const sauvegarde = await sauvegarderVersionDistante(this.contexte.local, chemin, contenuDistant, new Date(this.contexte.maintenant()), prisSurLeNas);
+    const sauvegarde = await this.enExclusion(() => sauvegarderVersionDistante(this.contexte.local, chemin, contenuDistant, new Date(this.contexte.maintenant()), prisSurLeNas));
     await this.pousser(chemin, contenuLocal);
     // La sauvegarde part aussitôt sur le NAS : l'autre appareil la reçoit à son prochain cycle.
     const infos = await this.contexte.local.infos(sauvegarde);
@@ -310,12 +329,22 @@ class Transferts {
   }
 
   async supprimerLocal(chemin: string): Promise<void> {
-    const local = await this.verifierLocal(chemin);
-    if (local === null || local === 'change' || (await this.verifierDistant(chemin)) !== null) {
+    if ((await this.verifierDistant(chemin)) !== null) {
       throw new Reporte();
     }
-    await this.contexte.local.supprimer(chemin);
-    delete this.index.fichiers[chemin];
+    await this.enExclusion(async () => {
+      const local = await this.verifierLocal(chemin);
+      if (local === null || local === 'change') {
+        throw new Reporte();
+      }
+      await this.contexte.local.supprimer(chemin);
+      delete this.index.fichiers[chemin];
+    });
+  }
+
+  /** Une vérification du disque et l'écriture qui la suit, sans qu'un enregistrement de page se glisse entre les deux. */
+  private enExclusion<T>(tache: () => Promise<T>): Promise<T> {
+    return this.contexte.exclusion === undefined ? tache() : this.contexte.exclusion(tache);
   }
 
   /** État actuel du fichier local : celui du relevé (null s'il était et reste absent), ou « change » s'il a bougé depuis. */

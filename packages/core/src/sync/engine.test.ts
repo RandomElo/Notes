@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { RemoteFsError } from '../fs/remote-fs';
-import { MemoryIndexStore, MemoryLocalFs } from '../testing/memory-fs';
+import { MemoryIndexStore, MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
+import { enregistrerCorps } from '../vault/content';
 import { MemoryRemoteFs } from '../testing/memory-remote-fs';
 import { etatLocalDePage, synchroniser } from './engine';
 import { ecrireVerrou } from './lock';
@@ -304,5 +305,67 @@ describe('synchroniser', () => {
     const autre = await synchroniser({ local: a.fs, distant: nas, index: a.index, cle: 'autre', maintenant: () => instant, appareil: 'a' });
     expect(autre.pousses).toEqual([]);
     expect(autre.conflits).toEqual([]);
+  });
+});
+
+/** File d'attente comme celle du main : une tâche à la fois, dans l'ordre d'arrivée. */
+function fileDAttente() {
+  let file: Promise<unknown> = Promise.resolve();
+  return <T>(tache: () => Promise<T>): Promise<T> => {
+    const resultat = file.then(tache, tache);
+    file = resultat.catch(() => undefined);
+    return resultat;
+  };
+}
+
+/** Un vault local où l'enregistrement d'une page arrive juste avant que la sync écrive le même fichier. */
+class DisqueAvecEnregistrement extends MemoryLocalFs {
+  avantEcriture: (() => void) | null = null;
+  override async ecrireOctets(chemin: string, contenu: Uint8Array): Promise<void> {
+    const crochet = this.avantEcriture;
+    this.avantEcriture = null;
+    crochet?.();
+    // Laisse tourner ce qui attend, comme le ferait un vrai disque.
+    for (let tour = 0; tour < 20; tour++) {
+      await Promise.resolve();
+    }
+    return super.ecrireOctets(chemin, contenu);
+  }
+}
+
+describe('enregistrement d’une page pendant un cycle (« Forcer l’édition »)', () => {
+  const enTete = '---\nid: 0199a0b0-0000-7000-8000-000000000001\ntitle: Alpha\n---\n';
+
+  it('ne perd pas la frappe enregistrée au moment où la version de l’autre appareil arrive', async () => {
+    const nas = new MemoryRemoteFs();
+    const disqueA = new DisqueAvecEnregistrement();
+    await disqueA.creerDossier('Alpha');
+    await disqueA.ecrireTexte('Alpha/page.md', `${enTete}départ\n`);
+    const enSerie = fileDAttente();
+    const a = new Appareil(disqueA, nas, 'a');
+    const b = new Appareil(new MemoryLocalFs(), nas, 'b');
+    const cycleA = () => synchroniser({ local: disqueA, distant: nas, index: a.index, cle: 'vault', maintenant: () => instant, appareil: 'a', exclusion: enSerie });
+    await cycleA();
+    await b.cycle();
+
+    // b force l'édition, écrit, et sa version part sur le NAS.
+    await b.fs.ecrireTexte('Alpha/page.md', `${enTete}départ\nécrit sur b\n`);
+    await b.cycle();
+
+    // Sur a, l'enregistrement de la dernière frappe tombe pendant que la sync tire la version de b.
+    let enregistrement: Promise<unknown> = Promise.resolve();
+    disqueA.avantEcriture = () => {
+      enregistrement = enSerie(() => enregistrerCorps(contexteDeTest(disqueA), 'Alpha', { corps: 'départ\nécrit sur a\n', corpsDeBase: 'départ\n' }));
+    };
+    await cycleA();
+    await enregistrement;
+    await cycleA();
+    await b.cycle();
+
+    const versions = Object.entries(disqueA.contenu()).map(([, texte]) => texte);
+    expect(versions.some((texte) => texte.includes('écrit sur a'))).toBe(true);
+    expect(versions.some((texte) => texte.includes('écrit sur b'))).toBe(true);
+    // Les deux appareils finissent avec les mêmes fichiers.
+    expect(b.fs.contenu()).toEqual(disqueA.contenu());
   });
 });

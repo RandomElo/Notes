@@ -52,3 +52,13 @@ audits/
 
 # Configuration Claude
 .claude/
+
+# Python (scripts ponctuels)
+venv/
+.venv/
+__pycache__/
+env/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/

@@ -1,5 +1,7 @@
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { niveauxDeTitre, schema } from '../schema/extensions';
+import { langageDuCallout, lireCallout } from './callout';
+import { attributsDImage } from './image';
 import type { Jeton } from './tokenizer';
 
 /** Levée quand un bloc contient quelque chose que le schéma ne représente pas : il devient un bloc brut. */
@@ -30,10 +32,24 @@ export function convertirJetons(jetons: Jeton[]): ProseMirrorNode[] {
     sommet().contenu.push(creer(cadre.type, cadre.attributs, cadre.contenu));
   };
 
+  // Jetons déjà traités avec le précédent (paragraphe qui ne contient qu'une image).
+  let sauterJusque = -1;
   jetons.forEach((jeton, index) => {
+    if (index <= sauterJusque) {
+      return;
+    }
     switch (jeton.type) {
-      case 'paragraph_open':
+      case 'paragraph_open': {
+        const image = imageSeule(jetons[index + 1]);
+        // Le premier paragraphe d'un item est son texte : une image n'y devient pas un bloc.
+        const parent = sommet();
+        if (image !== null && !((parent.type === 'listItem' || parent.type === 'taskItem') && parent.contenu.length === 0)) {
+          parent.contenu.push(creer('image', { ...attributsDImage(image) }));
+          sauterJusque = index + 2;
+          return;
+        }
         return ouvrir('paragraph');
+      }
       case 'heading_open': {
         const niveau = Number(jeton.tag.slice(1));
         if (!(niveauxDeTitre as readonly number[]).includes(niveau)) {
@@ -56,6 +72,27 @@ export function convertirJetons(jetons: Jeton[]): ProseMirrorNode[] {
         const coche = caseDeTache.exec(jetons[index + 2]?.content ?? '')?.[1];
         return ouvrir('taskItem', { checked: coche === 'x' || coche === 'X' });
       }
+      case 'table_open':
+        return ouvrir('table');
+      case 'tr_open':
+        return ouvrir('tableRow');
+      case 'th_open':
+      case 'td_open': {
+        // Une cellule de markdown-it contient directement son texte : le schéma veut un paragraphe.
+        ouvrir(jeton.type === 'th_open' ? 'tableHeader' : 'tableCell', { align: alignementDe(jeton) });
+        return ouvrir('paragraph');
+      }
+      case 'th_close':
+      case 'td_close':
+        fermer();
+        return fermer();
+      case 'thead_open':
+      case 'thead_close':
+      case 'tbody_open':
+      case 'tbody_close':
+        return;
+      case 'tr_close':
+      case 'table_close':
       case 'paragraph_close':
       case 'heading_close':
       case 'blockquote_close':
@@ -76,6 +113,11 @@ export function convertirJetons(jetons: Jeton[]): ProseMirrorNode[] {
       case 'fence':
       case 'code_block': {
         const langage = jeton.type === 'fence' ? jeton.info.trim() : '';
+        const callout = langage === langageDuCallout ? lireCallout(jeton.content, convertirJetons) : null;
+        if (callout !== null) {
+          sommet().contenu.push(creer('callout', { type: callout.type, icon: callout.icon }, callout.paragraphes));
+          return;
+        }
         const texte = jeton.content.replace(/\n$/, '');
         sommet().contenu.push(creer('codeBlock', { language: langage === '' ? null : langage }, texte === '' ? [] : [schema.text(texte)]));
         return;
@@ -106,6 +148,18 @@ function creer(type: string, attributs: Record<string, unknown> = {}, contenu: P
   } catch {
     throw new UnsupportedMarkdown();
   }
+}
+
+/** Le jeton image d'un contenu en ligne qui n'est fait que d'une image, ou null. */
+function imageSeule(jeton: Jeton | undefined): Jeton | null {
+  const enfants = jeton?.type === 'inline' ? (jeton.children ?? []) : [];
+  return enfants.length === 1 && enfants[0]?.type === 'image' ? enfants[0] : null;
+}
+
+/** Alignement d'une cellule, écrit par markdown-it dans son style (`text-align:center`). */
+function alignementDe(jeton: Jeton): string | null {
+  const alignement = /text-align:(left|center|right)/.exec(jeton.attrGet('style') ?? '')?.[1];
+  return alignement ?? null;
 }
 
 /** Jetons des items directs d'une liste ouverte à « index » : pour chacun, l'index de son ouverture. */

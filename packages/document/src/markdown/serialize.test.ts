@@ -1,6 +1,8 @@
+import { getSchema } from '@tiptap/core';
+import { Fragment, Slice } from '@tiptap/pm/model';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { describe, expect, it } from 'vitest';
-import { schema } from '../schema/extensions';
+import { extensionsDuSchema, schema } from '../schema/extensions';
 import { lireMarkdown } from './parse';
 import { ecrireMarkdown } from './serialize';
 
@@ -128,5 +130,23 @@ describe('ecrireMarkdown, page modifiée', () => {
 
   it('écrit tout en forme canonique sans source', () => {
     expect(ecrireMarkdown(lireMarkdown(corps).document)).toBe('- a\n- b\n\n# Titre\n\ndu *texte*\n');
+  });
+});
+
+describe('document venu d’un éditeur', () => {
+  it('ne réécrit que le bloc modifié, même avec le schéma propre à l’éditeur', () => {
+    // Un éditeur construit son propre schéma : ses types de nœud ne sont pas ceux du paquet.
+    const autreSchema = getSchema(extensionsDuSchema);
+    const texte = '* une\n* puce\n\nUn __gras__ ici.\n\n|a|b|\n|-|-|\n|1|2|\n';
+    const { document, source } = lireMarkdown(texte);
+    const dansLEditeur = autreSchema.nodeFromJSON(document.toJSON());
+    expect(ecrireMarkdown(dansLEditeur, source)).toBe(texte);
+    const paragraphe = dansLEditeur.child(1);
+    const modifie = dansLEditeur.replace(
+      dansLEditeur.child(0).nodeSize,
+      dansLEditeur.child(0).nodeSize + paragraphe.nodeSize,
+      new Slice(Fragment.from(autreSchema.nodes['paragraph']!.create(null, autreSchema.text('Autre texte.'))), 0, 0),
+    );
+    expect(ecrireMarkdown(modifie, source)).toBe('* une\n* puce\n\nAutre texte.\n\n|a|b|\n|-|-|\n|1|2|\n');
   });
 });

@@ -3,6 +3,10 @@ import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { MarkdownSerializer } from 'prosemirror-markdown';
 import type { MarkdownSerializerState } from 'prosemirror-markdown';
 import { schema } from '../schema/extensions';
+import type { ImageAttributes } from '../schema/nodes/image';
+import { ecrireCallout, langageDuCallout } from './callout';
+import { ecrireImage } from './image';
+import { ecrireTableau } from './table';
 
 /**
  * Forme canonique : le Markdown que l'application écrit pour un bloc qu'elle a
@@ -207,6 +211,35 @@ const serialiseur = new MarkdownSerializer(
           return;
         }
       }
+    },
+    table(etat, noeud) {
+      collerDansUneListeSerree(etat);
+      etat.text(ecrireTableau(noeud, (paragraphe) => blocCanonique(paragraphe)), false);
+      etat.closeBlock(noeud);
+    },
+    image(etat, noeud) {
+      collerDansUneListeSerree(etat);
+      etat.text(ecrireImage(noeud.attrs as ImageAttributes), false);
+      etat.closeBlock(noeud);
+    },
+    callout(etat, noeud) {
+      collerDansUneListeSerree(etat);
+      const paragraphes: string[] = [];
+      noeud.forEach((paragraphe) => {
+        const texte = blocCanonique(paragraphe);
+        if (texte.trim() !== '') {
+          paragraphes.push(texte);
+        }
+      });
+      const yaml = ecrireCallout(noeud.attrs['type'] as string | null, noeud.attrs['icon'] as string | null, paragraphes.join('\n\n'));
+      // Les lignes du YAML commencent par une clé ou par une indentation : trois accents graves suffisent toujours.
+      etat.write('```' + langageDuCallout + '\n');
+      if (yaml !== '') {
+        etat.text(yaml, false);
+        etat.write('\n');
+      }
+      etat.write('```');
+      etat.closeBlock(noeud);
     },
     rawBlock(etat, noeud) {
       etat.text(String(noeud.attrs['source']).replace(/\r\n?/g, '\n'), false);

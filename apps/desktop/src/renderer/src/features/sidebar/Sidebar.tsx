@@ -19,7 +19,7 @@ export function Sidebar({ reglagesOuverts, surReglages, ...arbre }: SidebarProps
           onClick={() => arbre.surCreation(null)}
           title="Nouvelle page à la racine (Ctrl+Maj+N)"
           aria-label="Nouvelle page"
-          className="text-discret hover:bg-bordure hover:text-texte flex size-6 items-center justify-center rounded"
+          className="text-discret hover:bg-bordure hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0"
         >
           <Plus className="size-4" aria-hidden="true" />
         </button>
@@ -36,7 +36,7 @@ export function Sidebar({ reglagesOuverts, surReglages, ...arbre }: SidebarProps
               type="button"
               onClick={vault.fermerErreur}
               aria-label="Fermer le message"
-              className="text-discret hover:text-texte shrink-0"
+              className="text-discret hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte shrink-0 rounded outline-0"
             >
               <X className="size-4" aria-hidden="true" />
             </button>
@@ -49,8 +49,11 @@ export function Sidebar({ reglagesOuverts, surReglages, ...arbre }: SidebarProps
           type="button"
           onClick={surReglages}
           aria-pressed={reglagesOuverts}
-          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm ${
-            reglagesOuverts ? 'bg-accent/25' : 'text-discret hover:bg-texte/10 hover:text-texte'
+          // Fond seul pour le focus clavier : après Échap, le focus revient sur ce bouton.
+          className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm outline-0 ${
+            reglagesOuverts
+              ? 'bg-accent/25 focus-visible:bg-accent/40'
+              : 'text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte'
           }`}
         >
           <Settings className="size-4" aria-hidden="true" />

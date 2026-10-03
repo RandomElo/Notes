@@ -11,7 +11,7 @@ Cette page rassemble tous les types de blocs. Elle sert aux essais et aux tests 
 
 ## Mise en forme
 
-Du **gras**, de l'*italique*, du ~~barré~~, du `code` et du ==surlignage==.
+Du **gras**, de l'*italique*, du ~~barré~~ et du `code`.
 
 Un [lien externe](https://example.com) et un lien vers [une autre page](notes://0199a0b0-0000-7000-8000-000000000003).
 
@@ -49,3 +49,5 @@ type: info
 icon: 💡
 text: Un callout reste lisible dans n'importe quel éditeur.
 ```
+
+![Un petit schéma](assets/schema.png "Une image copiée dans le dossier de la page")

@@ -1,9 +1,11 @@
 import { shell } from 'electron';
 import type { Session, WebContents } from 'electron';
+import { schemaDesImages } from '../../shared/ipc-contract';
 
 const politiqueDeBase = [
   "default-src 'none'",
-  "img-src 'self' data:",
+  // Les images de la page viennent seulement du dossier des notes, par le protocole du main (images/asset-protocol.ts).
+  `img-src 'self' data: ${schemaDesImages}:`,
   "font-src 'self'",
   "object-src 'none'",
   "base-uri 'none'",
@@ -19,14 +21,15 @@ export function politiqueDeContenu(developpement: boolean): string {
   return [...politiqueDeBase, ...regles].join('; ');
 }
 
-/** Applique la CSP à toutes les réponses et refuse toute demande de permission. */
+/** Applique la CSP à toutes les réponses et refuse toute demande de permission, sauf l'écriture dans le presse-papiers. */
 export function durcirSession(session: Session, developpement: boolean): void {
   const politique = politiqueDeContenu(developpement);
   session.webRequest.onHeadersReceived((details, repondre) => {
     repondre({ responseHeaders: { ...details.responseHeaders, 'Content-Security-Policy': [politique] } });
   });
-  session.setPermissionRequestHandler((_contenu, _permission, repondre) => repondre(false));
-  session.setPermissionCheckHandler(() => false);
+  // Seule exception : écrire du texte dans le presse-papiers (bouton « Copier » d'un bloc de code). Jamais le lire.
+  session.setPermissionRequestHandler((_contenu, permission, repondre) => repondre(permission === 'clipboard-sanitized-write'));
+  session.setPermissionCheckHandler((_contenu, permission) => permission === 'clipboard-sanitized-write');
 }
 
 /**

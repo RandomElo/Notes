@@ -17,8 +17,11 @@ import { Text } from '@tiptap/extension-text';
 import { Underline } from '@tiptap/extension-underline';
 import { avecElision } from './marks/elision';
 import { Highlight } from './marks/highlight';
+import { Callout } from './nodes/callout';
+import { Image } from './nodes/image';
 import { BulletList, NestedTaskItem, OrderedList, TaskList } from './nodes/lists';
 import { RawBlock } from './nodes/raw-block';
+import { Table, TableCell, TableHeader, TableHeaderRow, TableRow } from './nodes/table';
 
 /** Niveaux de titre de l'application (README §6). Un titre de niveau 6 reste un bloc brut. */
 export const niveauxDeTitre = [1, 2, 3, 4, 5] as const;
@@ -29,9 +32,10 @@ export const niveauxDeTitre = [1, 2, 3, 4, 5] as const;
  * le schéma soit le même partout. Elles portent aussi leurs raccourcis de
  * saisie Markdown et leurs raccourcis clavier.
  */
-// Citation et séparateur : lus, affichés et réécrits pour ne rien perdre d'un fichier qui en contient,
-// mais Eloi n'en veut pas dans ses notes. Ni raccourci de saisie (`>`, `---`), ni raccourci clavier.
-const sansSaisie = { addInputRules: () => [], addKeyboardShortcuts: () => ({}) };
+// Citation, séparateur et surlignage : lus, affichés et réécrits pour ne rien perdre d'un fichier qui en
+// contient, mais Eloi n'en veut pas dans ses notes. Ni raccourci de saisie (`>`, `---`, `==texte==`), ni
+// règle de collage, ni raccourci clavier.
+const sansSaisie = { addInputRules: () => [], addPasteRules: () => [], addKeyboardShortcuts: () => ({}) };
 
 export const extensionsDuSchema: Extensions = [
   Document,
@@ -45,7 +49,15 @@ export const extensionsDuSchema: Extensions = [
   TaskList,
   NestedTaskItem,
   ListKeymap,
-  CodeBlock,
+  // `Tab` indente dans un bloc de code, de deux espaces.
+  CodeBlock.configure({ enableTabIndentation: true, tabSize: 2 }),
+  Table,
+  TableRow,
+  TableHeader,
+  TableCell,
+  TableHeaderRow,
+  Image,
+  Callout,
   HorizontalRule.extend(sansSaisie),
   HardBreak,
   RawBlock,
@@ -56,7 +68,7 @@ export const extensionsDuSchema: Extensions = [
   avecElision(Strike, '~~'),
   // Pas de syntaxe Markdown pour le souligné : il s'écrit `<u>texte</u>` dans le fichier (Ctrl+U dans l'éditeur).
   Underline,
-  avecElision(Highlight, '=='),
+  Highlight.extend(sansSaisie),
   // Markdown permet du code en gras ou en italique : la marque de code n'exclut pas les autres.
   Code.extend({ excludes: '' }),
 ];

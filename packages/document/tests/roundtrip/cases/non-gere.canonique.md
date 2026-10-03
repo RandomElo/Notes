@@ -1,10 +1,4 @@
-Un tableau, une image et un titre de niveau 6 ne sont pas encore gérés.
-
-| Colonne | Autre |
-|---|---|
-| a | b |
-
-![Une image](assets/photo.png)
+Un titre de niveau 6, une définition de lien, une image au milieu du texte et du HTML ne sont pas gérés.
 
 ###### Niveau 6
 

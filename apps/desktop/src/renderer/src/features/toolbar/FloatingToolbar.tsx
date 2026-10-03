@@ -1,9 +1,11 @@
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/react';
-import { Bold, ChevronDown, Code, Highlighter, Italic, Strikethrough, Underline } from 'lucide-react';
+import { Bold, ChevronDown, Code, Italic, Strikethrough, Underline } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
+import { CalloutMenu } from '../callout/CalloutMenu';
 import { slashOuvert } from '../slash-menu/slash-extension';
+import { TableMenu } from '../tables/TableMenu';
 import { changerType, typeCourant, typesDeBloc } from './toolbar-model';
 
 const marques: { nom: string; libelle: string; raccourci: string; icone: LucideIcon }[] = [
@@ -12,14 +14,15 @@ const marques: { nom: string; libelle: string; raccourci: string; icone: LucideI
   { nom: 'underline', libelle: 'Souligné', raccourci: 'Ctrl+U', icone: Underline },
   { nom: 'strike', libelle: 'Barré', raccourci: 'Ctrl+Maj+S', icone: Strikethrough },
   { nom: 'code', libelle: 'Code', raccourci: 'Ctrl+E', icone: Code },
-  { nom: 'highlight', libelle: 'Surlignage', raccourci: 'Ctrl+Maj+H', icone: Highlighter },
 ];
 
 /**
- * Barre d'outils flottante (README §6) : elle apparaît au clic dans le texte
- * ou quand du texte est sélectionné, et disparaît à la frappe, au clic ailleurs
- * ou sur Échap. Son contenu dépend du bloc : dans un bloc de code, pas de
- * mise en forme du texte, seulement la nature du bloc.
+ * Barre d'outils flottante (README §6) : elle apparaît quand du texte est
+ * sélectionné (au clic aussi dans une cellule ou un callout, pour leurs
+ * menus), et disparaît à la frappe, au clic ailleurs ou sur Échap. Son contenu dépend du bloc : dans un bloc de code, pas de
+ * mise en forme du texte, seulement la nature du bloc. Dans une cellule, les
+ * lignes, colonnes et l'alignement du tableau ; dans un callout, sa nature et
+ * son icône.
  */
 export function FloatingToolbar({ editor }: { editor: Editor }) {
   const [, rafraichir] = useReducer((compteur: number) => compteur + 1, 0);
@@ -73,7 +76,12 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
   }, [editor]);
 
   const selection = editor.isDestroyed ? null : editor.state.selection;
-  const visible = demandee && selection instanceof TextSelection && editor.isFocused && slashOuvert(editor.state) === null;
+  const possible = demandee && selection instanceof TextSelection && editor.isFocused && slashOuvert(editor.state) === null;
+  const dansUnTableau = possible && editor.isActive('table');
+  const dansUnCallout = possible && !dansUnTableau && editor.isActive('callout');
+  // Dans le texte, seulement sur une sélection (demande d'Eloi). Une cellule ou un callout l'ont aussi au clic :
+  // la barre porte leurs menus (lignes et colonnes, nature et icône).
+  const visible = possible && (!selection.empty || dansUnTableau || dansUnCallout);
   const de = visible ? selection.from : null;
   const dansDuCode = visible && selection.$from.parent.type.spec.code === true;
 
@@ -108,7 +116,9 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
       style={{ left: position?.gauche ?? 0, top: position?.haut ?? 0, visibility: position === null ? 'hidden' : 'visible' }}
       className="border-bordure bg-surface fixed z-30 flex items-center gap-0.5 rounded-md border p-1 shadow-xl shadow-black/40"
     >
-      <div className="relative">
+      {dansUnTableau && <TableMenu editor={editor} />}
+      {dansUnCallout && <CalloutMenu editor={editor} />}
+      <div className={`relative ${dansUnTableau || dansUnCallout ? 'hidden' : ''}`}>
         <button
           type="button"
           aria-haspopup="listbox"

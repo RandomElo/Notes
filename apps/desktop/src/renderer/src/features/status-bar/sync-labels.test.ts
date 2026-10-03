@@ -3,7 +3,7 @@ import type { SyncStatus } from '../../../../shared/ipc-contract';
 import { momentDeSync, libelleDeSync } from './sync-labels';
 
 const maintenant = new Date(2026, 9, 3, 15, 0).getTime();
-const base: SyncStatus = { etat: 'synchronise', message: 'Synchronisé', derniereSync: new Date(2026, 9, 3, 14, 32).getTime(), sauvegardes: [], erreurs: [], refuses: [] };
+const base: SyncStatus = { etat: 'synchronise', message: 'Synchronisé', derniereSync: new Date(2026, 9, 3, 14, 32).getTime(), injoignableDepuis: null, sauvegardes: [], erreurs: [], refuses: [] };
 
 describe('libellés de la sync', () => {
   it('donne l’heure, ou le jour quand ce n’est pas aujourd’hui', () => {
@@ -14,8 +14,9 @@ describe('libellés de la sync', () => {
 
   it('dit quand a eu lieu la dernière synchronisation', () => {
     expect(libelleDeSync(base, maintenant)).toBe('Synchronisé à 14:32');
-    expect(libelleDeSync({ ...base, etat: 'injoignable', message: 'NAS injoignable' }, maintenant)).toBe('NAS injoignable, dernière synchronisation à 14:32');
-    expect(libelleDeSync({ ...base, etat: 'injoignable', message: 'NAS injoignable', derniereSync: null }, maintenant)).toBe('NAS injoignable');
+    expect(libelleDeSync({ ...base, etat: 'injoignable', message: 'NAS injoignable', injoignableDepuis: new Date(2026, 9, 3, 19, 2).getTime() }, maintenant)).toBe('NAS injoignable depuis 19:02');
+    expect(libelleDeSync({ ...base, etat: 'injoignable', message: 'NAS injoignable', injoignableDepuis: new Date(2026, 9, 2, 19, 2).getTime() }, maintenant)).toBe('NAS injoignable depuis hier à 19:02');
+    expect(libelleDeSync({ ...base, etat: 'injoignable', message: 'Accès refusé par le NAS', injoignableDepuis: maintenant }, maintenant)).toBe('Accès refusé par le NAS');
     expect(libelleDeSync({ ...base, etat: 'en_cours', message: 'Synchronisation en cours' }, maintenant)).toBe('Synchronisation en cours');
   });
 });

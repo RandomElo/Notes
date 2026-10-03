@@ -12,6 +12,7 @@ import { BlockSelection } from './block-selection';
 export const classeBlocSelectionne = 'bloc-selectionne';
 
 const blocsSelectionnes = (etat: EditorState): boolean => etat.selection instanceof BlockSelection;
+const tabPourLeBloc = (editor: Editor): boolean => editor.isActive('table') || editor.isActive('codeBlock');
 
 /**
  * Gestion des blocs au clavier (README §6) : Échap sélectionne le bloc (puis
@@ -75,6 +76,10 @@ export const BlockKeys = Extension.create({
           jouer(editor, indenterBlocs(1));
           return true;
         }
+        // Dans un tableau, Tab change de cellule ; dans un bloc de code, il indente : leurs extensions s'en chargent.
+        if (tabPourLeBloc(editor)) {
+          return false;
+        }
         // Dans une liste, Tab imbrique l'item. Ailleurs il ne fait rien, mais ne doit pas faire sortir de l'éditeur.
         if (!editor.commands.sinkListItem('listItem')) {
           editor.commands.sinkListItem('taskItem');
@@ -85,6 +90,9 @@ export const BlockKeys = Extension.create({
         if (blocsSelectionnes(editor.state)) {
           jouer(editor, indenterBlocs(-1));
           return true;
+        }
+        if (tabPourLeBloc(editor)) {
+          return false;
         }
         if (!editor.commands.liftListItem('listItem')) {
           editor.commands.liftListItem('taskItem');

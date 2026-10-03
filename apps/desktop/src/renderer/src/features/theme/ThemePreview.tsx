@@ -10,7 +10,7 @@ export function ThemePreview() {
       <h4>Titre 4</h4>
       <h5>Titre 5</h5>
       <p>
-        Un paragraphe avec du <strong>gras</strong>, de l'<em>italique</em>, du <code>code</code>, du <mark>surlignage</mark> et un <a>lien</a>.
+        Un paragraphe avec du <strong>gras</strong>, de l'<em>italique</em>, du <code>code</code> et un <a>lien</a>.
       </p>
       <ul>
         <li>

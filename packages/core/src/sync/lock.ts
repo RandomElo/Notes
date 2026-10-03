@@ -13,7 +13,7 @@ import { nomDuVerrou } from './scan';
 /** Au-delà, un verrou sans nouvelles est périmé et se reprend sans demander. */
 export const dureeDeVieDuVerrouMs = 90_000;
 /** Sans frappe depuis ce délai, le desktop relâche le verrou, une fois la page poussée sur le NAS. */
-export const inactiviteAvantRelacheMs = 60_000;
+export const inactiviteAvantRelacheMs = 10_000;
 
 export interface LockOwner {
   /** Identifiant propre à l'installation, tiré au hasard une fois pour toutes. */
@@ -97,12 +97,13 @@ export type TakeResult = { ok: true } | { ok: false; nom: string };
 
 /**
  * Verrous tenus par cet appareil. Le desktop pose le verrou à la première
- * frappe, l'entretient tant qu'on écrit, et le relâche après 60 s sans
- * frappe une fois la page poussée (README §5). `distant` est la vue du
+ * frappe, l'entretient tant qu'on écrit, et le relâche une fois la page
+ * poussée, dès qu'on la quitte ou après 10 s sans frappe (README §5). `distant` est la vue du
  * dossier du vault sur le NAS : les chemins sont ceux des pages.
  */
 export class LockManager {
-  private readonly tenus = new Map<string, { derniereFrappe: number }>();
+  /** Pour chaque page tenue : la dernière frappe, et si on l'a quittée (relâchée dès qu'elle est poussée). */
+  private readonly tenus = new Map<string, { derniereFrappe: number; quittee?: boolean }>();
 
   constructor(
     private readonly distant: RemoteFs,
@@ -128,6 +129,7 @@ export class LockManager {
     const tenu = this.tenus.get(page);
     if (tenu !== undefined && !forcer) {
       tenu.derniereFrappe = this.maintenant();
+      tenu.quittee = false;
       return { ok: true };
     }
     const avant = await this.consulter(page);
@@ -146,17 +148,17 @@ export class LockManager {
   }
 
   /**
-   * Appelé après chaque cycle de sync. Relâche les verrous inactifs dont la
-   * page est poussée, et tout de suite celui d'une page qui n'existe plus sur
+   * Appelé après chaque cycle de sync. Relâche les verrous des pages poussées
+   * qu'on a quittées ou qui sont inactives, et tout de suite celui d'une page qui n'existe plus sur
    * le poste (renommée, déplacée). Entretient les autres. Rend les pages dont
    * un autre appareil a pris le verrou entre-temps (« Forcer l'édition »).
    */
   async entretenir(etatLocal: (page: string) => Promise<LocalPageState>): Promise<{ relachees: string[]; perdues: { page: string; nom: string }[] }> {
     const relachees: string[] = [];
     const perdues: { page: string; nom: string }[] = [];
-    for (const [page, { derniereFrappe }] of [...this.tenus]) {
+    for (const [page, { derniereFrappe, quittee }] of [...this.tenus]) {
       const etat = await etatLocal(page);
-      if (etat === 'absente' || (etat === 'poussee' && this.maintenant() - derniereFrappe >= inactiviteAvantRelacheMs)) {
+      if (etat === 'absente' || (etat === 'poussee' && (quittee === true || this.maintenant() - derniereFrappe >= inactiviteAvantRelacheMs))) {
         await this.relacher(page);
         relachees.push(page);
         continue;
@@ -178,6 +180,18 @@ export class LockManager {
       }
     }
     return { relachees, perdues };
+  }
+
+  /**
+   * La page n'est plus ouverte sur cet appareil : son verrou sera relâché au
+   * prochain entretien, dès qu'elle est poussée. Vrai si un verrou était tenu.
+   */
+  quitter(page: string): boolean {
+    const tenu = this.tenus.get(page);
+    if (tenu !== undefined) {
+      tenu.quittee = true;
+    }
+    return tenu !== undefined;
   }
 
   /** Retire le verrou de la page s'il est encore à cet appareil. */

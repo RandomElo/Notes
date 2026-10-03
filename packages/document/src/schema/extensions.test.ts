@@ -5,8 +5,8 @@ import { extensionsDuSchema, schema } from './extensions';
 describe('schéma', () => {
   it('contient les blocs et les marques du jalon', () => {
     expect(Object.keys(schema.nodes).sort()).toEqual([
-      'blockquote', 'bulletList', 'codeBlock', 'doc', 'hardBreak', 'heading', 'horizontalRule', 'listItem',
-      'orderedList', 'paragraph', 'rawBlock', 'taskItem', 'taskList', 'text',
+      'blockquote', 'bulletList', 'callout', 'codeBlock', 'doc', 'hardBreak', 'heading', 'horizontalRule', 'image', 'listItem',
+      'orderedList', 'paragraph', 'rawBlock', 'table', 'tableCell', 'tableHeader', 'tableRow', 'taskItem', 'taskList', 'text',
     ]);
     expect(Object.keys(schema.marks).sort()).toEqual(['bold', 'code', 'highlight', 'italic', 'link', 'strike', 'underline']);
   });

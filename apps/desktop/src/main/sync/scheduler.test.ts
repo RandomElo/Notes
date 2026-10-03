@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { RemoteFsError } from '@notes/core';
 import type { SyncStatus } from '@notes/core';
 import { MemoryIndexStore, MemoryLocalFs, MemoryRemoteFs } from '@notes/core/testing';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { SettingsStore } from '../settings/settings-store';
 import type { CompanionCredentials } from '../smb/protocol';
 import { identiteDuPoste } from './device';
@@ -15,8 +15,14 @@ const nas = { hote: '192.0.2.10', partage: 'partage', utilisateur: 'utilisateur'
 /** Le NAS en mémoire, avec ce qu'une connexion du compagnon offre en plus. */
 class FausseConnexion extends MemoryRemoteFs {
   fermetures = 0;
+  /** Tant qu'elle n'est pas résolue, lister ne répond pas : un NAS qui ne répond plus. */
+  silence: Promise<void> | null = null;
   fermer(): void {
     this.fermetures++;
+  }
+  override async lister(chemin: string) {
+    await this.silence;
+    return super.lister(chemin);
   }
 }
 
@@ -39,6 +45,7 @@ async function monter(options: { reglagesNas?: boolean; motDePasse?: string | nu
     index: new MemoryIndexStore(),
     appareil: identiteDuPoste(reglages),
     surEtat: (etat) => etats.push(etat),
+    delaiApresModificationMs: 20,
   });
   return { dossier, reglages, local, partage, connexions, etats, sync };
 }
@@ -85,6 +92,47 @@ describe('SyncScheduler', () => {
     expect(sync.etat().etat).toBe('synchronise');
   });
 
+  it('garde l’heure du premier échec tant que le NAS reste injoignable', async () => {
+    const { sync, partage } = await monter();
+    partage.panne = true;
+    await sync.synchroniser();
+    const depuis = sync.etat().injoignableDepuis;
+    expect(depuis).not.toBeNull();
+    await new Promise((resoudre) => setTimeout(resoudre, 5));
+    await sync.synchroniser();
+    expect(sync.etat().injoignableDepuis).toBe(depuis);
+    partage.panne = false;
+    await sync.synchroniser();
+    expect(sync.etat().injoignableDepuis).toBeNull();
+  });
+
+  it('montre le NAS injoignable dès la perte du réseau, coupe le cycle en cours et reprend au retour', async () => {
+    const { sync, partage, local, etats } = await monter();
+    await sync.synchroniser();
+    // Le NAS ne répond plus : sans la perte du réseau signalée, le cycle attendrait la fin du délai.
+    let debloquer = (): void => undefined;
+    partage.silence = new Promise<void>((resoudre) => (debloquer = resoudre));
+    const cycle = sync.synchroniser();
+    await vi.waitFor(() => expect(sync.etat().etat).toBe('en_cours'));
+    sync.signalerReseau(false);
+    expect(sync.etat()).toMatchObject({ etat: 'injoignable', message: 'NAS injoignable' });
+    expect(partage.fermetures).toBe(1);
+    debloquer();
+    await cycle;
+    expect(sync.etat().etat).toBe('injoignable');
+    expect(etats.at(-1)?.etat).toBe('injoignable');
+
+    // Pas de cycle tant que le réseau manque.
+    partage.silence = null;
+    await local.ecrireTexte('Alpha/page.md', 'hors ligne\n');
+    await sync.synchroniser();
+    expect(partage.contenu()['Notes/Alpha/page.md']).toBe('alpha\n');
+
+    sync.signalerReseau(true);
+    await vi.waitFor(() => expect(partage.contenu()['Notes/Alpha/page.md']).toBe('hors ligne\n'));
+    expect(sync.etat().etat).toBe('synchronise');
+  });
+
   it('ne réessaie pas avec des identifiants refusés avant un changement de réglages', async () => {
     const { sync, partage, connexions } = await monter();
     partage.echouerSur = () => {
@@ -127,6 +175,36 @@ describe('SyncScheduler', () => {
     expect(partage.fermetures).toBe(1);
     await sync.synchroniser();
     expect(partage.contenu()).toEqual({ 'Notes/Alpha/page.md': 'dernière frappe\n' });
+  });
+
+  it('envoie une modification du poste peu après, sans attendre l’intervalle', async () => {
+    const { sync, partage, local } = await monter();
+    await sync.synchroniser();
+    await local.ecrireTexte('Alpha/page.md', 'modifiée\n');
+    sync.signalerModificationLocale();
+    sync.signalerModificationLocale();
+    await vi.waitFor(() => expect(partage.contenu()['Notes/Alpha/page.md']).toBe('modifiée\n'));
+  });
+
+  it('relance un cycle demandé pendant qu’un autre tourne', async () => {
+    const { sync, partage, local } = await monter();
+    const premier = sync.synchroniser();
+    await local.ecrireTexte('Alpha/page.md', 'pendant le cycle\n');
+    await sync.quitterPage('Alpha');
+    sync.signalerModificationLocale();
+    await premier;
+    await vi.waitFor(() => expect(partage.contenu()['Notes/Alpha/page.md']).toBe('pendant le cycle\n'));
+  });
+
+  it('rend le verrou d’une page quittée dès qu’elle est sur le NAS', async () => {
+    const { sync, partage, local } = await monter();
+    await sync.synchroniser();
+    await sync.prendreVerrou('Alpha', false);
+    await local.ecrireTexte('Alpha/page.md', 'dernière frappe\n');
+    expect(partage.contenu()['Notes/Alpha/.lock']).toBeDefined();
+    await sync.quitterPage('Alpha');
+    expect(partage.contenu()['Notes/Alpha/page.md']).toBe('dernière frappe\n');
+    expect(partage.contenu()['Notes/Alpha/.lock']).toBeUndefined();
   });
 
   it('tire un identifiant d’appareil une seule fois et le garde dans les réglages', async () => {

@@ -52,14 +52,21 @@ export function variablesDuTheme(theme: Theme): Record<string, string> {
 
   variables['--page-fond-code'] = couleur(theme.code.background);
   variables['--page-code-taille'] = theme.code.font_size;
-  // Coloration du code, callouts et tableaux : les blocs arrivent en J6, leurs couleurs sont déjà là.
+  variables['--code-retour'] = theme.code.wrap ? 'pre-wrap' : 'pre';
+  variables['--code-numeros'] = theme.code.line_numbers ? 'inline-block' : 'none';
+  variables['--code-marge-numeros'] = theme.code.line_numbers ? '2em' : '0em';
+  variables['--code-texte'] = couleur(theme.code.syntax.text);
   variables['--code-commentaire'] = couleur(theme.code.syntax.comment);
   variables['--code-mot-cle'] = couleur(theme.code.syntax.keyword);
+  variables['--code-controle'] = couleur(theme.code.syntax.control);
   variables['--code-chaine'] = couleur(theme.code.syntax.string);
+  variables['--code-regex'] = couleur(theme.code.syntax.regex);
   variables['--code-nombre'] = couleur(theme.code.syntax.number);
   variables['--code-fonction'] = couleur(theme.code.syntax.function);
   variables['--code-type'] = couleur(theme.code.syntax.type);
   variables['--code-variable'] = couleur(theme.code.syntax.variable);
+  variables['--code-balise'] = couleur(theme.code.syntax.tag);
+  variables['--code-attribut'] = couleur(theme.code.syntax.attribute);
   variables['--callout-info'] = couleur(theme.callout.info);
   variables['--callout-succes'] = couleur(theme.callout.success);
   variables['--callout-alerte'] = couleur(theme.callout.warning);

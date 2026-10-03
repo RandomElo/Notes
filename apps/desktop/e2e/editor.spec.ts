@@ -19,8 +19,8 @@ test('ouvrir toutes les pages sans rien modifier ne change pas un octet du vault
   await expect(contenu.locator('h1')).toHaveText('Bienvenue dans Notes');
   await expect(contenu.locator('h5')).toHaveText('Code et tableau');
   await expect(contenu.locator('ul[data-type="taskList"] li')).toHaveCount(2);
-  await expect(contenu.locator('mark')).toHaveText('surlignage');
-  await expect(contenu.locator('pre[data-raw-block]')).toContainText('| Colonne | Autre |');
+  await expect(contenu.locator('table th')).toHaveText(['Colonne', 'Autre']);
+  await expect(contenu.locator('div[data-callout]')).toContainText('Un callout reste lisible');
 
   // Un clic et un déplacement du curseur ne sont pas des modifications.
   await contenu.locator('h1').click();
@@ -108,7 +108,8 @@ test('les raccourcis de saisie Markdown produisent les bons blocs et le bon fich
   await expect(contenu.locator('em')).toHaveText('italique');
   await expect(contenu.locator('s')).toHaveText('barré');
   await expect(contenu.locator('p code')).toHaveText('code');
-  await expect(contenu.locator('mark')).toHaveText('surlignage');
+  // Plus de surlignage à la saisie : « ==texte== » reste du texte.
+  await expect(contenu.locator('mark')).toHaveCount(0);
   await expect(contenu.locator('ul:not([data-type]) li')).toHaveCount(2);
   await expect(contenu.locator('ol li')).toHaveCount(2);
   await expect(contenu.locator('ul[data-type="taskList"] li')).toHaveCount(2);
@@ -120,7 +121,7 @@ test('les raccourcis de saisie Markdown produisent les bons blocs et le bon fich
     [
       '# Titre un',
       '##### Titre cinq',
-      "Du **gras**, de l'*italique*, du ~~barré~~, du `code`, du ==surlignage== et (**entre parenthèses**).",
+      "Du **gras**, de l'*italique*, du ~~barré~~, du `code`, du \\==surlignage\\== et (**entre parenthèses**).",
       '- puce\n- autre puce',
       '1. premier\n2. second',
       '- [ ] à faire\n- [ ] encore',
@@ -137,8 +138,9 @@ test('les raccourcis de saisie Markdown produisent les bons blocs et le bon fich
   await taper('gras');
   await page.keyboard.press('Control+b');
   await taper(' ');
+  // Ctrl+Maj+H ne surligne plus rien.
   await page.keyboard.press('Control+Shift+h');
-  await taper('surligné');
+  await taper('normal');
   await page.keyboard.press('Control+Shift+h');
   await taper(' ');
   await page.keyboard.press('Control+u');
@@ -148,7 +150,7 @@ test('les raccourcis de saisie Markdown produisent les bons blocs et le bon fich
   await page.keyboard.press('Control+Alt+3');
   await taper('Titre trois');
   await attendreEnregistrement(page);
-  expect(await lireCorps(vault, 'Projets')).toMatch(/\n\nfin\n\n\*\*gras\*\* ==surligné== <u>souligné<\/u>\n\n### Titre trois\n$/);
+  expect(await lireCorps(vault, 'Projets')).toMatch(/\n\nfin\n\n\*\*gras\*\* normal <u>souligné<\/u>\n\n### Titre trois\n$/);
 
   // Comme en Markdown : `- [ ] ` fait une tâche, y compris au milieu d'une liste à puces.
   await entree();
@@ -258,4 +260,24 @@ test('une note venue d’un autre outil est montrée en lecture seule, sans êtr
   await expect(apercu).toHaveAttribute('contenteditable', 'false');
   await fermer(session);
   expect(await lireVault(vault)).toEqual(avant);
+});
+
+test('un surlignage déjà écrit dans un fichier est affiché et reste intact', async () => {
+  const prepare = await preparer();
+  const fichier = join(prepare.vault, 'Courses', 'page.md');
+  const avant = await readFile(fichier, 'utf8');
+  await writeFile(fichier, avant.replace('- [ ] Pâtes', '- [ ] Pâtes ==fraîches==') + '\nUn ==mot surligné== ailleurs.\n');
+  const session = await lancer(prepare);
+  const { page } = session;
+  await ouvrirPage(page, 'Courses');
+  await expect(editeur(page).locator('mark')).toHaveText(['fraîches', 'mot surligné']);
+  // Une modification dans le même bloc récrit la marque telle qu'elle était.
+  await editeur(page).locator('p', { hasText: 'ailleurs' }).click();
+  await page.keyboard.press('End');
+  await page.keyboard.type(' Ajout.', { delay: 15 });
+  await attendreEnregistrement(page);
+  const corps = await lireCorps(prepare.vault, 'Courses');
+  expect(corps).toContain('- [ ] Pâtes ==fraîches==\n');
+  expect(corps).toContain('Un ==mot surligné== ailleurs. Ajout.\n');
+  await fermer(session);
 });

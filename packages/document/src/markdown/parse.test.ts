@@ -134,10 +134,10 @@ describe('lireMarkdown', () => {
   });
 
   it('garde tel quel ce que le schéma ne représente pas', () => {
-    const texte = '| a | b |\n|---|---|\n| 1 | 2 |\n\n![image](a.png)\n\ntexte ![image](a.png)\n\n[ref]: https://example.com\n';
+    const texte = '###### six\n\n| a | ![image](a.png) |\n|---|---|\n\ntexte ![image](a.png)\n\n[ref]: https://example.com\n';
     expect(blocs(texte)).toEqual([
-      { type: 'rawBlock', attrs: { source: '| a | b |\n|---|---|\n| 1 | 2 |' } },
-      { type: 'rawBlock', attrs: { source: '![image](a.png)' } },
+      { type: 'rawBlock', attrs: { source: '###### six' } },
+      { type: 'rawBlock', attrs: { source: '| a | ![image](a.png) |\n|---|---|' } },
       { type: 'rawBlock', attrs: { source: 'texte ![image](a.png)' } },
       { type: 'rawBlock', attrs: { source: '[ref]: https://example.com' } },
     ]);

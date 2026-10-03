@@ -1,4 +1,5 @@
-import { FolderOpen, RefreshCw } from 'lucide-react';
+import { estFichierDeConflitDePage } from '@notes/core';
+import { FolderOpen, GitMerge, RefreshCw } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../../lib/ipc';
 import type { SyncStatus } from '../../../../shared/ipc-contract';
@@ -8,6 +9,8 @@ interface SyncPanelProps {
   etat: SyncStatus;
   maintenant: number;
   surFermeture: () => void;
+  /** Ouvre l'écran de résolution d'une version en conflit d'une page. */
+  surResolution: (sauvegarde: string) => void;
 }
 
 const classeBouton = 'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 rounded px-2 py-1 outline-0 disabled:opacity-50';
@@ -17,7 +20,7 @@ const classeBouton = 'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 r
  * synchronisation, versions en conflit gardées à côté, fichiers en souffrance,
  * et un bouton pour synchroniser tout de suite.
  */
-export function SyncPanel({ etat, maintenant, surFermeture }: SyncPanelProps) {
+export function SyncPanel({ etat, maintenant, surFermeture, surResolution }: SyncPanelProps) {
   const [lancement, definirLancement] = useState(false);
   const premier = useRef<HTMLButtonElement>(null);
   const fermer = useRef<HTMLButtonElement>(null);
@@ -37,7 +40,7 @@ export function SyncPanel({ etat, maintenant, surFermeture }: SyncPanelProps) {
           {etat.derniereSync !== null && etat.etat !== 'synchronise' && (
             <p className="text-discret text-xs">Dernière synchronisation réussie {momentDeSync(etat.derniereSync, maintenant)}.</p>
           )}
-          {etat.etat !== 'desactivee' && <p className="text-discret text-xs">Synchronisation automatique toutes les 30 secondes.</p>}
+          {etat.etat !== 'desactivee' && <p className="text-discret text-xs">Synchronisation automatique toutes les 10 secondes.</p>}
         </div>
         {etat.etat !== 'desactivee' && (
           <button ref={premier} type="button" onClick={synchroniser} disabled={lancement || etat.etat === 'en_cours'} className={`${classeBouton} flex shrink-0 items-center gap-1.5`}>
@@ -57,8 +60,8 @@ export function SyncPanel({ etat, maintenant, surFermeture }: SyncPanelProps) {
         <section className="space-y-1.5">
           <h2 className="font-medium">Versions en conflit</h2>
           <p className="text-discret text-xs">
-            Ces pages ont été modifiées sur deux appareils en même temps. Rien n'a été perdu : la version de l'autre appareil est gardée à côté de la page. Compare les deux, reporte ce qui manque, puis
-            supprime la copie dans le dossier des notes.
+            Ces pages ont été modifiées sur deux appareils en même temps. Rien n'a été perdu : la version de l'autre appareil est gardée à côté de la page. « Résoudre » met les deux versions face à face
+            pour choisir ce que la page garde.
           </p>
           <ul className="max-h-40 space-y-1 overflow-y-auto">
             {etat.sauvegardes.map((chemin) => (
@@ -66,6 +69,17 @@ export function SyncPanel({ etat, maintenant, surFermeture }: SyncPanelProps) {
                 <span className="min-w-0 flex-1 truncate font-mono text-xs" title={chemin}>
                   {chemin}
                 </span>
+                {estFichierDeConflitDePage(chemin) && (
+                  <button
+                    type="button"
+                    onClick={() => surResolution(chemin)}
+                    className={`${classeBouton} flex shrink-0 items-center gap-1 text-xs`}
+                    aria-label={`Résoudre ${chemin}`}
+                  >
+                    <GitMerge className="size-3.5" aria-hidden="true" />
+                    Résoudre
+                  </button>
+                )}
                 <button
                   type="button"
                   onClick={() => void api.montrerFichier({ chemin })}

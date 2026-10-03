@@ -5,7 +5,9 @@ import type { SettingsStore } from '../settings/settings-store';
 import type { CompanionCredentials } from '../smb/protocol';
 
 /** Intervalle entre deux cycles (README §5). */
-const intervalleParDefautMs = 30_000;
+const intervalleParDefautMs = 10_000;
+/** Après une modification du dossier des notes, le cycle part ce délai plus tard : une rafale d'écritures n'en lance qu'un. */
+const delaiApresModificationParDefautMs = 1_000;
 /** À la fermeture, le dernier cycle a ce temps pour finir : au-delà, l'application se ferme quand même. */
 const delaiMaxDeFermetureMs = 15_000;
 
@@ -24,8 +26,13 @@ export interface SyncSchedulerDependencies {
   /** Cet appareil, pour signer les verrous. */
   appareil: () => Promise<LockOwner>;
   surEtat: (etat: SyncStatus) => void;
+  /** File d'attente des écritures du vault local, partagée avec l'enregistrement des pages. */
+  enSerie?: <T>(tache: () => Promise<T>) => Promise<T>;
+  /** Durée de chaque cycle, sans aucun chemin ni identifiant. Par défaut la console du main. */
+  journal?: (ligne: string) => void;
   maintenant?: () => number;
   intervalleMs?: number;
+  delaiApresModificationMs?: number;
 }
 
 interface Session {
@@ -36,8 +43,9 @@ interface Session {
 }
 
 /**
- * Déclenche la sync du desktop : au démarrage, toutes les 30 s, à la demande
- * et à la fermeture (README §5). Un seul cycle à la fois. Garde la connexion
+ * Déclenche la sync du desktop : au démarrage, toutes les 10 s, une seconde
+ * après chaque modification du dossier des notes, à la demande et à la
+ * fermeture (README §5). Un seul cycle à la fois. Garde la connexion
  * au NAS ouverte entre deux cycles et tient les verrous de page.
  */
 export class SyncScheduler {
@@ -46,10 +54,15 @@ export class SyncScheduler {
   /** Ouverture en cours : un cycle et une lecture de verrou simultanés partagent la même connexion. */
   private ouverture: Promise<Session | null> | null = null;
   private cycleEnCours: Promise<void> | null = null;
+  /** Un cycle a été demandé pendant qu'un autre tournait : il repart dès la fin de celui-ci. */
+  private cycleDemande = false;
+  private minuteurDeModification: ReturnType<typeof setTimeout> | null = null;
   private minuteur: ReturnType<typeof setInterval> | null = null;
   /** Identifiants refusés : on ne réessaie pas tout seul, pour ne pas faire verrouiller le compte par le NAS. */
   private identifiantsRefuses = false;
   private arrete = false;
+  /** Le poste n'a plus de réseau : aucun cycle avant son retour. */
+  private horsLigne = false;
   private readonly maintenant: () => number;
 
   constructor(private readonly dependances: SyncSchedulerDependencies) {
@@ -72,8 +85,68 @@ export class SyncScheduler {
     }
     this.cycleEnCours ??= this.cycle().finally(() => {
       this.cycleEnCours = null;
+      if (this.cycleDemande) {
+        this.cycleDemande = false;
+        void this.synchroniser();
+      }
     });
     return this.cycleEnCours;
+  }
+
+  /**
+   * Le dossier des notes a changé sur le poste (page enregistrée, image
+   * ajoutée, autre outil) : un cycle part peu après, pour que l'autre appareil
+   * le voie sans attendre l'intervalle. Les écritures de la sync elle-même
+   * en lancent aussi un, qui ne trouve plus rien à faire.
+   */
+  signalerModificationLocale(): void {
+    if (this.arrete) {
+      return;
+    }
+    if (this.minuteurDeModification !== null) {
+      clearTimeout(this.minuteurDeModification);
+    }
+    this.minuteurDeModification = setTimeout(() => {
+      this.minuteurDeModification = null;
+      this.demanderCycle();
+    }, this.dependances.delaiApresModificationMs ?? delaiApresModificationParDefautMs);
+  }
+
+  /**
+   * La page n'est plus ouverte : son verrou est rendu dès qu'elle est sur le
+   * NAS, à la fin d'un cycle lancé tout de suite.
+   */
+  async quitterPage(page: string): Promise<void> {
+    if (this.session?.verrous.quitter(page) === true) {
+      await this.demanderCycle();
+    }
+  }
+
+  /**
+   * Le poste a perdu ou retrouvé le réseau (câble, wifi). Perdu : le cycle en
+   * cours est abandonné (connexion fermée) et le NAS montré injoignable tout
+   * de suite, sans attendre la fin du délai du client SMB. Retrouvé : un cycle part.
+   */
+  signalerReseau(enLigne: boolean): void {
+    if (this.arrete || enLigne !== this.horsLigne) {
+      return;
+    }
+    this.horsLigne = !enLigne;
+    if (enLigne) {
+      void this.demanderCycle();
+      return;
+    }
+    this.emettre(etatApresEchec('injoignable', this.etatCourant, this.maintenant()));
+    void this.fermerSession();
+  }
+
+  /** Un cycle, maintenant ou juste après celui qui tourne (qui a pu relever le dossier avant le changement). */
+  private demanderCycle(): Promise<void> {
+    if (this.cycleEnCours !== null) {
+      this.cycleDemande = true;
+      return this.cycleEnCours;
+    }
+    return this.synchroniser();
   }
 
   /** Réglages du NAS, mot de passe ou dossier des notes changés : on repart d'une connexion neuve. */
@@ -85,6 +158,9 @@ export class SyncScheduler {
   }
 
   async etatVerrou(page: string): Promise<LockView> {
+    if (this.horsLigne) {
+      return { etat: 'inconnu' };
+    }
     try {
       const session = await this.ouvrirSession();
       return session === null ? { etat: 'inconnu' } : await session.verrous.consulter(page);
@@ -99,6 +175,9 @@ export class SyncScheduler {
    * versions s'il le faut.
    */
   async prendreVerrou(page: string, forcer: boolean): Promise<TakeResult> {
+    if (this.horsLigne) {
+      return { ok: true };
+    }
     try {
       const session = await this.ouvrirSession();
       return session === null ? { ok: true } : await session.verrous.prendre(page, forcer);
@@ -113,6 +192,10 @@ export class SyncScheduler {
       clearInterval(this.minuteur);
       this.minuteur = null;
     }
+    if (this.minuteurDeModification !== null) {
+      clearTimeout(this.minuteurDeModification);
+      this.minuteurDeModification = null;
+    }
     const fin = (async () => {
       await this.cycleEnCours?.catch(() => undefined);
       await this.synchroniser();
@@ -125,7 +208,7 @@ export class SyncScheduler {
   }
 
   private async cycle(): Promise<void> {
-    if (this.identifiantsRefuses) {
+    if (this.identifiantsRefuses || this.horsLigne) {
       return;
     }
     try {
@@ -142,20 +225,28 @@ export class SyncScheduler {
         cle: session.cle,
         maintenant: this.maintenant,
         appareil: (await this.dependances.appareil()).appareil,
+        ...(this.dependances.enSerie === undefined ? {} : { exclusion: this.dependances.enSerie }),
       });
       // L'entretien des verrous ne doit pas changer l'état affiché : un verrou non rafraîchi périme tout seul.
       await session.verrous.entretenir((page) => etatLocalDePage(local, this.dependances.index, session.cle, page)).catch(() => undefined);
-      this.emettre(etatApresCycle(rapport, this.maintenant()));
+      (this.dependances.journal ?? console.info)(`Sync : relevé du NAS ${rapport.durees.releveDistant} ms, cycle ${rapport.durees.total} ms`);
+      if (!this.horsLigne) {
+        this.emettre(etatApresCycle(rapport, this.maintenant()));
+      }
     } catch (erreur) {
+      if (this.horsLigne) {
+        // Cycle coupé par la perte du réseau : l'état injoignable est déjà affiché.
+        return;
+      }
       if (!(erreur instanceof RemoteFsError)) {
         this.emettre({ ...this.etatCourant, etat: 'en_attente', message: 'Synchronisation interrompue, nouvel essai dans un instant' });
         return;
       }
       if (erreur.code === 'identifiants_refuses') {
         this.identifiantsRefuses = true;
-        this.emettre({ ...etatApresEchec(erreur.code, this.etatCourant), message: 'Identifiants refusés par le NAS : saisis à nouveau le mot de passe' });
+        this.emettre({ ...etatApresEchec(erreur.code, this.etatCourant, this.maintenant()), message: 'Identifiants refusés par le NAS : saisis à nouveau le mot de passe' });
       } else {
-        this.emettre(etatApresEchec(erreur.code, this.etatCourant));
+        this.emettre(etatApresEchec(erreur.code, this.etatCourant, this.maintenant()));
       }
       // La session sera rouverte au prochain cycle.
       await this.fermerSession();
