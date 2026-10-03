@@ -182,6 +182,25 @@ test('cocher une tâche ne change que sa ligne', async () => {
   await fermer(session);
 });
 
+test('la case d’une tâche est centrée sur la première ligne de son texte', async () => {
+  const session = await lancer(await preparer());
+  const { page } = session;
+  await ouvrirPage(page, 'Courses');
+  const { centreDeLaCase, centreDuTexte } = await editeur(page).evaluate((racine) => {
+    const item = racine.querySelector('ul[data-type="taskList"] > li');
+    const caseACocher = item?.querySelector('input')?.getBoundingClientRect();
+    const plage = racine.ownerDocument.createRange();
+    const texte = item?.querySelector('p');
+    if (texte) {
+      plage.selectNodeContents(texte);
+    }
+    const ligne = plage.getClientRects()[0];
+    return { centreDeLaCase: (caseACocher?.top ?? 0) + (caseACocher?.height ?? 0) / 2, centreDuTexte: (ligne?.top ?? 0) + (ligne?.height ?? 0) / 2 };
+  });
+  expect(Math.abs(centreDeLaCase - centreDuTexte)).toBeLessThan(1.5);
+  await fermer(session);
+});
+
 test('changer de page ou fermer la fenêtre enregistre la frappe en attente', async () => {
   const session = await lancer(await preparer());
   const { page, vault } = session;

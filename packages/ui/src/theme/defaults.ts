@@ -38,9 +38,10 @@ export interface Theme {
 }
 
 /**
- * Thème par défaut : l'apparence arrêtée à la fin de J3. Les titres ont été
- * choisis par Eloi sur comparatif (gras, trait fin, italique, gris, italique
- * gris), le titre de la page tenant lieu de niveau 1.
+ * Thème par défaut. Les titres ont été choisis par Eloi sur comparatif (gras,
+ * trait fin, italique, gras à la taille du texte, italique léger), le titre de
+ * la page tenant lieu de niveau 1. Leurs couleurs sont la palette « Feux »,
+ * choisie elle aussi sur comparatif : rouge, orange, jaune, vert, gris.
  */
 export const themeParDefaut: Theme = {
   colors: {
@@ -49,7 +50,7 @@ export const themeParDefaut: Theme = {
     border: '#2d3039',
     text: '#e6e7ea',
     muted: '#9aa0ab',
-    accent: '#7aa2f7',
+    accent: '#60a5fa',
     success: '#7bc47f',
     warning: '#e0af68',
     error: '#f08a8a',
@@ -61,21 +62,21 @@ export const themeParDefaut: Theme = {
     line_height: 1.65,
   },
   heading: {
-    h1: { size: '1.6rem', weight: 700, italic: false, underline: false, color: 'text', margin_top: '1.5em' },
-    h2: { size: '1.3rem', weight: 700, italic: false, underline: true, color: 'text', margin_top: '1.3em' },
-    h3: { size: '1.1rem', weight: 600, italic: true, underline: false, color: 'text', margin_top: '1.2em' },
-    h4: { size: '1rem', weight: 600, italic: false, underline: false, color: 'muted', margin_top: '1.2em' },
+    h1: { size: '1.6rem', weight: 700, italic: false, underline: false, color: '#f87171', margin_top: '1.5em' },
+    h2: { size: '1.3rem', weight: 700, italic: false, underline: true, color: '#fb923c', margin_top: '1.3em' },
+    h3: { size: '1.1rem', weight: 600, italic: true, underline: false, color: '#facc15', margin_top: '1.2em' },
+    h4: { size: '1rem', weight: 600, italic: false, underline: false, color: '#4ade80', margin_top: '1.2em' },
     h5: { size: '1rem', weight: 400, italic: true, underline: false, color: 'muted', margin_top: '1.1em' },
   },
-  list: { bullet_1: 'accent', bullet_2: 'warning', bullet_3: 'success' },
+  list: { bullet_1: '#f87171', bullet_2: '#fb923c', bullet_3: '#4ade80' },
   code: {
     background: 'surface',
     font_size: '0.875rem',
     syntax: {
       comment: 'muted',
-      keyword: '#bb9af7',
-      string: '#9ece6a',
-      number: '#ff9e64',
+      keyword: '#f87171',
+      string: '#4ade80',
+      number: '#fb923c',
       function: 'accent',
       type: '#2ac3de',
       variable: 'text',

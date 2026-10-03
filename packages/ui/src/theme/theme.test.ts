@@ -31,7 +31,7 @@ describe('lireTheme', () => {
 
   it('ne modifie jamais le thème par défaut lui-même', () => {
     lireTheme('[colors]\naccent = "#ff0000"\n');
-    expect(themeParDefaut.colors.accent).toBe('#7aa2f7');
+    expect(themeParDefaut.colors.accent).toBe('#60a5fa');
   });
 
   it('ignore une valeur fausse, garde le défaut et dit ce qui était attendu', () => {
@@ -93,7 +93,7 @@ describe('texteDuThemeParDefaut', () => {
   it('se relit sans avertissement et donne le thème par défaut', () => {
     const texte = texteDuThemeParDefaut();
     expect(lireTheme(texte)).toEqual({ theme: themeParDefaut, avertissements: [] });
-    expect(texte).toContain('[heading.h2]\nsize = "1.3rem"\nweight = 700\nitalic = false\nunderline = true\ncolor = "text"\nmargin_top = "1.3em"\n');
+    expect(texte).toContain('[heading.h2]\nsize = "1.3rem"\nweight = 700\nitalic = false\nunderline = true\ncolor = "#fb923c"\nmargin_top = "1.3em"\n');
     expect(texte).toContain('[code.syntax]');
     // Le commentaire des titres n'est écrit qu'une fois.
     expect(texte.match(/# Titres\./g)).toHaveLength(1);
@@ -129,10 +129,11 @@ describe('variablesDuTheme', () => {
   const variables = variablesDuTheme(themeParDefaut);
 
   it('renvoie aux couleurs de la palette par leur variable, pour que les surcharges de page suivent', () => {
-    expect(variables['--color-accent']).toBe('#7aa2f7');
-    expect(variables['--page-h4-couleur']).toBe('var(--color-discret)');
-    expect(variables['--page-puce-2']).toBe('var(--color-alerte)');
-    expect(variables['--code-mot-cle']).toBe('#bb9af7');
+    expect(variables['--color-accent']).toBe('#60a5fa');
+    expect(variables['--page-h1-couleur']).toBe('#f87171');
+    expect(variables['--page-h5-couleur']).toBe('var(--color-discret)');
+    expect(variables['--code-fonction']).toBe('var(--color-accent)');
+    expect(variables['--page-puce-2']).toBe('#fb923c');
     expect(variables['--page-h2-trait']).toBe('underline');
     expect(variables['--page-h3-style']).toBe('italic');
   });
@@ -159,8 +160,9 @@ describe('variablesDeSurcharge', () => {
     expect(prises.avertissements).toEqual([]);
     expect(prises.variables).toMatchObject({ '--color-accent': '#ff8800', '--color-fond': '#000' });
     // Ce qui renvoie à la palette est reposé au même endroit, pour suivre la nouvelle couleur. Le reste n'y est pas.
-    expect(prises.variables['--page-puce-1']).toBe('var(--color-accent)');
-    expect(prises.variables['--page-h4-couleur']).toBe('var(--color-discret)');
+    expect(prises.variables['--code-fonction']).toBe('var(--color-accent)');
+    expect(prises.variables['--page-h5-couleur']).toBe('var(--color-discret)');
+    expect(prises.variables['--page-puce-1']).toBeUndefined();
     expect(prises.variables['--page-h1-taille']).toBeUndefined();
     expect(prises.variables['--color-texte']).toBeUndefined();
     const { variables, avertissements } = variablesDeSurcharge({ accent: 'red', size: '2rem', text: { a: 1 } }, themeParDefaut);

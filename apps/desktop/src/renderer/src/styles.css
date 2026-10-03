@@ -9,6 +9,20 @@ html {
   color-scheme: dark;
 }
 
+/*
+ * La liste ouverte d'une liste déroulante est dessinée par le système : sans
+ * ces couleurs, elle prend un fond clair où le texte gris ne se lit pas.
+ * Dans la couche « base », pour que les classes d'un champ passent devant.
+ */
+@layer base {
+  select,
+  option,
+  optgroup {
+    background-color: var(--color-fond);
+    color: var(--color-texte);
+  }
+}
+
 /* Barre de titre : la zone qui déplace la fenêtre, et ce qui doit rester cliquable dedans. */
 .zone-de-deplacement {
   -webkit-app-region: drag;

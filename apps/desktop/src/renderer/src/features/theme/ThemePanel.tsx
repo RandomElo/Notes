@@ -1,11 +1,14 @@
 import { champsDuTheme, ecrireValeur, lireValeur, themeParDefaut } from '@notes/ui';
 import type { FieldKind, Theme } from '@notes/ui';
 import { ArrowLeft, FilePlus, LoaderCircle, RotateCcw, SquarePen, TriangleAlert } from 'lucide-react';
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { api } from '../../lib/ipc';
 import { inscrireVidage } from '../editor/pending-saves';
 import { ThemeField } from './ThemeField';
-import { sectionsDuFormulaire } from './theme-form-model';
+import { policesInstallees } from './font-detection';
+import { InfoTip } from './InfoTip';
+import { policesProposees, sectionsDuFormulaire } from './theme-form-model';
+import type { FontFamilyKind, FormSection } from './theme-form-model';
 import { ThemePreview } from './ThemePreview';
 import type { ThemeStatus } from './useTheme';
 
@@ -30,6 +33,8 @@ export function ThemePanel({ theme, surRetour }: { theme: ThemeStatus; surRetour
   const [fichierEnCours, definirFichierEnCours] = useState(false);
   const [echecFichier, definirEchecFichier] = useState<string | null>(null);
   const [confirmation, definirConfirmation] = useState(false);
+  // Les polices proposées sont celles qui sont installées : la détection mesure du texte, elle se fait une fois.
+  const polices = useMemo(() => ({ texte: policesInstallees(policesProposees.texte), code: policesInstallees(policesProposees.code) }), []);
   const enAttente = useRef<Theme | null>(null);
   const minuteur = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -104,6 +109,7 @@ export function ThemePanel({ theme, surRetour }: { theme: ThemeStatus; surRetour
   };
 
   const courant = enAttente.current ?? theme.theme;
+  const proprietesDesChamps = { courant, polices, regler };
   const parDefaut = JSON.stringify(courant) === JSON.stringify(themeParDefaut);
 
   return (
@@ -179,25 +185,23 @@ export function ThemePanel({ theme, surRetour }: { theme: ThemeStatus; surRetour
         )}
 
         <fieldset disabled={sansDossier} className="space-y-3">
-          {sectionsDuFormulaire.map((section) => (
-            <div key={section.titre} role="group" aria-label={section.titre} className="bg-surface rounded-lg p-4">
-              <h3 className="text-sm font-semibold">{section.titre}</h3>
-              {section.aide !== undefined && <p className="text-discret text-xs">{section.aide}</p>}
-              <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-x-4 gap-y-3">
-                {section.champs.map((champ) => (
-                  <ThemeField
-                    key={champ.chemin}
-                    libelle={champ.libelle}
-                    genre={genres.get(champ.chemin) ?? 'police'}
-                    valeur={lireValeur(courant, champ.chemin)}
-                    parDefaut={lireValeur(themeParDefaut, champ.chemin)}
-                    palette={courant.colors}
-                    surChangement={(valeur) => regler(champ.chemin, valeur)}
-                  />
+          {sectionsDuFormulaire
+            .filter((section) => section.avance !== true)
+            .map((section) => (
+              <ThemeSection key={section.titre} section={section} {...proprietesDesChamps} />
+            ))}
+          <details className="bg-surface rounded-lg">
+            <summary className="hover:bg-texte/10 focus-visible:bg-texte/20 cursor-pointer rounded-lg p-4 text-sm font-semibold outline-0">
+              Autres réglages : puces, code, interface
+            </summary>
+            <div className="space-y-3 px-1 pb-1">
+              {sectionsDuFormulaire
+                .filter((section) => section.avance === true)
+                .map((section) => (
+                  <ThemeSection key={section.titre} section={section} {...proprietesDesChamps} />
                 ))}
-              </div>
             </div>
-          ))}
+          </details>
         </fieldset>
 
         <div className="bg-surface space-y-3 rounded-lg p-4 text-sm">
@@ -243,5 +247,39 @@ export function ThemePanel({ theme, surRetour }: { theme: ThemeStatus; surRetour
         <ThemePreview />
       </aside>
     </section>
+  );
+}
+
+interface ThemeSectionProps {
+  section: FormSection;
+  courant: Theme;
+  polices: Record<FontFamilyKind, string[]>;
+  regler: (chemin: string, valeur: unknown) => void;
+}
+
+/** Une carte du formulaire : son titre, son aide en infobulle, et ses réglages. */
+function ThemeSection({ section, courant, polices, regler }: ThemeSectionProps) {
+  return (
+    <div role="group" aria-label={section.titre} className="bg-surface rounded-lg p-4">
+      <h3 className="flex items-center gap-1 text-sm font-semibold">
+        {section.titre}
+        {section.aide !== undefined && <InfoTip texte={section.aide} sujet={section.titre} />}
+      </h3>
+      <div className="mt-3 grid grid-cols-[repeat(auto-fill,minmax(10.5rem,1fr))] gap-x-4 gap-y-3">
+        {section.champs.map((champ) => (
+          <ThemeField
+            key={champ.chemin}
+            libelle={champ.libelle}
+            genre={genres.get(champ.chemin) ?? 'police'}
+            valeur={lireValeur(courant, champ.chemin)}
+            parDefaut={lireValeur(themeParDefaut, champ.chemin)}
+            palette={courant.colors}
+            {...(champ.aide === undefined ? {} : { aide: champ.aide })}
+            {...(champ.police === undefined ? {} : { police: { famille: champ.police, installees: polices[champ.police] } })}
+            surChangement={(valeur) => regler(champ.chemin, valeur)}
+          />
+        ))}
+      </div>
+    </div>
   );
 }

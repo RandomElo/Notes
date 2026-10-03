@@ -1,24 +1,32 @@
-import { nomsDeCouleur, refus } from '@notes/ui';
+import { refus } from '@notes/ui';
 import type { ColorName, FieldKind } from '@notes/ui';
 import { RotateCcw } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
-import { decouperTaille, libellesDeCouleur, surSixChiffres, unitesDeTaille } from './theme-form-model';
+import { ColorSelect } from './ColorSelect';
+import { InfoTip } from './InfoTip';
+import { decouperTaille, policeDeValeur, surSixChiffres, unitesDeTaille, valeurDePolice } from './theme-form-model';
+import type { FontFamilyKind } from './theme-form-model';
 
 interface ThemeFieldProps {
   libelle: string;
   genre: FieldKind;
   valeur: unknown;
   parDefaut: unknown;
-  /** La palette en cours : une couleur libre part de celle que le nom désignait. */
+  /** La palette en cours : une couleur nommée s'affiche avec sa valeur. */
   palette: Record<ColorName, string>;
+  /** Explication en infobulle, à côté du libellé. */
+  aide?: string;
+  /** Pour une police : la famille et les polices installées à proposer. */
+  police?: { famille: FontFamilyKind; installees: string[] };
   /** Appelé seulement avec une valeur acceptée par le thème. */
   surChangement: (valeur: unknown) => void;
 }
 
-const apparenceDeChamp = 'bg-fond focus:bg-texte/15 hover:bg-texte/10 rounded-md px-2 py-1.5 text-sm outline-0';
+const apparenceDeChamp = 'bg-fond text-texte focus:bg-texte/15 hover:bg-texte/10 rounded-md px-2 py-1.5 text-sm outline-0';
 const classeDeChamp = `${apparenceDeChamp} w-full min-w-0`;
 /** Dans une rangée de deux champs : le premier prend la place qui reste. */
 const classeDeChampEtire = `${apparenceDeChamp} min-w-0 flex-1`;
+const classeDuCarre = 'bg-fond hover:bg-texte/10 h-8 w-10 flex-none cursor-pointer rounded-md p-1';
 const graisses = [
   [100, 'Très fin'],
   [200, 'Extra-fin'],
@@ -32,7 +40,7 @@ const graisses = [
 ] as const;
 
 /** Un réglage du thème : le champ adapté à sa nature, son message si la saisie est refusée, et le retour au défaut. */
-export function ThemeField({ libelle, genre, valeur, parDefaut, palette, surChangement }: ThemeFieldProps) {
+export function ThemeField({ libelle, genre, valeur, parDefaut, palette, aide, police, surChangement }: ThemeFieldProps) {
   const id = useId();
   // Ce qui est tapé, même si ce n'est pas encore une valeur acceptée : une saisie en cours ne doit pas être effacée.
   const [saisie, definirSaisie] = useState<string | null>(null);
@@ -86,8 +94,7 @@ export function ThemeField({ libelle, genre, valeur, parDefaut, palette, surChan
         />
       );
       break;
-    case 'duree': {
-      const millisecondes = saisie ?? String(valeur).replace(/ms$/, '');
+    case 'duree':
       champ = (
         <div className="flex items-center gap-2">
           <input
@@ -96,7 +103,7 @@ export function ThemeField({ libelle, genre, valeur, parDefaut, palette, surChan
             min={0}
             max={2000}
             step={10}
-            value={millisecondes}
+            value={saisie ?? String(valeur).replace(/ms$/, '')}
             onChange={(evenement) => proposer(`${evenement.target.value}ms`, evenement.target.value)}
             className={classeDeChampEtire}
           />
@@ -104,7 +111,6 @@ export function ThemeField({ libelle, genre, valeur, parDefaut, palette, surChan
         </div>
       );
       break;
-    }
     case 'taille': {
       const morceaux = decouperTaille(String(valeur)) ?? { nombre: '1', unite: 'rem' };
       champ = (
@@ -133,63 +139,68 @@ export function ThemeField({ libelle, genre, valeur, parDefaut, palette, surChan
       break;
     }
     case 'couleur':
-    case 'reference': {
-      const nommee = genre === 'reference' && (nomsDeCouleur as readonly unknown[]).includes(valeur);
+      // Une couleur de la palette : le carré pour la choisir, son code pour la taper.
       champ = (
         <div className="flex items-center gap-2">
-          {genre === 'reference' && (
-            <select
-              id={id}
-              value={nommee ? String(valeur) : ''}
-              // « Autre couleur » part de la couleur que le nom désignait : rien ne change à l'écran tant qu'on n'a pas choisi.
-              onChange={(evenement) => surChangement(evenement.target.value === '' ? palette[valeur as ColorName] : evenement.target.value)}
-              className={nommee ? classeDeChamp : `${apparenceDeChamp} w-32 flex-none`}
-            >
-              {nomsDeCouleur.map((nom) => (
-                <option key={nom} value={nom}>
-                  {libellesDeCouleur[nom]}
-                </option>
-              ))}
-              <option value="">Autre couleur</option>
-            </select>
-          )}
-          {!nommee && (
-            <>
-              <input
-                type="color"
-                aria-label={`Choisir ${libelle}`}
-                value={surSixChiffres(String(valeur)) ?? '#000000'}
-                onChange={(evenement) => surChangement(evenement.target.value)}
-                className="bg-fond h-8 w-10 flex-none cursor-pointer rounded-md p-1"
-              />
-              <input
-                id={genre === 'couleur' ? id : undefined}
-                aria-label={genre === 'couleur' ? undefined : `Code de ${libelle}`}
-                value={texte}
-                spellCheck={false}
-                onChange={(evenement) => proposer(evenement.target.value.trim(), evenement.target.value)}
-                className={`${classeDeChampEtire} font-mono`}
-              />
-            </>
-          )}
+          <input
+            type="color"
+            aria-label={`Choisir ${libelle}`}
+            value={surSixChiffres(String(valeur)) ?? '#000000'}
+            onChange={(evenement) => surChangement(evenement.target.value)}
+            className={classeDuCarre}
+          />
+          <input
+            id={id}
+            value={texte}
+            spellCheck={false}
+            onChange={(evenement) => proposer(evenement.target.value.trim(), evenement.target.value)}
+            className={`${classeDeChampEtire} font-mono`}
+          />
         </div>
       );
       break;
-    }
-    case 'police':
+    case 'reference':
+      // Une couleur qui peut renvoyer à la palette : tout se choisit dans la liste, « Couleur choisie… » compris.
+      champ = <ColorSelect id={id} libelle={libelle} valeur={String(valeur)} palette={palette} surChoix={surChangement} />;
+      break;
+    case 'police': {
+      const famille = police?.famille ?? 'texte';
+      const choisie = policeDeValeur(String(valeur), famille);
+      const systeme = valeur === parDefaut;
       champ = (
-        <input id={id} value={texte} spellCheck={false} onChange={(evenement) => proposer(evenement.target.value, evenement.target.value)} className={classeDeChamp} />
+        <select
+          id={id}
+          value={systeme ? 'systeme' : (choisie ?? 'autre')}
+          onChange={(evenement) => surChangement(evenement.target.value === 'systeme' ? parDefaut : valeurDePolice(evenement.target.value, famille))}
+          style={{ fontFamily: String(valeur) }}
+          className={classeDeChamp}
+        >
+          <option value="systeme" style={{ fontFamily: String(parDefaut) }}>
+            {famille === 'code' ? 'Police à chasse fixe du système' : 'Police du système'}
+          </option>
+          {/* Une valeur écrite à la main dans le fichier reste affichée telle quelle. */}
+          {!systeme && choisie === null && <option value="autre">Écrite dans le fichier : {String(valeur)}</option>}
+          {(police?.installees ?? []).map((nom) => (
+            <option key={nom} value={nom} style={{ fontFamily: valeurDePolice(nom, famille) }}>
+              {nom}
+            </option>
+          ))}
+        </select>
       );
       break;
+    }
   }
 
   const modifie = JSON.stringify(valeur) !== JSON.stringify(parDefaut);
   return (
     <div className={genre === 'booleen' ? 'flex items-center gap-2' : 'space-y-1'}>
       <div className={`flex items-center justify-between gap-2 ${genre === 'booleen' ? 'order-2 flex-1' : ''}`}>
-        <label htmlFor={id} className="text-discret text-xs">
-          {libelle}
-        </label>
+        <span className="flex items-center gap-1">
+          <label htmlFor={id} className="text-discret text-xs">
+            {libelle}
+          </label>
+          {aide !== undefined && <InfoTip texte={aide} sujet={libelle} />}
+        </span>
         {modifie && (
           <button
             type="button"

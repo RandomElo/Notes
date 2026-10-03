@@ -8,8 +8,8 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 
 | | |
 |---|---|
-| Dernière mise à jour | 2026-10-02 |
-| Version | 0.5.2 |
+| Dernière mise à jour | 2026-10-03 |
+| Version | 0.5.7 |
 | Avancement | J0 à J4 terminés, J5 pas commencé |
 | Jalon en cours | Aucun, prochain : J5 (sync SMB) |
 | Points bloquants | Aucun |
@@ -37,7 +37,7 @@ Ce qui n'existe pas encore : la synchronisation avec le NAS (seul le test de con
 
 Reste à faire :
 
-- commiter le travail de J2, J3 et J4 (versions 0.3.0 à 0.5.2), qui ne l'est pas encore ;
+- commiter le travail de J2, J3 et J4 (versions 0.3.0 à 0.5.7), qui ne l'est pas encore ;
 - créer le fichier `.env` à partir de `.env.example` pour pouvoir lancer `npm run test:nas` ;
 - dérouler les parties 3 à 5 de `docs/recettes/J0.md` (refus de connexion, relance, test d'intégration), non rapportées à ce jour.
 
@@ -353,7 +353,7 @@ La case à cocher se tape aussi dans une puce, comme en Markdown : `- [ ] ` donn
 
 - Puces : la forme et la couleur changent à chaque niveau (disque bleu, cercle orange, carré vert), puis le cycle reprend.
 - Listes ordonnées : 1, 2, 3 au premier niveau, a, b, c au deuxième, i, ii, iii au troisième. C'est un affichage : dans le fichier, Markdown ne connaît que les nombres, les sous-listes y restent numérotées 1, 2, 3.
-- Titres : le niveau 1 est le titre de la page, affiché en haut, en grand. Dans le texte, `#` est donc le premier niveau en dessous, et il y en a cinq, chacun avec son signe : `#` en gras, `##` un peu plus petit avec un trait fin gris dessous, `###` en italique, `####` gris à la taille du texte, `#####` en italique gris sans gras. Pas de couleur, pas de filet. Dans le fichier, `#` reste un titre Markdown de niveau 1. Ces valeurs deviendront celles du thème par défaut en J4.
+- Titres : le niveau 1 est le titre de la page, affiché en haut, en grand. Dans le texte, `#` est donc le premier niveau en dessous, et il y en a cinq, chacun avec son signe : `#` en gras, `##` un peu plus petit avec un trait fin dessous, de la couleur du titre, `###` en italique, `####` gris à la taille du texte, `#####` en italique gris sans gras. Pas de filet. Couleurs : palette « Feux », choisie sur comparatif, `#` rouge, `##` orange, `###` jaune, `####` vert, `#####` gris. Les puces suivent (rouge, orange, vert) et l'accent passe au bleu `#60a5fa`. Dans le fichier, `#` reste un titre Markdown de niveau 1. Ces valeurs deviendront celles du thème par défaut en J4.
 
 ### Enregistrement
 
@@ -443,6 +443,9 @@ Le point clé est la hiérarchie H1 à H5, nettement différenciée (taille, gra
 - Thème par défaut : l'apparence arrêtée à la fin de J3 (titres choisis sur comparatif, puces et numérotation par niveau, fond de code, surlignage). Sans fichier de thème, c'est lui qui s'applique. J4 n'a pas changé l'apparence, il l'a rendue réglable.
 - Réglage dans l'application : l'éditeur de thème a son propre écran, pour ne pas se mélanger aux autres réglages. La page des réglages dit seulement où en est le thème (par défaut, personnalisé, réglages ignorés) et porte le bouton « Modifier le thème » qui y mène, un bouton de retour en ramène. Cet écran a un formulaire du thème (couleurs, texte, chaque niveau de titre, puces, code, interface) avec un aperçu d'une page d'exemple à côté. Chaque réglage s'applique tout de suite à l'écran, puis est écrit dans le fichier après un court délai, ou tout de suite si on quitte les réglages ou ferme la fenêtre. Une saisie refusée est signalée sous son champ, n'est pas appliquée et n'est pas écrite. Chaque réglage a son retour au défaut, et tout le thème aussi, après confirmation.
 - Le fichier reste la référence, et l'application ne l'écrit que sur un geste : un réglage dans le formulaire, ou le bouton « Créer le fichier de thème ». Il n'est jamais créé tout seul. L'application l'écrit en entier, toutes les valeurs, commentées par section : un commentaire ou un réglage inconnu ajouté à la main disparaît donc au prochain réglage fait dans le formulaire. Le bouton « Ouvrir le fichier de thème » l'ouvre dans l'éditeur de texte du système.
+- Ordre du formulaire, celui où on s'en sert : les cinq niveaux de titre d'abord (couleur, taille, graisse, espace au-dessus, italique, trait), puis le texte (interligne, taille, polices), puis la palette. Puces, code et interface sont repliés sous « Autres réglages ».
+- Une couleur qui peut renvoyer à la palette (celle d'un titre, par exemple) se règle dans une seule liste où chaque couleur a sa pastille : un nom de la palette, qui suit la palette, ou « Couleur choisie… », qui ouvre le sélecteur de couleur du système et donne une couleur propre à ce réglage. Cette liste est dessinée par l'application (une liste déroulante du système n'affiche que du texte) et se manie au clavier comme une liste ordinaire : flèches, `Entrée`, `Échap`. Un « i » entouré, à côté du libellé ou du titre d'une section, explique au survol (ou au focus clavier) comment marchent les couleurs, la palette et l'interligne.
+- Les polices se choisissent dans une liste : la police du système d'abord, puis les polices courantes sous Linux qui sont installées sur le poste (détectées en mesurant du texte, sans rien demander au système). Une police choisie s'écrit avec son repli (`'Noto Sans', sans-serif`), pour le téléphone qui ne l'aurait pas. Une police écrite à la main dans le fichier reste affichée telle quelle.
 - Le formulaire ne montre pas les réglages encore sans effet (coloration du code, callouts, tableaux, voir plus bas) : ils sont dans le fichier.
 - Rechargement à chaud : le fichier est relu à chaque modification du dossier des notes, et ses valeurs deviennent des variables CSS posées sur la racine. Une ligne supprimée reprend sa valeur par défaut, un fichier supprimé rend le thème par défaut.
 - Citations et séparateurs gardent un affichage fixe, hors du thème : l'application n'en crée plus (§6).
@@ -755,6 +758,7 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-02 | Une surcharge de page invalide est ignorée sans message : seul le fichier de thème a ses avertissements à l'écran. |
 | 2026-10-02 | Le thème se règle aussi dans les réglages (demande d'Eloi) : formulaire et aperçu en direct. Le fichier TOML reste la référence. Le renderer envoie le thème réglé, le main le revérifie valeur par valeur et rédige lui-même le fichier, en entier : le renderer ne choisit jamais le texte écrit sur le disque. Ce qu'on avait ajouté à la main dans le fichier hors des réglages connus est perdu à ce moment-là. |
 | 2026-10-02 | L'éditeur de thème est un écran à part, ouvert par un bouton depuis les réglages (demande d'Eloi) : chaque famille de réglages longue aura son écran plutôt que de s'empiler sur la même page. |
+| 2026-10-03 | Éditeur de thème, retours d'Eloi : titres en tête du formulaire (c'est surtout leur couleur et l'interligne qu'il règle), polices choisies dans une liste de polices installées au lieu d'une suite de noms à taper, infobulles « i » sur les couleurs, listes déroulantes aux couleurs de l'application. |
 | 2026-10-01 | SMB 3 visé, avec chiffrement (le NAS l'accepte). Libs JavaScript pures écartées car limitées à SMB 2.0.2. |
 | 2026-10-01 | Accès hors domicile par Tailscale : l'app utilise l'adresse Tailscale du NAS partout. |
 | 2026-10-01 | Aucun identifiant en clair sur le disque. Sans trousseau système, le secret n'est pas enregistré et est redemandé à chaque lancement. |
@@ -766,6 +770,8 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-01 | Chiffrement SMB imposé par le client, sur desktop comme sur Android, sans changer le réglage du NAS (« défini par le client »). Côté desktop, copie de `go-smb2` avec un correctif maison. |
 | 2026-10-01 | Connexion SMB avec le compte personnel d'Eloi, pas de compte dédié. La 2FA du compte ne concerne pas SMB (vérifié), rien à gérer dans l'app. |
 | 2026-10-01 | Lib SMB Android : `smbj`, dans un plugin Capacitor maison. Validé par un POC sur le téléphone (SMB 3 chiffré : écriture, lecture, liste, suppression). POC supprimé ensuite. |
+| 2026-10-03 | Le trait sous un titre prend la couleur du titre et une épaisseur proportionnée à sa taille (demande d'Eloi), au lieu d'un gris fixe de 1 px. La couleur d'un réglage ne se choisit plus que dans la liste à pastilles, sans carré à côté. |
+| 2026-10-03 | Couleurs des titres : palette « Feux », choisie par Eloi parmi huit propositions (`~/demo-claude/notes/couleurs-titres/`). Titres 1 à 5 en `#f87171`, `#fb923c`, `#facc15`, `#4ade80` et gris, puces en rouge, orange, vert, accent `#60a5fa`, coloration du code assortie. C'est le thème par défaut, et les mêmes couleurs ont été reportées dans le fichier de thème d'Eloi, qui passait devant. |
 
 ---
 
@@ -862,3 +868,8 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-02 | 0.5.0 | J4 : thème |
 | 2026-10-02 | 0.5.1 | Thème réglable dans les réglages |
 | 2026-10-02 | 0.5.2 | Thème : écran à part |
+| 2026-10-03 | 0.5.3 | Éditeur de thème plus clair |
+| 2026-10-03 | 0.5.4 | Pastilles de couleur |
+| 2026-10-03 | 0.5.5 | Trait de titre, liste seule |
+| 2026-10-03 | 0.5.6 | Palette Feux |
+| 2026-10-03 | 0.5.7 | Cases à cocher alignées |
