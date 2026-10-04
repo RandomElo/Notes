@@ -40,6 +40,14 @@ export function creerHandlersFenetre(fenetre: () => BrowserWindow | null, attend
       return cible.isMaximized();
     },
     fermer: (): void => fenetre()?.close(),
+    /** Une nouvelle fenêtre principale remplace celle qui a été fermée : sa fermeture repasse par les deux temps. */
+    reinitialiser: (): void => {
+      confirmee = false;
+      if (delai !== null) {
+        clearTimeout(delai);
+        delai = null;
+      }
+    },
     estAgrandie: (): boolean => fenetre()?.isMaximized() ?? false,
     confirmerFermeture: (): Promise<void> => fermerPourDeBon(),
 

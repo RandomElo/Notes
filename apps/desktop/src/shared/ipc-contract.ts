@@ -40,6 +40,16 @@ export const canaux = {
   prendreVerrou: 'sync:prendre-verrou',
   quitterPage: 'sync:quitter-page',
   montrerFichier: 'sync:montrer-fichier',
+  pagesEnAttente: 'sync:pages-en-attente',
+  etatDuFond: 'fond:etat',
+  definirDemarrageAuto: 'fond:demarrage-auto',
+  quitterNotes: 'fond:quitter',
+  relancerNotes: 'maj:relancer',
+  miseAJourEnAttente: 'maj:en-attente',
+  choisirDepuisLaRecherche: 'recherche:choisir',
+  fermerLaRecherche: 'recherche:fermer',
+  ajusterLaRecherche: 'recherche:ajuster',
+  prendrePageDemandee: 'recherche:prendre-page',
   choisirImages: 'images:choisir',
   ajouterImage: 'images:ajouter',
   telechargerImage: 'images:telecharger',
@@ -66,7 +76,31 @@ export const evenements = {
   fermetureDemandee: 'fenetre:fermeture-demandee',
   /** L'état de la sync a changé (début ou fin d'un cycle, NAS injoignable). Porte le nouvel état. */
   etatSyncModifie: 'sync:etat-modifie',
+  /** Une page a été choisie dans la fenêtre de recherche du raccourci global : la fenêtre principale la prend et l'ouvre. */
+  pageDemandee: 'recherche:page-demandee',
+  /** La petite fenêtre de recherche vient d'être montrée : la liste des pages est à relire. */
+  rechercheMontree: 'recherche:montree',
+  /** La petite fenêtre de recherche vient d'être cachée : la page repart de zéro. */
+  rechercheCachee: 'recherche:cachee',
+  /** Une nouvelle version de l'AppImage vient d'être installée : la barre de titre propose de relancer. */
+  miseAJourInstallee: 'maj:installee',
 } as const;
+
+/** Notes gardée en fond pour le raccourci global (README §7). */
+export interface BackgroundState {
+  /** Touches du raccourci global, telles qu'affichées. */
+  raccourci: string;
+  /** Faux si un autre programme a déjà pris ces touches (raccourci de Cinnamon, par exemple). */
+  raccourciActif: boolean;
+  /** Notes démarre avec la session. null hors de l'AppImage : rien à régler. */
+  demarrageAuto: boolean | null;
+}
+
+/** Page choisie dans la fenêtre de recherche du raccourci global, à ouvrir dans la fenêtre principale. */
+export interface PageRequest {
+  id: string;
+  nouvelOnglet: boolean;
+}
 
 /** Verrou d'une page vu du renderer : « inconnu » quand la sync est coupée ou le NAS injoignable. */
 export type LockView = LockState | { etat: 'inconnu' };
@@ -226,6 +260,31 @@ export interface NotesApi {
   quitterPage(demande: { chemin: string }): Promise<void>;
   /** Montre un fichier du dossier des notes dans le gestionnaire de fichiers (sauvegarde de conflit, image inutilisée). */
   montrerFichier(demande: { chemin: string }): Promise<void>;
+  /** Parmi ces pages, celles que le NAS n'a pas encore dans leur dernière version. Aucune si la sync n'est pas réglée. Ne contacte pas le NAS. */
+  pagesEnAttente(demande: { chemins: string[] }): Promise<string[]>;
+
+  /** Raccourci global et application gardée en fond : état affiché dans les réglages. */
+  etatDuFond(): Promise<BackgroundState>;
+  /** Lance Notes en fond à l'ouverture de session, ou plus. Rend l'état à jour. */
+  definirDemarrageAuto(actif: boolean): Promise<BackgroundState>;
+  /** Quitte Notes pour de bon : la fenêtre enregistre et se ferme, la recherche n'est plus prête. */
+  quitterNotes(): Promise<void>;
+  /** Vrai si une nouvelle version a été installée depuis le lancement (`npm run installer`). */
+  miseAJourEnAttente(): Promise<boolean>;
+  surMiseAJourInstallee(ecouteur: () => void): () => void;
+  /** Enregistre, quitte et relance Notes sur la nouvelle version installée. */
+  relancerNotes(): Promise<void>;
+  /** Fenêtre de recherche du raccourci global : ouvre la page dans la fenêtre principale, qui revient devant, et se cache. */
+  choisirDepuisLaRecherche(demande: PageRequest): Promise<void>;
+  /** Fenêtre de recherche : se cache sans choix. */
+  fermerLaRecherche(): Promise<void>;
+  surRechercheMontree(ecouteur: () => void): () => void;
+  surRechercheCachee(ecouteur: () => void): () => void;
+  /** Fenêtre de recherche : prend la hauteur de son contenu. */
+  ajusterLaRecherche(demande: { hauteur: number }): Promise<void>;
+  /** Fenêtre principale : la page choisie dans la fenêtre de recherche, une seule fois, null s'il n'y en a pas. */
+  prendrePageDemandee(): Promise<PageRequest | null>;
+  surPageDemandee(ecouteur: () => void): () => void;
 
   /** Ouvre le sélecteur de fichiers et rend les images choisies, sans les copier. Aucune si l'utilisateur annule. */
   choisirImages(): Promise<ImagesReceivedResult>;

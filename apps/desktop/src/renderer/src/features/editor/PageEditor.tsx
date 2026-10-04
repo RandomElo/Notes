@@ -1,6 +1,6 @@
 import type { TreeNode } from '@notes/core';
 import { ecrireMarkdown, lireMarkdown } from '@notes/document';
-import type { ImageAttributes } from '@notes/document';
+import type { ImageAttributes, OutlineEntry } from '@notes/document';
 import { classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
 import { Node as NoeudTiptap } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
@@ -8,7 +8,7 @@ import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import type { Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { Lock, X } from 'lucide-react';
+import { List, Lock, X } from 'lucide-react';
 import { Selection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -32,6 +32,9 @@ import { TableGridPicker } from '../tables/TableGridPicker';
 import { RowColumnGrips } from '../tables/RowColumnGrips';
 import { TableHandles } from '../tables/TableHandles';
 import { TableKeys } from '../tables/table-keys';
+import { OutlineDialog } from '../outline/OutlineDialog';
+import { OutlineRail } from '../outline/OutlineRail';
+import { allerAuTitre, useOutline } from '../outline/useOutline';
 import { FloatingToolbar } from '../toolbar/FloatingToolbar';
 import { allerALaFin } from './end-click';
 import { PageSaver } from './page-saver';
@@ -95,10 +98,12 @@ interface PageEditorProps {
   theme: Theme;
   /** Ouvre l'écran de résolution d'une version en conflit de cette page. */
   surConflit: (sauvegarde: string) => void;
+  /** Sommaire latéral affiché (Ctrl+Maj+\ le masque). */
+  sommaireVisible: boolean;
 }
 
 /** Page ouverte : fil d'Ariane, titre, puis l'éditeur de son contenu. */
-export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit }: PageEditorProps) {
+export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible }: PageEditorProps) {
   // Entrée ou flèche bas dans le titre : le curseur passe au début du contenu.
   const [descentes, descendre] = useState(0);
   const [chargement, definirChargement] = useState<Chargement>({ etat: 'lecture' });
@@ -109,6 +114,15 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   const verrou = usePageLock(noeud.chemin);
   const lectureSeule = verrou.verrou.etat === 'autre';
   const conflits = useConflits(noeud.chemin);
+  const [editeur, definirEditeur] = useState<Editor | null>(null);
+  const sommaire = useOutline(editeur);
+  const [sommaireOuvert, definirSommaireOuvert] = useState(false);
+  const allerA = (entree: OutlineEntry): void => {
+    definirSommaireOuvert(false);
+    if (editeur !== null && !editeur.isDestroyed) {
+      allerAuTitre(editeur, entree);
+    }
+  };
 
   useEffect(() => {
     let actif = true;
@@ -135,12 +149,23 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   );
 
   return (
-    <div data-zone-page style={couleurs as CSSProperties} className="bg-fond text-texte -mr-6 -ml-12 min-h-full pr-6 pl-12">
-      <article className="mx-auto max-w-(--ui-largeur-contenu) pb-24">
+    <div data-zone-page style={couleurs as CSSProperties} className="bg-fond text-texte -mr-6 -ml-12 flex min-h-full pr-6 pl-12">
+      <article className="mx-auto max-w-(--ui-largeur-contenu) min-w-0 flex-1 pb-24">
         {/* Reste visible quand la page défile : c'est là que s'affiche le résultat de l'enregistrement. */}
         <div className="bg-fond sticky top-0 z-10 -mx-2 flex items-center justify-between gap-4 px-2 py-2">
           <p className="text-discret min-w-0 truncate text-xs">{noeud.chemin.split('/').join(' / ')}</p>
-          {chargement.etat === 'pret' && <SaveIndicator etat={enregistrement} />}
+          <div className="flex shrink-0 items-center gap-2">
+            {chargement.etat === 'pret' && <SaveIndicator etat={enregistrement} />}
+            <button
+              type="button"
+              onClick={() => definirSommaireOuvert(true)}
+              aria-label="Sommaire de la page"
+              title="Sommaire de la page"
+              className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0"
+            >
+              <List className="size-4" aria-hidden="true" />
+            </button>
+          </div>
         </div>
         {/* Le titre de la page est le niveau 1 : dans le contenu, `#` est le premier niveau en dessous. */}
         <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} lectureSeule={lectureSeule} />
@@ -165,9 +190,23 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
             surSurcharges={surSurcharges}
             lectureSeule={lectureSeule}
             surFrappe={verrou.signalerFrappe}
+            surEditeur={definirEditeur}
           />
         )}
       </article>
+      {sommaireVisible && <OutlineRail entrees={sommaire.entrees} courant={sommaire.courant} surChoix={allerA} />}
+      {sommaireOuvert && (
+        <OutlineDialog
+          titre={noeud.titre}
+          entrees={sommaire.entrees}
+          courant={sommaire.courant}
+          surChoix={allerA}
+          surFermeture={() => {
+            definirSommaireOuvert(false);
+            editeur?.commands.focus(undefined, { scrollIntoView: false });
+          }}
+        />
+      )}
     </div>
   );
 }
@@ -188,9 +227,11 @@ interface EditorSurfaceProps {
   lectureSeule: boolean;
   /** Appelé à chaque modification du contenu, pour le verrou de la page. */
   surFrappe: () => void;
+  /** Donne l'éditeur à la page, pour son sommaire. */
+  surEditeur: (editeur: Editor | null) => void;
 }
 
-function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe }: EditorSurfaceProps) {
+function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur }: EditorSurfaceProps) {
   const [erreurDImage, definirErreurDImage] = useState<string | null>(null);
   // Position où ouvrir la grille de taille d'un tableau (`/tableau`), null quand elle est fermée.
   const [grille, definirGrille] = useState<number | null>(null);
@@ -283,7 +324,9 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
   }, [editeur, lectureSeule, sauvegarde]);
   useEffect(() => {
     editeurActuel.current = editeur;
-  }, [editeur]);
+    surEditeur(editeur);
+    return () => surEditeur(null);
+  }, [editeur, surEditeur]);
 
   useEffect(() => {
     if (descentes > 0) {
@@ -292,9 +335,14 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
   }, [descentes, editeur]);
 
   // Après l'arborescence, qui reprend le focus à la fin du renommage : les effets d'un même rendu vont dans l'ordre de l'arbre.
+  // Une recherche ouverte entre-temps (Ctrl+K juste après avoir choisi la page) garde le focus. Sans délai :
+  // la commande `focus` de TipTap attend l'image suivante, et prendrait le focus à une recherche ouverte d'ici là.
   useEffect(() => {
     if (entrer) {
-      editeur.commands.focus('start');
+      if (document.querySelector('[aria-modal="true"]') === null && !editeur.isDestroyed) {
+        editeur.view.dispatch(editeur.state.tr.setSelection(Selection.atStart(editeur.state.doc)));
+        editeur.view.focus();
+      }
       surEntree();
     }
   }, [entrer, editeur, surEntree]);
@@ -346,7 +394,7 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
         return;
       }
       // Seulement le fond : ni le contenu, ni un bouton, un champ ou un message.
-      if (editeur.view.dom.contains(cible) || cible.closest('button, a, input, textarea, [role="alert"], [contenteditable]') !== null) {
+      if (editeur.view.dom.contains(cible) || cible.closest('button, a, input, textarea, nav, [role="alert"], [contenteditable]') !== null) {
         return;
       }
       if (evenement.clientY <= editeur.view.dom.getBoundingClientRect().bottom) {

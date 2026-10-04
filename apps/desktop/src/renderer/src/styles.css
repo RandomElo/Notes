@@ -32,6 +32,11 @@ html {
   -webkit-app-region: no-drag;
 }
 
+/* Un titre atteint par le sommaire s'arrête sous la barre collée en haut de la page, pas dessous. */
+.notes-page :is(h1, h2, h3, h4, h5) {
+  scroll-margin-top: 4rem;
+}
+
 /*
  * Bloc sélectionné en entier (Échap) : montré par le fond, jamais par un contour.
  * Le fond a la même hauteur quel que soit le bloc : sur une ligne, celle du plus

@@ -1,5 +1,5 @@
 import { LockManager, RemoteFsError, etatApresCycle, etatApresEchec, etatDesactive, etatEnCours, etatLocalDePage, sousDossierDistant, synchroniser } from '@notes/core';
-import type { IndexStore, LocalFs, LockOwner, RemoteFs, SyncStatus, TakeResult } from '@notes/core';
+import type { IndexStore, LocalFs, LockOwner, NasSettings, RemoteFs, SyncStatus, TakeResult } from '@notes/core';
 import type { LockView } from '../../shared/ipc-contract';
 import type { SettingsStore } from '../settings/settings-store';
 import type { CompanionCredentials } from '../smb/protocol';
@@ -10,6 +10,11 @@ const intervalleParDefautMs = 10_000;
 const delaiApresModificationParDefautMs = 1_000;
 /** À la fermeture, le dernier cycle a ce temps pour finir : au-delà, l'application se ferme quand même. */
 const delaiMaxDeFermetureMs = 15_000;
+
+/** Ce qui identifie un couple dossier des notes et NAS dans l'index de sync : changer l'un repart d'un index neuf. */
+function cleDeLIndex(vaultLocal: string, nas: Pick<NasSettings, 'hote' | 'partage' | 'dossierVault'>): string {
+  return JSON.stringify([vaultLocal, nas.hote, nas.partage, nas.dossierVault]);
+}
 
 /** Une connexion au NAS que la sync garde ouverte d'un cycle à l'autre. */
 export interface SyncConnection extends RemoteFs {
@@ -75,7 +80,7 @@ export class SyncScheduler {
 
   demarrer(): void {
     void this.synchroniser();
-    this.minuteur = setInterval(() => void this.synchroniser(), this.dependances.intervalleMs ?? intervalleParDefautMs);
+    this.minuteur ??= setInterval(() => void this.synchroniser(), this.dependances.intervalleMs ?? intervalleParDefautMs);
   }
 
   /** Lance un cycle, ou rend celui qui tourne déjà. */
@@ -186,8 +191,36 @@ export class SyncScheduler {
     }
   }
 
+  /**
+   * Parmi ces pages, celles que le NAS n'a pas encore dans leur dernière
+   * version (point sur leur onglet). Aucune quand la sync n'est pas réglée.
+   * Ne contacte pas le NAS : l'état se lit dans l'index du dernier cycle.
+   */
+  async pagesEnAttente(pages: readonly string[]): Promise<string[]> {
+    const reglages = await this.dependances.reglages.lire();
+    const local = this.dependances.localFs();
+    if (reglages.nas === null || reglages.vaultLocal === null || local === null) {
+      return [];
+    }
+    const cle = cleDeLIndex(reglages.vaultLocal, reglages.nas);
+    const enAttente: string[] = [];
+    for (const page of pages) {
+      if ((await etatLocalDePage(local, this.dependances.index, cle, page).catch(() => 'absente')) === 'en_attente') {
+        enAttente.push(page);
+      }
+    }
+    return enAttente;
+  }
+
   /** À la fermeture : dernier cycle (borné dans le temps), verrous rendus, connexion fermée. */
   async arreter(): Promise<void> {
+    this.arreterMinuteurs();
+    await this.dernierCycle();
+    this.arrete = true;
+    await this.fermerSession();
+  }
+
+  private arreterMinuteurs(): void {
     if (this.minuteur !== null) {
       clearInterval(this.minuteur);
       this.minuteur = null;
@@ -196,15 +229,16 @@ export class SyncScheduler {
       clearTimeout(this.minuteurDeModification);
       this.minuteurDeModification = null;
     }
+  }
+
+  /** Un dernier cycle après celui qui tourne, puis les verrous rendus. Borné dans le temps : au-delà, on ferme quand même. */
+  private async dernierCycle(): Promise<void> {
     const fin = (async () => {
       await this.cycleEnCours?.catch(() => undefined);
       await this.synchroniser();
-      this.arrete = true;
       await this.session?.verrous.toutRelacher();
     })();
     await Promise.race([fin, new Promise((resoudre) => setTimeout(resoudre, delaiMaxDeFermetureMs))]);
-    this.arrete = true;
-    await this.fermerSession();
   }
 
   private async cycle(): Promise<void> {
@@ -280,7 +314,7 @@ export class SyncScheduler {
       return null;
     }
     const { hote, partage, utilisateur, dossierVault } = reglages.nas;
-    const cle = JSON.stringify([reglages.vaultLocal, hote, partage, dossierVault]);
+    const cle = cleDeLIndex(reglages.vaultLocal, reglages.nas);
     if (this.session?.cle === cle) {
       return this.session;
     }

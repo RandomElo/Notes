@@ -15,12 +15,23 @@ export interface IpcDependencies {
   theme: ReturnType<typeof creerHandlersTheme>;
   sync: ReturnType<typeof creerHandlersSync>;
   images: ReturnType<typeof creerHandlersImages>;
+  recherche: {
+    etatDuFond: () => unknown;
+    definirDemarrageAuto: (actif: unknown) => unknown;
+    quitter: () => void;
+    relancer: () => void;
+    miseAJourEnAttente: () => boolean;
+    choisir: (demande: unknown) => void;
+    fermer: () => void;
+    ajuster: (demande: unknown) => void;
+    prendrePage: () => unknown;
+  };
   /** Vrai si l'appel vient bien de la page de l'application. */
   expediteurAutorise: (evenement: IpcMainInvokeEvent) => boolean;
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, recherche, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -70,6 +81,17 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, ex
   brancher(canaux.prendreVerrou, (demande) => sync.prendreVerrou(demande));
   brancher(canaux.quitterPage, (demande) => sync.quitterPage(demande));
   brancher(canaux.montrerFichier, (demande) => sync.montrerFichier(demande));
+  brancher(canaux.pagesEnAttente, (demande) => sync.pagesEnAttente(demande));
+
+  brancher(canaux.etatDuFond, () => recherche.etatDuFond());
+  brancher(canaux.definirDemarrageAuto, (actif) => recherche.definirDemarrageAuto(actif));
+  brancher(canaux.quitterNotes, () => recherche.quitter());
+  brancher(canaux.relancerNotes, () => recherche.relancer());
+  brancher(canaux.miseAJourEnAttente, () => recherche.miseAJourEnAttente());
+  brancher(canaux.choisirDepuisLaRecherche, (demande) => recherche.choisir(demande));
+  brancher(canaux.fermerLaRecherche, () => recherche.fermer());
+  brancher(canaux.ajusterLaRecherche, (demande) => recherche.ajuster(demande));
+  brancher(canaux.prendrePageDemandee, () => recherche.prendrePage());
 
   brancher(canaux.choisirImages, () => images.choisir());
   brancher(canaux.ajouterImage, (demande) => images.ajouter(demande));

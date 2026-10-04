@@ -207,6 +207,21 @@ describe('SyncScheduler', () => {
     expect(partage.contenu()['Notes/Alpha/.lock']).toBeUndefined();
   });
 
+  it('dit quelles pages le NAS n’a pas encore, sans le contacter', async () => {
+    const { sync, local, partage } = await monter();
+    expect(await sync.pagesEnAttente(['Alpha', 'Absente'])).toEqual(['Alpha']);
+    await sync.synchroniser();
+    expect(await sync.pagesEnAttente(['Alpha'])).toEqual([]);
+    partage.panne = true;
+    await local.ecrireTexte('Alpha/page.md', 'hors ligne\n');
+    expect(await sync.pagesEnAttente(['Alpha'])).toEqual(['Alpha']);
+  });
+
+  it('ne signale aucune page en attente quand la sync n’est pas réglée', async () => {
+    const { sync } = await monter({ reglagesNas: false });
+    expect(await sync.pagesEnAttente(['Alpha'])).toEqual([]);
+  });
+
   it('tire un identifiant d’appareil une seule fois et le garde dans les réglages', async () => {
     const { reglages, dossier } = await monter();
     const identite = identiteDuPoste(reglages);

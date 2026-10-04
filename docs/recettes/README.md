@@ -17,6 +17,7 @@ Un jalon ne passe à « Fait » dans le README qu'une fois sa recette rapportée
 |---|---|---|---|
 | [J5.md](J5.md) | Sync SMB | Deux machines pendant une journée sans perte ni écrasement : passage d'une page d'un poste à l'autre, verrous, conflit, hors ligne, fermeture | Validée le 2026-10-03, retouches comprises |
 | [J6.md](J6.md) | Blocs riches | Page technique complète rédigée confortablement : code, tableaux, images, callouts | Validée, retouches faites (0.5.13 à 0.5.23) |
+| [J7.md](J7.md) | Navigation avancée | Raccourci global et sommaire toujours à jour : onglets, recherche `Ctrl+K`, raccourci du bureau, sommaires | Validée le 2026-10-04, retouches comprises (0.7.1 à 0.7.7) |
 
 J0 à J4 ont été vérifiés avec Eloi au fil des séances : ils n'ont pas de recette.
 
@@ -66,7 +67,7 @@ Lancés par Claude avant de dire qu'un travail est fini. On peut les lancer soi-
 | Commande | Ce qu'elle vérifie | Durée |
 |---|---|---|
 | `npm run check` | Typage, lint, carte du code, tests Vitest (format des pages, aller-retour Markdown, sync simulée sans NAS, verrous) et tests Go du compagnon | Moins d'une minute |
-| `npm run test:e2e` | Construit l'application et la pilote sur une copie du vault d'exemple : éditeur, blocs, blocs riches, thème, barre de statut. Tourne sur un écran virtuel (`xvfb-run`, paquet `xvfb`) : rien ne s'affiche, le poste reste utilisable | Environ une minute |
+| `npm run test:e2e` | Construit l'application et la pilote sur une copie du vault d'exemple : éditeur, blocs, blocs riches, thème, barre de statut, onglets, recherche, sommaire. Tourne sur un écran virtuel (`xvfb-run`, paquet `xvfb`) : rien ne s'affiche, le poste reste utilisable | Environ une minute |
 | `npx vitest run <chemin>` | Un seul fichier de test | Quelques secondes |
 
 Ces tests ne remplacent pas une recette : ils ne parlent jamais au NAS réel et ne font tourner qu'une seule machine.

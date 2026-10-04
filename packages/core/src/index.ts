@@ -41,3 +41,5 @@ export { LockManager, dureeDeVieDuVerrouMs, inactiviteAvantRelacheMs } from './s
 export type { LocalPageState, LockOwner, LockState, TakeResult } from './sync/lock';
 export { etatApresCycle, etatApresEchec, etatDesactive, etatEnCours, messageInjoignable } from './sync/status';
 export type { SyncStatus, SyncStatusKind } from './sync/status';
+export { classerParTitre, correspondanceFloue, normaliserPourRecherche } from './search/fuzzy';
+export type { FuzzyMatch, RankedResult } from './search/fuzzy';

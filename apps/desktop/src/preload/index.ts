@@ -55,6 +55,38 @@ const api: NotesApi = {
 
   lireEtatSync: () => ipcRenderer.invoke(canaux.lireEtatSync),
   synchroniserMaintenant: () => ipcRenderer.invoke(canaux.synchroniserMaintenant),
+  pagesEnAttente: (demande) => ipcRenderer.invoke(canaux.pagesEnAttente, demande),
+
+  etatDuFond: () => ipcRenderer.invoke(canaux.etatDuFond),
+  definirDemarrageAuto: (actif) => ipcRenderer.invoke(canaux.definirDemarrageAuto, actif),
+  quitterNotes: () => ipcRenderer.invoke(canaux.quitterNotes),
+  miseAJourEnAttente: () => ipcRenderer.invoke(canaux.miseAJourEnAttente),
+  surMiseAJourInstallee: (ecouteur) => {
+    const relais = (): void => ecouteur();
+    ipcRenderer.on(evenements.miseAJourInstallee, relais);
+    return () => ipcRenderer.removeListener(evenements.miseAJourInstallee, relais);
+  },
+  relancerNotes: () => ipcRenderer.invoke(canaux.relancerNotes),
+  surRechercheMontree: (ecouteur) => {
+    const relais = (): void => ecouteur();
+    ipcRenderer.on(evenements.rechercheMontree, relais);
+    return () => ipcRenderer.removeListener(evenements.rechercheMontree, relais);
+  },
+  surRechercheCachee: (ecouteur) => {
+    const relais = (): void => ecouteur();
+    ipcRenderer.on(evenements.rechercheCachee, relais);
+    return () => ipcRenderer.removeListener(evenements.rechercheCachee, relais);
+  },
+  choisirDepuisLaRecherche: (demande) => ipcRenderer.invoke(canaux.choisirDepuisLaRecherche, demande),
+  fermerLaRecherche: () => ipcRenderer.invoke(canaux.fermerLaRecherche),
+  ajusterLaRecherche: (demande) => ipcRenderer.invoke(canaux.ajusterLaRecherche, demande),
+  prendrePageDemandee: () => ipcRenderer.invoke(canaux.prendrePageDemandee),
+  surPageDemandee: (ecouteur) => {
+    const relais = (): void => ecouteur();
+    ipcRenderer.on(evenements.pageDemandee, relais);
+    return () => ipcRenderer.removeListener(evenements.pageDemandee, relais);
+  },
+
   surEtatSync: (ecouteur) => {
     const relais = (_evenement: unknown, etat: SyncStatus): void => ecouteur(etat);
     ipcRenderer.on(evenements.etatSyncModifie, relais);

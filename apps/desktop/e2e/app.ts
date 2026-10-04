@@ -28,17 +28,39 @@ export async function preparer(): Promise<{ vault: string; profil: string }> {
 }
 
 /** Lance l'application construite sur un vault et un profil donnés. */
-export async function lancer({ vault, profil }: { vault: string; profil: string }): Promise<Session> {
-  const application = await electron.launch({ args: [dossierApplication, `--user-data-dir=${profil}`], cwd: dossierApplication });
-  const page = await application.firstWindow();
+export async function lancer({ vault, profil }: { vault: string; profil: string }, argumentsEnPlus: string[] = []): Promise<Session> {
+  const application = await electron.launch({ args: [dossierApplication, `--user-data-dir=${profil}`, ...argumentsEnPlus], cwd: dossierApplication });
+  // La petite fenêtre de la recherche globale, créée cachée au lancement, n'est pas celle qu'on pilote.
+  // Une fenêtre tout juste créée n'a pas encore d'adresse : on attend de pouvoir les distinguer.
+  const estPrincipale = (fenetre: Page): boolean => fenetre.url().startsWith('file:') && !fenetre.url().endsWith('#recherche');
+  let page: Page | undefined;
+  while ((page = application.windows().find(estPrincipale)) === undefined) {
+    await new Promise((resoudre) => setTimeout(resoudre, 20));
+  }
   await page.getByRole('tree').waitFor();
   return { application, page, vault, profil };
 }
 
+/** Ligne de commande qui lance l'application construite sur ce profil, comme le raccourci du bureau avec `--recherche`. */
+export function argumentsDeLancement(profil: string, argumentsEnPlus: string[] = []): string[] {
+  return [dossierApplication, `--user-data-dir=${profil}`, ...argumentsEnPlus];
+}
+
+export { dossierApplication };
+
+/** Fenêtres ouvertes, vues du main : titre et visibilité. */
+export async function fenetres(application: ElectronApplication): Promise<{ titre: string; visible: boolean }[]> {
+  return application.evaluate(({ BrowserWindow }) => BrowserWindow.getAllWindows().map((fenetre) => ({ titre: fenetre.getTitle(), visible: fenetre.isVisible() })));
+}
+
 /** Ferme la fenêtre par son bouton, comme l'utilisateur, et attend la fin du processus. */
 export async function fermer({ application, page }: Session): Promise<void> {
-  const fin = application.waitForEvent('close');
+  const fermee = page.waitForEvent('close');
   await page.getByRole('button', { name: 'Fermer', exact: true }).click();
+  await fermee;
+  // La fenêtre fermée, Notes reste en fond pour la recherche globale : on la quitte comme par « Quitter ».
+  const fin = application.waitForEvent('close');
+  await application.evaluate(({ app }) => app.quit());
   await fin;
 }
 

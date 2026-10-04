@@ -9,3 +9,5 @@ export { ecrireMarkdown } from './markdown/serialize';
 export type { FinDeLigne, PageSource, ParsedMarkdown, SourceBlock } from './markdown/types';
 export { assemblerTexte, assemblerVersions, comparerVersions } from './merge/conflict';
 export type { ConflictRow } from './merge/conflict';
+export { extraireSommaire } from './outline';
+export type { OutlineEntry } from './outline';

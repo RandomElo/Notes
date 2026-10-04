@@ -4,10 +4,13 @@ import type { LockView } from '../../shared/ipc-contract';
 import type { SyncScheduler } from '../sync/scheduler';
 
 export interface SyncHandlersDependencies {
-  sync: Pick<SyncScheduler, 'etat' | 'synchroniser' | 'etatVerrou' | 'prendreVerrou' | 'quitterPage'>;
+  sync: Pick<SyncScheduler, 'etat' | 'synchroniser' | 'etatVerrou' | 'prendreVerrou' | 'quitterPage' | 'pagesEnAttente'>;
   /** Montre un fichier du vault (chemin relatif déjà vérifié) dans le gestionnaire de fichiers. */
   montrerFichier: (chemin: string) => void;
 }
+
+/** Au-delà, la demande est refusée : il y a un onglet par page suivie, jamais des centaines. */
+const maxPagesSuivies = 100;
 
 /** Handlers des canaux « sync: ». Les entrées viennent du renderer : rien n'est supposé valide. */
 export function creerHandlersSync({ sync, montrerFichier }: SyncHandlersDependencies) {
@@ -39,6 +42,14 @@ export function creerHandlersSync({ sync, montrerFichier }: SyncHandlersDependen
         // Le cycle peut prendre quelques secondes : le renderer n'a pas à l'attendre.
         void sync.quitterPage(chemin).catch(() => undefined);
       }
+    },
+
+    pagesEnAttente: async (demande: unknown): Promise<string[]> => {
+      const chemins = typeof demande === 'object' && demande !== null ? (demande as { chemins?: unknown }).chemins : undefined;
+      if (!Array.isArray(chemins) || chemins.length > maxPagesSuivies) {
+        return [];
+      }
+      return sync.pagesEnAttente(chemins.filter((chemin): chemin is string => typeof chemin === 'string' && verifierCheminRelatif(chemin) === null));
     },
 
     montrerFichier: async (demande: unknown): Promise<void> => {

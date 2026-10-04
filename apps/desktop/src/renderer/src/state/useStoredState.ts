@@ -36,3 +36,4 @@ export function useStoredState<T>(cle: string, defaut: T, valider: (valeur: unkn
 export const estTexteOuNull = (valeur: unknown): valeur is string | null => valeur === null || typeof valeur === 'string';
 export const estListeDeTextes = (valeur: unknown): valeur is string[] =>
   Array.isArray(valeur) && valeur.every((element) => typeof element === 'string');
+export const estBooleen = (valeur: unknown): valeur is boolean => typeof valeur === 'boolean';

@@ -16,10 +16,31 @@ import { useTheme } from './features/theme/useTheme';
 import { TitleBar } from './features/title-bar/TitleBar';
 import { cleDeNoeud, clesDesAncetres, trouverParCle } from './features/sidebar/tree-model';
 import { StatusBar } from './features/status-bar/StatusBar';
+import { GlobalShortcutPanel } from './features/search/GlobalShortcutPanel';
+import { demandeDeCreation } from './features/search/creation-place';
+import { ajouterRecente } from './features/search/recent-pages';
+import { SearchPalette } from './features/search/SearchPalette';
+import { TabBar } from './features/tabs/TabBar';
+import { ajouter, estEtatDOnglets, etatInitial, fermer, ongletActif, ouvrir, parNumero, remplacer, voisin } from './features/tabs/tabs-model';
+import type { TabsState } from './features/tabs/tabs-model';
+import { usePendingPages } from './features/tabs/usePendingPages';
 import { VaultChooser } from './features/welcome/VaultChooser';
 import { api } from './lib/ipc';
-import { estListeDeTextes, estTexteOuNull, useStoredState } from './state/useStoredState';
+import { estBooleen, estListeDeTextes, useStoredState } from './state/useStoredState';
 import { useVault } from './state/useVault';
+
+/**
+ * Onglets du premier lancement de cette version : la page ouverte jusqu'ici
+ * (`notes.selection`, d'avant les onglets) devient le premier onglet.
+ */
+function ongletsDeDepart(): TabsState {
+  try {
+    const ancienne: unknown = JSON.parse(window.localStorage.getItem('notes.selection') ?? 'null');
+    return etatInitial(typeof ancienne === 'string' ? ancienne : null);
+  } catch {
+    return etatInitial(null);
+  }
+}
 
 /** Disposition générale : arborescence à gauche, éditeur de la page ouverte ou réglages au centre. */
 export function App() {
@@ -29,7 +50,14 @@ export function App() {
   const [reglagesOuverts, definirReglagesOuverts] = useState(false);
   // L'éditeur de thème est un écran à part, auquel on arrive depuis les réglages.
   const [themeOuvert, definirThemeOuvert] = useState(false);
-  const [selection, definirSelection] = useStoredState<string | null>('notes.selection', null, estTexteOuNull);
+  const [onglets, definirOnglets] = useStoredState<TabsState>('notes.onglets', ongletsDeDepart(), estEtatDOnglets);
+  const selection = ongletActif(onglets).cle;
+  // Page de l'onglet affiché, changée sans chercher dans les autres onglets (abandon d'une page neuve).
+  const definirSelection = useCallback((cle: string | null) => definirOnglets((etat) => remplacer(etat, cle)), [definirOnglets]);
+  const [recentes, definirRecentes] = useStoredState<string[]>('notes.recentes', [], estListeDeTextes);
+  const [barreVisible, definirBarreVisible] = useStoredState<boolean>('notes.barre-laterale', true, estBooleen);
+  const [sommaireVisible, definirSommaireVisible] = useStoredState<boolean>('notes.sommaire', true, estBooleen);
+  const [rechercheOuverte, definirRechercheOuverte] = useState(false);
   const [listeDeplies, definirListeDeplies] = useStoredState<string[]>('notes.deplies', [], estListeDeTextes);
   const [renommage, definirRenommage] = useState<string | null>(null);
   // Version en conflit ouverte dans l'écran de résolution, à la place de la page.
@@ -61,14 +89,26 @@ export function App() {
     [definirListeDeplies],
   );
 
+  /** Ouvre une page : dans son onglet s'il y en a un, sinon dans l'onglet affiché ou un nouveau. */
   const selectionner = useCallback(
-    (cle: string) => {
-      definirSelection(cle);
+    (cle: string, nouvelOnglet = false) => {
+      definirOnglets((etat) => ouvrir(etat, cle, nouvelOnglet));
       definirReglagesOuverts(false);
       definirThemeOuvert(false);
       definirConflit(null);
     },
-    [definirSelection],
+    [definirOnglets],
+  );
+
+  /** Change d'onglet, ou en ferme un : les réglages et l'écran des conflits laissent la place à la page. */
+  const changerDOnglets = useCallback(
+    (changement: (etat: TabsState) => TabsState) => {
+      definirOnglets(changement);
+      definirReglagesOuverts(false);
+      definirThemeOuvert(false);
+      definirConflit(null);
+    },
+    [definirOnglets],
   );
 
   /** Ouvre l'écran de résolution d'une version en conflit, depuis le bandeau de la page ou le détail de la sync. */
@@ -157,6 +197,72 @@ export function App() {
     return () => window.removeEventListener('keydown', surTouche);
   }, [creer, vault.etat, vault.arbre, pageDeReference]);
 
+  // Raccourcis de l'application (annexe du README). En capture : l'éditeur ne doit pas les prendre pour lui.
+  // Ils ne valent pas dans une fenêtre de recherche ou de sommaire, qui a ses propres touches.
+  useEffect(() => {
+    const surTouche = (evenement: KeyboardEvent) => {
+      if (!evenement.ctrlKey || evenement.altKey || evenement.metaKey || document.querySelector('[aria-modal="true"]') !== null) {
+        return;
+      }
+      const touche = evenement.key.toLowerCase();
+      // Ctrl+Maj+\ donne « | » sur un clavier français : la touche physique est plus sûre.
+      const barreOblique = evenement.code === 'Backslash' || evenement.code === 'IntlBackslash' || touche === '\\';
+      let action: (() => void) | null = null;
+      if (touche === 'k' && !evenement.shiftKey) {
+        action = () => definirRechercheOuverte(true);
+      } else if (touche === 't' && !evenement.shiftKey) {
+        action = () => {
+          changerDOnglets((etat) => ajouter(etat));
+          definirRechercheOuverte(true);
+        };
+      } else if (touche === 'w' && !evenement.shiftKey) {
+        action = () => changerDOnglets((etat) => fermer(etat, etat.actif));
+      } else if (evenement.key === 'Tab') {
+        action = () => changerDOnglets((etat) => voisin(etat, evenement.shiftKey ? -1 : 1));
+      } else if (/^Digit[1-9]$/.test(evenement.code) && !evenement.shiftKey) {
+        action = () => changerDOnglets((etat) => parNumero(etat, Number(evenement.code.slice(5))));
+      } else if (barreOblique) {
+        action = evenement.shiftKey ? () => definirSommaireVisible((visible) => !visible) : () => definirBarreVisible((visible) => !visible);
+      } else if (touche === 'q' && !evenement.shiftKey) {
+        action = () => void api.quitterNotes();
+      } else if (touche === ',' && !evenement.shiftKey) {
+        action = () => {
+          definirReglagesOuverts((ouverts) => !ouverts);
+          definirThemeOuvert(false);
+        };
+      }
+      if (action !== null) {
+        evenement.preventDefault();
+        evenement.stopPropagation();
+        action();
+      }
+    };
+    window.addEventListener('keydown', surTouche, true);
+    return () => window.removeEventListener('keydown', surTouche, true);
+  }, [changerDOnglets, definirBarreVisible, definirSommaireVisible]);
+
+  // Page choisie dans la petite fenêtre du raccourci global : elle s'ouvre ici, comme depuis Ctrl+K.
+  useEffect(() => {
+    const prendre = (): void => {
+      void api.prendrePageDemandee().then((demande) => {
+        if (demande !== null) {
+          definirRechercheOuverte(false);
+          selectionner(demande.id, demande.nouvelOnglet);
+          definirAEcrire(demande.id);
+        }
+      });
+    };
+    prendre();
+    return api.surPageDemandee(prendre);
+  }, [selectionner]);
+
+  // Pages récentes de la recherche : chaque page ouverte passe en tête.
+  useEffect(() => {
+    if (selection !== null && trouverParCle(vault.arbre, selection)?.importe === true) {
+      definirRecentes((liste) => (liste[0] === selection ? liste : ajouterRecente(liste, selection)));
+    }
+  }, [selection, vault.arbre, definirRecentes]);
+
   // Échap dans les réglages : l'écran du thème revient aux réglages, les réglages reviennent à la page.
   // Un menu ou une liste ouverte qui traite Échap l'empêche d'aller plus loin.
   useEffect(() => {
@@ -196,12 +302,33 @@ export function App() {
 
   const sansVault = vault.etat !== null && vault.etat.dossier === null;
 
+  // Titre et chemin de la page de chaque onglet ; un onglet dont la page n'existe plus reste, vide.
+  const pagesDesOnglets = onglets.onglets.map((onglet) => ({ onglet, noeud: trouverParCle(vault.arbre, onglet.cle) }));
+  const enAttente = usePendingPages(pagesDesOnglets.flatMap(({ noeud }) => (noeud?.importe === true ? [noeud.chemin] : [])));
+  const barreDOnglets =
+    vault.etat?.dossier == null ? null : (
+      <TabBar
+        onglets={pagesDesOnglets.map(({ onglet, noeud }) => ({
+          ...onglet,
+          titre: noeud?.titre ?? 'Nouvel onglet',
+          enAttente: noeud?.importe === true && enAttente.has(noeud.chemin),
+        }))}
+        actif={onglets.actif}
+        surActivation={(id) => changerDOnglets((etat) => ({ ...etat, actif: id }))}
+        surFermeture={(id) => changerDOnglets((etat) => fermer(etat, id))}
+        surNouveau={() => {
+          changerDOnglets((etat) => ajouter(etat));
+          definirRechercheOuverte(true);
+        }}
+      />
+    );
+
   return (
     <div className="flex h-full flex-col">
-      <TitleBar dossier={vault.etat?.dossier ?? null} />
+      <TitleBar dossier={vault.etat?.dossier ?? null}>{barreDOnglets}</TitleBar>
 
       <div className="flex min-h-0 flex-1">
-        {vault.etat?.dossier != null && (
+        {vault.etat?.dossier != null && barreVisible && (
           <Sidebar
             vault={vault}
             selection={reglagesOuverts ? null : selection}
@@ -241,6 +368,7 @@ export function App() {
               <div className="mx-auto max-w-2xl space-y-10 py-4">
                 <ThemeSummary theme={theme} surOuverture={() => definirThemeOuvert(true)} />
                 <NasConnectionPanel />
+                <GlobalShortcutPanel />
                 <WebpConversion />
                 <UnusedImages />
               </div>
@@ -273,6 +401,7 @@ export function App() {
               surEntree={contenuRejoint}
               theme={theme.theme}
               surConflit={ouvrirConflit}
+              sommaireVisible={sommaireVisible}
             />
           ) : (
             <PageSummary
@@ -286,6 +415,30 @@ export function App() {
         </main>
       </div>
       <StatusBar surResolution={ouvrirConflit} />
+      {rechercheOuverte && vault.etat?.dossier != null && (
+        <SearchPalette
+          arbre={vault.arbre}
+          recentes={recentes}
+          pageOuverte={reglagesOuverts ? null : noeudSelectionne}
+          surChoix={(id, nouvelOnglet) => {
+            definirRechercheOuverte(false);
+            selectionner(id, nouvelOnglet);
+            definirAEcrire(id);
+          }}
+          surCreation={async (titre, ou) => {
+            const resultat = await api.creerPage({ ...demandeDeCreation(vault.arbre, reglagesOuverts ? null : noeudSelectionne, ou), titre });
+            if (!resultat.ok) {
+              return resultat.erreur.message;
+            }
+            await vault.recharger();
+            definirRechercheOuverte(false);
+            selectionner(resultat.page.id);
+            definirAEcrire(resultat.page.id);
+            return null;
+          }}
+          surFermeture={() => definirRechercheOuverte(false)}
+        />
+      )}
       {!reglagesOuverts && (
         <ThemeNotice
           avertissements={theme.avertissements}

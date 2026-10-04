@@ -8,10 +8,10 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 
 | | |
 |---|---|
-| Dernière mise à jour | 2026-10-03 |
-| Version | 0.7.0 |
-| Avancement | J0 à J6 terminés : recettes J5 et J6 validées par Eloi le 2026-10-03, retouches comprises |
-| Jalon en cours | J7 (navigation avancée), à lancer par `/jalon J7` |
+| Dernière mise à jour | 2026-10-04 |
+| Version | 0.8.0 |
+| Avancement | J0 à J7 terminés : recette J7 validée par Eloi le 2026-10-04, retouches comprises |
+| Jalon en cours | J8 (liens et icônes), à lancer par `/jalon J8` |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -33,6 +33,7 @@ Ce qui fonctionne aujourd'hui :
 - les blocs riches : blocs de code colorés (langage choisi dans une liste avec recherche ou deviné au collage, bouton copier, numéros de ligne et retour à la ligne réglables dans le thème), tableaux (grille de taille au `/tableau`, poignées pour ajouter ou retirer colonnes et lignes, navigation au clavier, alignement des colonnes), images (insertion, collage ou dépôt, copie dans `assets/`, largeur, alignement, texte alternatif, légende, visionneuse, liste des images inutilisées), callouts (nature, icône, texte mis en forme) ;
 - la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 10 secondes, une seconde après chaque modification et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail ; NAS injoignable, elle dit depuis quand, et une coupure du réseau se voit dans la seconde.
 - l'écran de résolution des conflits : la page et la version mise de côté face à face, bloc par bloc, avec garder A, B ou les deux, poignées pour placer une version ailleurs, aperçu et validation.
+- la navigation (J7) : onglets dans la barre de titre, retrouvés au redémarrage, avec un point quand la page n'est pas encore sur le NAS ; recherche `Ctrl+K` floue sur les titres, sans accents, pages récentes, création d'une page quand rien ne correspond ; sommaire à droite de la page, à jour à la frappe, qui suit la lecture, et sommaire complet avec filtre par l'icône du haut de la page ; recherche globale instantanée par `Ctrl+Alt+Espace`, dans une petite fenêtre, Notes restant en fond fenêtre fermée (`Ctrl+Q` pour quitter, démarrage avec la session en option) ; `Ctrl+\` et `Ctrl+Shift+\` masquent la barre latérale et le sommaire, `Ctrl+,` ouvre les réglages.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
@@ -40,11 +41,10 @@ Ce qui n'existe pas encore : les liens et mentions de page (J8), la suppression 
 
 Reste à faire :
 
-- commiter le travail de J6 et des retouches (versions 0.5.9 à 0.7.0), qui ne l'est pas encore ;
 - l'intervalle de sync reste à 10 s : les durées de cycle de la partie 8 de la recette J5 n'ont pas été relevées. Le passage à 5 s se décidera quand elles le seront (elles s'écrivent dans la console du main) ;
-- lancer J7.
+- lancer J8.
 
-Pour reprendre : `npm install`, puis `npm run dev`. J7 se lancera avec `/jalon J7` une fois les recettes de J5 et J6 rapportées OK.
+Pour reprendre : `npm install`, puis `npm run dev`. J8 se lance avec `/jalon J8`. Pour installer la version construite : `npm run installer`.
 
 ## Sommaire
 
@@ -490,10 +490,10 @@ Section desktop. L'interface Android est décrite en §15.
 - Disposition : onglets en haut, barre latérale (arborescence) à gauche, éditeur au centre, sommaire à droite, barre de statut en bas (sync, corrections, coût IA du jour).
 - Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, exporter, supprimer), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Pendant un glisser-déposer, un trait plat de 2 px à la couleur d'accent montre où la page tombera, un fond bleu qu'elle deviendra sous-page. `Ctrl+N` crée une page sœur de la page ouverte, juste après elle (à la racine si aucune n'est ouverte), `Ctrl+Shift+N` une page à la racine. `Échap` dans le nom d'une page encore « Sans titre » la supprime si elle n'a ni contenu, ni sous-page, ni fichier, et la page ouverte avant revient ; sinon il annule seulement le renommage. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
 - Réglages : `Échap` les ferme et rend la page ; depuis l'écran du thème, il revient d'abord aux réglages.
-- Onglets : multiples dans une seule fenêtre, `Ctrl+T`, `Ctrl+W`, `Ctrl+Tab`, `Ctrl+1` à `9`, restaurés au démarrage, point si non synchronisé.
-- Recherche `Ctrl+K` : sur les titres de page uniquement (pas de full-text en v1), floue, insensible aux accents, pages récentes par défaut, proposition de création si aucun résultat.
-- Raccourci global : `Ctrl+Alt+Espace` par défaut, configurable, ramène la fenêtre au premier plan et ouvre la recherche depuis n'importe où dans le système. Les postes visés sont en session X11 (Cinnamon), où `globalShortcut` d'Electron fonctionne ; Wayland n'est pas pris en charge.
-- Sommaire : version latérale permanente (suivi de lecture via IntersectionObserver, réduite en traits au repos) et version modale (arborescence complète, recherche).
+- Onglets : dans la barre de titre, comme Firefox, entre le nom de l'application et les boutons de fenêtre. Multiples dans une seule fenêtre, `Ctrl+T` (onglet vide, recherche ouverte), `Ctrl+W` (le dernier onglet se vide au lieu de se fermer), `Ctrl+Tab` et `Ctrl+Shift+Tab`, `Ctrl+1` à `9`, clic du milieu pour fermer, restaurés au démarrage, point si la page n'est pas encore sur le NAS. Une page n'est ouverte que dans un onglet : un clic dans l'arborescence ramène à son onglet s'il existe, sinon elle remplace la page de l'onglet affiché. `Ctrl+clic` ou clic du milieu l'ouvre dans un nouvel onglet.
+- Recherche `Ctrl+K` : sur les titres de page uniquement (pas de full-text en v1), floue, insensible aux accents, pages récentes par défaut, proposition de création si aucun résultat : juste après la page ouverte (choisi d'office), dedans, ou à la racine, une ligne chacun, au clavier. `Entrée` ouvre la page comme un clic dans l'arborescence, `Ctrl+Entrée` dans un nouvel onglet.
+- Recherche globale : `Ctrl+Alt+Espace` ouvre instantanément, depuis n'importe où, une petite fenêtre qui ne contient que la barre de recherche, au milieu de l'écran, devant les autres fenêtres. `Entrée` ouvre la page dans la fenêtre de l'application, qui passe devant (`Ctrl+Entrée` dans un nouvel onglet) ; `Échap` ou un clic ailleurs la cache. Pour être instantanée, Notes reste lancée quand on ferme sa fenêtre : la page est enregistrée et la sync continue de tourner en fond, comme fenêtre ouverte. La petite fenêtre reste prête, cachée, et l'application capte elle-même le raccourci (`globalShortcut`, session X11 de Cinnamon). Environ 230 Mo de mémoire en fond. `Ctrl+Q` ou « Quitter Notes » dans les réglages l'arrêtent pour de bon. Les réglages proposent de la démarrer avec la session, sans fenêtre (`~/.config/autostart/notes.desktop`, argument `--fond`). Notes pas lancée, l'argument `--recherche` ouvre directement la petite fenêtre (environ 1 s depuis l'AppImage).
+- Sommaire : version latérale permanente à droite de la page (tous les niveaux de titre, réduite en traits au repos, titres en clair au survol, suivi de lecture via IntersectionObserver), à jour à chaque frappe, et version complète (titrée « Sommaire », tous les niveaux en arbre, filtre insensible aux accents) ouverte par une icône à côté de « Enregistré », sans raccourci. Le latéral fait au plus 60 % de la hauteur de la fenêtre : au-delà, traits et liste défilent pour garder le titre en cours au milieu, les traits s'estompant seulement du côté où d'autres sont cachés, et au survol son nom s'affiche à la hauteur de son trait.
 
 ---
 
@@ -717,9 +717,9 @@ Sur Android, cache des pages, index et réglages vivent dans le stockage privé 
 
 ## 17. Packaging et distribution
 
-- Linux : AppImage via electron-builder (`Notes-1.0.0-x86_64.AppImage`), aucune installation requise et aucune dépendance à un paquet du système : le client SMB est dans l'AppImage. Build x86_64 uniquement, pour le PC fixe et le portable (Linux Mint, Cinnamon, X11). `.deb` possible en complément.
+- Linux : AppImage via electron-builder (`Notes.AppImage`), aucune installation requise et aucune dépendance à un paquet du système : le client SMB est dans l'AppImage. Build x86_64 uniquement, pour le PC fixe et le portable (Linux Mint, Cinnamon, X11). `.deb` possible en complément.
 - Android : APK construit avec Gradle, signé avec une clé locale, installé à la main (transfert du fichier ou `adb install`). Pas de Play Store.
-- Pas d'auto-update : projet privé, réinstallation manuelle. Numéro de version visible dans les réglages des deux applications.
+- AppImage au nom fixe `Notes.AppImage`. `npm run installer` la construit et la met dans `~/Applications` (ou le dossier `NOTES_DOSSIER_INSTALLATION` de `.env`), par renommage. Notes se met à jour d'elle-même : fenêtre fermée, elle se relance aussitôt sur la nouvelle version ; ouverte, la barre de titre propose « Relancer ». Pas de serveur de mises à jour : projet privé. Numéro de version dans la barre de titre.
 - La clé de signature Android reste hors du dépôt. La perdre oblige à désinstaller l'app avant de réinstaller une version signée autrement.
 
 ---
@@ -739,7 +739,7 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J4 | Thème | Modif du TOML visible à chaud, hiérarchie lisible | Fait |
 | J5 | Sync SMB | Deux machines pendant une journée sans perte ni écrasement | Fait |
 | J6 | Blocs riches (code, images, tableaux, callouts) | Page technique complète rédigée confortablement | Fait |
-| J7 | Navigation avancée | Raccourci global et sommaire toujours à jour | À faire |
+| J7 | Navigation avancée | Raccourci global et sommaire toujours à jour | Fait |
 | J8 | Liens et icônes | Renommage sans mention cassée | À faire |
 | J9 | Export | 20 pages en PDF sans coupure incorrecte | À faire |
 | J10 | Corbeille | Page supprimée restaurée intégralement | À faire |
@@ -888,18 +888,30 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-03 | Réponses d'Eloi (recette J5, partie 15) : téléchargement d'une image abandonné après 20 s ; nom du fichier tiré de l'adresse, question posée seulement pour un lien qui finit par une extension d'image ; la barre d'outils garde son apparition au clic dans une cellule ou un callout ; le travail depuis 0.5.9 sera commité après la recette J5. |
 | 2026-10-03 | Version 0.5.23, images en WebP (demande d'Eloi) : toute image reçue est enregistrée en WebP qualité 82 %, réduite à 1920 px de large ; GIF et SVG gardés tels quels. Conversion faite dans le renderer par le moteur d'images de Chromium (aucune dépendance), le main ne fait que lire et écrire. Une image reçue peut faire 200 Mo, la version enregistrée 50. Les images déjà présentes se convertissent depuis les réglages (« Images en WebP ») : la page renvoie à la version WebP, l'adresse seule est remplacée dans le fichier, l'ancienne image reste pour être supprimée à la main. |
 | 2026-10-03 | Recettes J5 et J6 validées par Eloi, retouches comprises (parties 1 à 17 de la recette J5) : J5 et J6 passent à « Fait », version 0.7.0 (0.6.0 pour J5, 0.7.0 pour J6, livrés ensemble). L'intervalle de sync reste à 10 s faute de mesure du cycle. |
+| 2026-10-04 | J7, choix d'Eloi : onglets dans la barre de titre ; une page n'est ouverte que dans un onglet, un clic dans l'arborescence ramène à son onglet ou remplace la page de l'onglet affiché ; sommaire complet ouvert par une icône en haut de la page, sans raccourci (« plus il y a de raccourcis, moins on s'en sert »). |
+| 2026-10-04 | J7, raccourci global : Eloi ne veut pas d'application qui reste en fond, il préfère une fenêtre un peu plus lente à s'ouvrir. Le `globalShortcut` d'Electron, qui ne vit qu'avec l'application, est remplacé par un raccourci de Cinnamon qui lance l'AppImage avec `--recherche` ; l'instance unique ramène la fenêtre si elle est ouverte. Fermer la fenêtre quitte toujours l'application. |
+| 2026-10-04 | Version 0.7.2 (demande d'Eloi) : le raccourci global n'affiche plus l'application derrière la recherche, seulement une petite fenêtre avec la barre de recherche. La page choisie s'ouvre dans la fenêtre de l'application ; sans choix, l'application s'arrête si elle n'était pas ouverte, rien ne reste en fond. |
+| 2026-10-04 | Version 0.7.3 (choix d'Eloi, mesures à l'appui) : la recherche globale doit être instantanée. Depuis l'AppImage, tout lancement coûte environ 1 s, même pour passer la main à l'instance ouverte. Eloi accepte donc que Notes reste en fond, fenêtre fermée, avec la petite fenêtre prête et cachée et le raccourci capté par l'application : affichage en quelques millisecondes, environ 230 Mo de mémoire. Sync en pause tant que la fenêtre est fermée, `Ctrl+Q` pour quitter, démarrage avec la session en option. Remplace la décision « rien en fond » du même jour ; le raccourci personnalisé de Cinnamon est à retirer. |
+| 2026-10-04 | Recette J7, réponses d'Eloi : les 230 Mo en fond lui vont ; la sync doit continuer fenêtre fermée (remplace la pause de la 0.7.3) ; la barre de recherche lui convient. Ses choix sont résumés dans `.claude/notes/recherche-globale.md`, pour la refaire dans un autre projet. |
+| 2026-10-04 | Version 0.7.5, retours d'Eloi sur le sommaire : la fenêtre du sommaire complet porte le titre « Sommaire » ; le sommaire latéral, qui prenait toute la hauteur avec beaucoup de titres, est limité à 60 % de la fenêtre (32 rem au plus) et défile pour garder le titre en cours au milieu, aligné avec son nom au survol. |
+| 2026-10-04 | Recette J7, questions tranchées par Eloi : `Ctrl+T` avec la recherche, dernier onglet vidé, `Ctrl+Z` perdu au changement d'onglet, tout acceptés ; le sommaire latéral montre tous les niveaux ; une page créée depuis la recherche se place au clavier, juste après la page ouverte par défaut, sinon dedans ou à la racine ; icône de liste pour le sommaire. Version 0.7.6. |
+| 2026-10-04 | Version 0.7.6, mise à jour locale (demande d'Eloi, remplace « pas d'auto-update » du §17) : AppImage au nom fixe, `npm run installer` qui la remplace par renommage, Notes qui surveille son fichier et se relance (en fond, ou par « Relancer » si la fenêtre est ouverte, page enregistrée d'abord). `app.relaunch` d'Electron ne marche pas depuis une AppImage : Notes lance la nouvelle par bash (`/bin/bash`, livré avec Mint), qui ferme les descripteurs hérités pour que l'ancien montage disparaisse, et la nouvelle attend la fin de l'ancienne. Sans bash, relance directe. |
+| 2026-10-04 | Recette J7 validée par Eloi, retouches 0.7.1 à 0.7.7 comprises : J7 passe à « Fait », version 0.8.0. |
+| 2026-10-04 | Version 0.7.7 (Eloi) : le dégradé des traits du sommaire ne s'affiche que du côté où des traits sont cachés. Tout en haut de la page, pas de dégradé en haut ; tout en bas, pas en bas. |
+| 2026-10-04 | Version 0.7.6, défaut corrigé : avec plus de titres que la hauteur limitée du sommaire latéral, les traits se tassaient jusqu'à disparaître. |
+| 2026-10-04 | J7, choix faits sans Eloi (questions de la recette J7) : `Ctrl+T` ouvre la recherche dans l'onglet neuf ; le dernier onglet se vide au lieu de se fermer ; la recherche vide montre huit pages récentes, et à défaut les premières pages ; une page créée depuis la recherche va à la racine ; le sommaire latéral s'arrête au niveau 3 ; le titre en cours est le dernier passé sous la barre du haut (le premier en haut de page, le dernier visible en bas) ; seule la page de l'onglet affiché est chargée, l'historique d'annulation ne survit donc pas à un changement d'onglet. |
 
 ---
 
 ## Annexe : raccourcis
 
-Desktop uniquement.
+Desktop uniquement. La liste complète, contexte par contexte (arborescence, recherche, titre, code, conflits) et la création du raccourci global dans Cinnamon : [`docs/raccourcis.md`](docs/raccourcis.md).
 
 ### Global
 
 | Raccourci | Action |
 |---|---|
-| `Ctrl+Alt+Espace` | Recherche globale (configurable) |
+| `Ctrl+Alt+Espace` | Recherche globale, dans une petite fenêtre (Notes lancée, même fenêtre fermée) |
 
 ### Application
 
@@ -911,11 +923,14 @@ Desktop uniquement.
 | `Échap` (nom d'une page « Sans titre ») | Supprimer la page si elle est vide, sinon annuler le renommage |
 | `Échap` (réglages) | Revenir aux réglages depuis le thème, puis à la page |
 | `Ctrl+T` / `Ctrl+W` | Nouvel onglet / fermer |
-| `Ctrl+Tab` | Onglet suivant |
+| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Onglet suivant / précédent |
+| `Ctrl+clic`, clic du milieu | Ouvrir la page dans un nouvel onglet (arborescence) ; le clic du milieu ferme un onglet |
+| `Ctrl+Entrée` (recherche) | Ouvrir la page dans un nouvel onglet |
 | `Ctrl+1` à `Ctrl+9` | Onglet n |
 | `Ctrl+\` | Afficher/masquer la barre latérale |
 | `Ctrl+Shift+\` | Afficher/masquer le sommaire |
 | `Ctrl+,` | Réglages |
+| `Ctrl+Q` | Quitter Notes pour de bon (fermer la fenêtre la garde en fond) |
 
 ### Édition
 
@@ -1009,3 +1024,11 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-03 | 0.5.23 | Images converties en WebP |
 | 2026-10-03 | 0.6.0 | J5 : sync validée |
 | 2026-10-03 | 0.7.0 | J6 : blocs riches validés |
+| 2026-10-04 | 0.7.1 | J7 : navigation, en recette |
+| 2026-10-04 | 0.7.2 | Recherche globale seule |
+| 2026-10-04 | 0.7.3 | Recherche globale instantanée |
+| 2026-10-04 | 0.7.4 | Sync continue fenêtre fermée |
+| 2026-10-04 | 0.7.5 | Sommaire : hauteur limitée |
+| 2026-10-04 | 0.7.6 | Mise à jour automatique locale |
+| 2026-10-04 | 0.7.7 | Dégradé du sommaire ajusté |
+| 2026-10-04 | 0.8.0 | J7 : navigation validée |

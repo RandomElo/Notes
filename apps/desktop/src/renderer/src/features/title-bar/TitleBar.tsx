@@ -1,11 +1,13 @@
-import { Copy, Minus, NotebookText, Square, X } from 'lucide-react';
+import { Copy, Minus, NotebookText, RefreshCw, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { api } from '../../lib/ipc';
 
 interface TitleBarProps {
-  /** Dossier des notes ouvert, affiché à titre d'information. */
+  /** Dossier des notes ouvert, montré au survol du nom de l'application. */
   dossier: string | null;
+  /** Les onglets, entre le nom de l'application et les boutons de fenêtre. */
+  children?: ReactNode;
 }
 
 /**
@@ -13,9 +15,10 @@ interface TitleBarProps {
  * version, puis les boutons de fenêtre à droite. Toute la barre sert à
  * déplacer la fenêtre, sauf les boutons.
  */
-export function TitleBar({ dossier }: TitleBarProps) {
+export function TitleBar({ dossier, children }: TitleBarProps) {
   const [version, definirVersion] = useState('');
   const [agrandie, definirAgrandie] = useState(false);
+  const [miseAJour, definirMiseAJour] = useState(false);
 
   useEffect(() => {
     void api.version().then(definirVersion);
@@ -23,18 +26,34 @@ export function TitleBar({ dossier }: TitleBarProps) {
     return api.surFenetreAgrandie(definirAgrandie);
   }, []);
 
+  useEffect(() => {
+    void api.miseAJourEnAttente().then((enAttente) => enAttente && definirMiseAJour(true));
+    return api.surMiseAJourInstallee(() => definirMiseAJour(true));
+  }, []);
+
   return (
     <header className="zone-de-deplacement border-bordure flex h-10 shrink-0 items-stretch border-b select-none">
       <div className="flex min-w-0 flex-1 items-center gap-3 pl-4">
-        <NotebookText className="text-accent size-5 shrink-0" aria-hidden="true" />
-        <h1 className="shrink-0 text-sm font-semibold">Notes</h1>
-        {version !== '' && <span className="text-discret shrink-0 text-xs whitespace-nowrap">version {version}</span>}
-        {dossier !== null && (
-          <span className="text-discret ml-auto min-w-0 truncate pr-3 text-xs" title={`Dossier des notes : ${dossier}`}>
-            {dossier}
-          </span>
-        )}
+        <div className="flex shrink-0 items-center gap-3" title={dossier === null ? undefined : `Dossier des notes : ${dossier}`}>
+          <NotebookText className="text-accent size-5 shrink-0" aria-hidden="true" />
+          <h1 className="shrink-0 text-sm font-semibold">Notes</h1>
+          {version !== '' && <span className="text-discret shrink-0 text-xs whitespace-nowrap">version {version}</span>}
+        </div>
+        {/* Une marge à droite des onglets reste libre pour déplacer la fenêtre. */}
+        <div className="flex h-full min-w-0 flex-1 pr-12">{children}</div>
       </div>
+
+      {miseAJour && (
+        <button
+          type="button"
+          onClick={() => void api.relancerNotes()}
+          title="Une nouvelle version de Notes vient d'être installée. La page est enregistrée avant de relancer."
+          className="hors-deplacement bg-accent/20 hover:bg-accent/35 focus-visible:bg-accent/45 my-1.5 mr-2 inline-flex shrink-0 items-center gap-1.5 rounded-md px-2.5 text-xs font-medium whitespace-nowrap outline-0"
+        >
+          <RefreshCw className="size-3.5" aria-hidden="true" />
+          Nouvelle version · Relancer
+        </button>
+      )}
 
       <div className="hors-deplacement flex shrink-0">
         <WindowButton libelle="Réduire" surClic={() => void api.reduireFenetre()}>

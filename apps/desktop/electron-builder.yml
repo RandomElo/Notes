@@ -17,6 +17,7 @@ linux:
     - target: AppImage
       arch: x64
   category: Office
-  artifactName: Notes-${version}-x86_64.${ext}
+  # Nom fixe : l'installation (npm run installer) remplace toujours le même fichier. La version se lit dans la barre de titre.
+  artifactName: Notes.${ext}
 npmRebuild: false
 publish: null

@@ -14,7 +14,8 @@ export interface TreeRowProps {
   enRenommage: boolean;
   /** Zone survolée pendant un glisser-déposer, null hors survol. */
   zoneDeDepot: DropZone | null;
-  surSelection: () => void;
+  /** Clic sur la ligne. « nouvelOnglet » : Ctrl+clic ou clic du milieu. */
+  surSelection: (nouvelOnglet: boolean) => void;
   surBascule: () => void;
   surValidationDuTitre: (titre: string) => void;
   surAbandonDuRenommage: () => void;
@@ -55,7 +56,13 @@ export function TreeRow(props: TreeRowProps) {
       aria-expanded={aDesEnfants ? deplie : undefined}
       tabIndex={props.focalisable ? 0 : -1}
       draggable={noeud.importe && !enRenommage}
-      onClick={props.surSelection}
+      onClick={(evenement) => props.surSelection(evenement.ctrlKey)}
+      onAuxClick={(evenement) => {
+        if (evenement.button === 1) {
+          evenement.preventDefault();
+          props.surSelection(true);
+        }
+      }}
       onContextMenu={ouvrirMenu}
       onKeyDown={props.surTouche}
       onFocus={props.surFocus}

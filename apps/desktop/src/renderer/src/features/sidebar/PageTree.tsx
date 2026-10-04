@@ -13,7 +13,8 @@ import type { DropZone } from './tree-model';
 export interface PageTreeProps {
   vault: Vault;
   selection: string | null;
-  surSelection: (cle: string) => void;
+  /** Ouvre une page. « nouvelOnglet » : Ctrl+clic, clic du milieu ou Ctrl+Entrée. */
+  surSelection: (cle: string, nouvelOnglet?: boolean) => void;
   deplies: ReadonlySet<string>;
   surDepliage: (cle: string, deplie: boolean) => void;
   renommage: string | null;
@@ -140,7 +141,7 @@ export function PageTree(props: PageTreeProps) {
         break;
       case 'Enter':
       case ' ':
-        props.surSelection(cle);
+        props.surSelection(cle, evenement.ctrlKey);
         break;
       case 'F2':
         if (noeud.importe) {
@@ -236,7 +237,7 @@ export function PageTree(props: PageTreeProps) {
                 elements.current.set(cle, element);
               }
             }}
-            surSelection={() => props.surSelection(cle)}
+            surSelection={(nouvelOnglet) => props.surSelection(cle, nouvelOnglet)}
             surBascule={() => props.surDepliage(cle, !deplies.has(cle))}
             surFocus={() => definirFocus(cle)}
             surTouche={(evenement) => surTouche(evenement, noeud, rang)}
