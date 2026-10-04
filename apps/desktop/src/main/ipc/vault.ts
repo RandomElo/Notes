@@ -1,5 +1,6 @@
-import { LocalFsError, VaultError, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
-import type { PageLocation, TreeNode, VaultContext } from '@notes/core';
+import { renommerMentions } from '@notes/document';
+import { LocalFsError, VaultError, ajouterIconeImage, changerIcone, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
+import type { BrokenMention, PageLocation, TreeNode, VaultContext } from '@notes/core';
 import type { ConflictReadResult, PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
 import { creerFileDAttente } from '../vault/serial-queue';
 import type { SerialQueue } from '../vault/serial-queue';
@@ -51,12 +52,43 @@ export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAtt
     },
 
     renommerPage: (demande: unknown) => {
-      const { chemin, titre } = champs(demande);
-      if (!estChemin(chemin) || typeof titre !== 'string') {
+      const { chemin, titre, sauf } = champs(demande);
+      if (!estChemin(chemin) || typeof titre !== 'string' || !(sauf === undefined || typeof sauf === 'string')) {
         return Promise.resolve(requeteInvalide());
       }
-      return operation((contexte) => renommerPage(contexte, chemin, titre));
+      return operation(async (contexte) => {
+        const avant = (await chargerPage(contexte.fs, chemin)).meta.titre;
+        const page = await renommerPage(contexte, chemin, titre);
+        const apres = (await chargerPage(contexte.fs, page.chemin)).meta.titre;
+        if (apres !== avant) {
+          await suivreLeRenommage(contexte, page.id, apres, sauf);
+        }
+        return page;
+      });
     },
+
+    changerIcone: (demande: unknown) => {
+      const { chemin, icone } = champs(demande);
+      if (!estChemin(chemin) || !(icone === null || (typeof icone === 'string' && icone.length <= 200))) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return operation((contexte) => changerIcone(contexte, chemin, icone));
+    },
+
+    ajouterIconeImage: (demande: unknown) => {
+      const { chemin, octets } = champs(demande);
+      // Une icône fait 128 × 128 : quelques dizaines de kilo-octets suffisent largement.
+      if (!estChemin(chemin) || !(octets instanceof Uint8Array) || octets.length > 2 * 1024 * 1024) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return operation((contexte) => ajouterIconeImage(contexte, chemin, octets));
+    },
+
+    listerMentionsCassees: (): Promise<BrokenMention[]> =>
+      enSerie(async () => {
+        const { fs } = vault.contexte();
+        return mentionsCassees(fs, await lireArbre(fs)).catch(() => []);
+      }),
 
     deplacerPage: (demande: unknown) => {
       const { chemin, parent, index } = champs(demande);
@@ -154,6 +186,26 @@ export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAtt
 }
 
 type EchecOuEtat = VaultState | VaultFailure;
+
+/**
+ * Une page renommée : ses mentions prennent le nouveau titre dans les pages qui
+ * la citent (README §6), pour que les fichiers restent justes hors de
+ * l'application. La page « sauf », ouverte dans l'éditeur, s'en charge
+ * elle-même : l'écrire ici ferait un conflit avec la frappe en cours. Une page
+ * qui ne peut pas être réécrite n'empêche pas le renommage.
+ */
+async function suivreLeRenommage(contexte: VaultContext, id: string, titre: string, sauf: string | undefined): Promise<void> {
+  const arbre = await lireArbre(contexte.fs);
+  for (const chemin of await pagesQuiMentionnent(contexte.fs, arbre, id)) {
+    try {
+      if ((await chargerPage(contexte.fs, chemin)).meta.id !== sauf) {
+        await reecrireCorps(contexte, chemin, (corps) => renommerMentions(corps, id, titre));
+      }
+    } catch (erreur) {
+      console.error(`Mentions de ${chemin} non mises à jour :`, erreur instanceof Error ? erreur.message : erreur);
+    }
+  }
+}
 
 /** Taille maximale d'un corps de page accepté du renderer : bien au-delà d'une note, bien en deçà d'un abus. */
 const tailleMaxDuCorps = 20_000_000;

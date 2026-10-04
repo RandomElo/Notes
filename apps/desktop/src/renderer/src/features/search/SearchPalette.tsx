@@ -3,6 +3,7 @@ import type { TitleEntry, TreeNode } from '@notes/core';
 import { FilePlus, FileText, Search } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, ReactNode } from 'react';
+import { PageIcon } from '../page-icon/PageIcon';
 import { emplacementsProposes, libelleDeCreation } from './creation-place';
 import type { CreationPlace } from './creation-place';
 
@@ -159,7 +160,12 @@ export function SearchPalette({ arbre, recentes, pageOuverte, surChoix, surCreat
             >
               {option.genre === 'page' ? (
                 <>
-                  <FileText className="text-discret size-4 shrink-0" aria-hidden="true" />
+                  <PageIcon
+                    icone={option.entree.icone}
+                    chemin={option.entree.chemin}
+                    className="text-discret size-4 text-sm"
+                    defaut={<FileText className="text-discret size-4 shrink-0" aria-hidden="true" />}
+                  />
                   <span className="min-w-0 truncate">
                     <TitreSouligne titre={option.entree.titre} positions={option.positions} />
                   </span>

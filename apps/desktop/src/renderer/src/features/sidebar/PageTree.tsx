@@ -1,6 +1,6 @@
 import { dossierParent, titreParDefaut, trouverNoeud } from '@notes/core';
 import type { TreeNode } from '@notes/core';
-import { ArrowDownToLine, Copy, FilePlus, Pencil } from 'lucide-react';
+import { ArrowDownToLine, Copy, FilePlus, Pencil, Smile } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import type { Vault } from '../../state/useVault';
@@ -26,6 +26,8 @@ export interface PageTreeProps {
    * de la ligne à focaliser ensuite, null si la page reste.
    */
   surAbandon: (noeud: TreeNode) => Promise<string | null>;
+  /** Ouvre le choix de l'icône de la page, à cet endroit de la fenêtre. */
+  surIcone: (noeud: TreeNode, x: number, y: number) => void;
 }
 
 interface Survol {
@@ -69,7 +71,7 @@ export function PageTree(props: PageTreeProps) {
     [vault],
   );
 
-  const elementsDuMenu = (noeud: TreeNode): MenuItem[] => {
+  const elementsDuMenu = (noeud: TreeNode, x: number, y: number): MenuItem[] => {
     if (!noeud.importe) {
       return [
         {
@@ -84,6 +86,7 @@ export function PageTree(props: PageTreeProps) {
     return [
       { libelle: 'Nouvelle sous-page', icone: FilePlus, action: () => props.surCreation(noeud) },
       { libelle: 'Renommer', icone: Pencil, raccourci: 'F2', action: () => props.surRenommage(cleDeNoeud(noeud)) },
+      { libelle: 'Icône', icone: Smile, action: () => props.surIcone(noeud, x, y) },
       {
         libelle: 'Dupliquer',
         icone: Copy,
@@ -273,7 +276,7 @@ export function PageTree(props: PageTreeProps) {
         );
       })}
       {menu !== null && (
-        <ContextMenu x={menu.x} y={menu.y} elements={elementsDuMenu(menu.noeud)} surFermeture={() => definirMenu(null)} />
+        <ContextMenu x={menu.x} y={menu.y} elements={elementsDuMenu(menu.noeud, menu.x, menu.y)} surFermeture={() => definirMenu(null)} />
       )}
     </div>
   );

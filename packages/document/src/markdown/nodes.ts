@@ -1,6 +1,7 @@
 import type { Mark, Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { niveauxDeTitre, schema } from '../schema/extensions';
 import { langageDuCallout, lireCallout } from './callout';
+import { idDeLienInterne } from '../schema/nodes/page-mention';
 import { attributsDImage } from './image';
 import type { Jeton } from './tokenizer';
 
@@ -231,7 +232,8 @@ function convertirEnLigne(jetons: Jeton[], sansCase: boolean): ProseMirrorNode[]
     debut = reste === '' && jetons[1]?.type === 'softbreak' ? 2 : 1;
   }
 
-  for (const jeton of jetons.slice(debut)) {
+  for (let index = debut; index < jetons.length; index++) {
+    const jeton = jetons[index] as Jeton;
     switch (jeton.type) {
       case 'text':
         texte(jeton.content);
@@ -252,9 +254,16 @@ function convertirEnLigne(jetons: Jeton[], sansCase: boolean): ProseMirrorNode[]
       case 'u_open':
         actives = marque(marques[jeton.tag] ?? '').addToSet(actives);
         break;
-      case 'link_open':
+      case 'link_open': {
+        const mention = mentionDe(jetons, index);
+        if (mention !== null) {
+          noeuds.push(creer('pageMention', mention.attributs).mark(actives));
+          index = mention.fin;
+          break;
+        }
         actives = marque('link', { href: jeton.attrGet('href') ?? '', title: jeton.attrGet('title') }).addToSet(actives);
         break;
+      }
       case 'strong_close':
       case 'em_close':
       case 's_close':
@@ -271,6 +280,30 @@ function convertirEnLigne(jetons: Jeton[], sansCase: boolean): ProseMirrorNode[]
     }
   }
   return noeuds;
+}
+
+/**
+ * Un lien `notes://uuid` dont le texte est simple devient une mention. Rend
+ * ses attributs et l'index de sa fermeture, ou null : lien ordinaire.
+ */
+function mentionDe(jetons: Jeton[], index: number): { attributs: Record<string, unknown>; fin: number } | null {
+  const ouverture = jetons[index] as Jeton;
+  const id = idDeLienInterne(ouverture.attrGet('href') ?? '');
+  if (id === null) {
+    return null;
+  }
+  let libelle = '';
+  for (let fin = index + 1; fin < jetons.length; fin++) {
+    const jeton = jetons[fin] as Jeton;
+    if (jeton.type === 'link_close') {
+      return { attributs: { id, libelle, title: ouverture.attrGet('title') }, fin };
+    }
+    if (jeton.type !== 'text') {
+      return null;
+    }
+    libelle += jeton.content;
+  }
+  return null;
 }
 
 function retirer(actives: readonly Mark[], nom: string): readonly Mark[] {

@@ -34,7 +34,7 @@ export function durcirSession(session: Session, developpement: boolean): void {
 
 /**
  * Empêche la page de naviguer ailleurs ou d'ouvrir des fenêtres. Les liens
- * http(s) partent dans le navigateur du système.
+ * http(s) partent dans le navigateur du système, les adresses mailto dans la messagerie.
  */
 export function durcirContenu(contenu: WebContents, urlApplication: string): void {
   contenu.on('will-navigate', (evenement, url) => {
@@ -53,7 +53,7 @@ export function durcirContenu(contenu: WebContents, urlApplication: string): voi
 export function estLienExterneSur(url: string): boolean {
   try {
     const protocole = new URL(url).protocol;
-    return protocole === 'https:' || protocole === 'http:';
+    return protocole === 'https:' || protocole === 'http:' || protocole === 'mailto:';
   } catch {
     return false;
   }

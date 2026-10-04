@@ -1,6 +1,6 @@
 # Raccourcis clavier
 
-Tous les raccourcis de l'application desktop, version 0.8.0. Seuls ceux qui existent déjà sont listés : `@` pour mentionner une page arrivera avec J8.
+Tous les raccourcis de l'application desktop, version 0.8.1.
 
 ## Hors de l'application
 
@@ -74,6 +74,8 @@ Le sommaire complet de la page (icône à côté de « Enregistré ») se pilote
 | `Ctrl+Alt+0` | Paragraphe |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Annuler / rétablir |
 | `/` | Menu des blocs (flèches, `Entrée` ou `Tab` pour valider, `Échap` pour fermer) |
+| `@` | Mentionner une page (mêmes touches que le menu des blocs) |
+| Clic, `Ctrl+clic` sur un lien | Ouvrir le lien ou la page mentionnée ; `Ctrl+clic` ou clic du milieu : la page dans un nouvel onglet |
 
 ## Saisie Markdown
 

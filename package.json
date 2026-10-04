@@ -1,6 +1,6 @@
 {
   "name": "notes",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "private": true,
   "type": "module",
   "description": "Éditeur de notes local-first avec synchronisation SMB",
@@ -12,9 +12,10 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "npm run build:companion && npm run dev -w @notes/desktop",
-    "build": "npm run build:companion && npm run build -w @notes/desktop",
+    "dev": "npm run build:companion && npm run build:models && npm run dev -w @notes/desktop",
+    "build": "npm run build:companion && npm run build:models && npm run build -w @notes/desktop",
     "build:companion": "bash scripts/build-companion.sh",
+    "build:models": "bash scripts/prepare-models.sh",
     "package": "npm run build && npm run package -w @notes/desktop",
     "installer": "bash scripts/install-local.sh",
     "typecheck": "npm run typecheck --workspaces --if-present",

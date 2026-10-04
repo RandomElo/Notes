@@ -2,7 +2,9 @@ import { readFile, stat } from 'node:fs/promises';
 import { basename } from 'node:path';
 import { ajouterImage, dossierAssets, listerImagesAConvertir, listerImagesOrphelines, natureDImage, remplacerParWebp, tailleMaxAvantConversion, tailleMaxDImage } from '@notes/core';
 import type { ImageToConvert } from '@notes/core';
-import type { ImageReadResult, ImagesAddResult, ImagesReceivedResult } from '../../shared/ipc-contract';
+import type { BackgroundRemovalResult, ImageReadResult, ImagesAddResult, ImagesReceivedResult } from '../../shared/ipc-contract';
+import type { BackgroundRemoval } from '../images/background-removal';
+import { coteDuModele } from '../images/background-removal-model';
 import type { DownloadResult } from '../images/download';
 import type { VaultService } from '../vault/vault-service';
 import { champs, estChemin, requeteInvalide, versErreur } from './vault';
@@ -15,6 +17,8 @@ export interface ImagesHandlersDependencies {
   choisirFichiers: () => Promise<string[]>;
   /** Télécharge une image d'Internet (images/download.ts), hors de la file : le réseau ne bloque pas le vault. */
   telecharger: (adresse: string) => Promise<DownloadResult>;
+  /** Détourage des icônes (images/background-removal.ts), hors de la file : il ne touche pas au vault. */
+  detourage: Pick<BackgroundRemoval, 'masque'>;
 }
 
 /** Un nom de fichier seul, sans dossier ni fichier caché : ce qu'un dossier `assets/` peut contenir. */
@@ -25,7 +29,7 @@ const estNomDeFichier = (nom: unknown): nom is string =>
  * Handlers des canaux « images: ». Les entrées viennent du renderer : rien n'est supposé valide.
  * Une image reçue (choisie, téléchargée) est rendue au renderer, qui la convertit en WebP avant de l'ajouter.
  */
-export function creerHandlersImages({ vault, enSerie, choisirFichiers, telecharger }: ImagesHandlersDependencies) {
+export function creerHandlersImages({ vault, enSerie, choisirFichiers, telecharger, detourage }: ImagesHandlersDependencies) {
   const echec = (erreur: unknown): ImagesAddResult => ({ ok: false, erreur: versErreur(erreur) });
 
   return {
@@ -112,5 +116,35 @@ export function creerHandlersImages({ vault, enSerie, choisirFichiers, telecharg
           return [];
         }
       }),
+
+    /**
+     * Image collée depuis une autre page : le fichier « source » (dans un dossier `assets/`) est
+     * copié dans les `assets/` de « page », sans rien remplacer. Rend l'adresse à écrire dans la page.
+     */
+    copier: (demande: unknown): Promise<ImagesAddResult> => {
+      const { source, page } = champs(demande);
+      const morceaux = typeof source === 'string' ? source.split('/') : [];
+      const nom = morceaux.at(-1);
+      if (!estChemin(source) || !estChemin(page) || morceaux.at(-2) !== dossierAssets || !estNomDeFichier(nom)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          const octets = await vault.contexte().fs.lireOctets(source);
+          return natureDImage(octets) === null ? requeteInvalide() : { ok: true, adresses: [await ajouterImage(vault.contexte(), page, nom, octets)] };
+        } catch (erreur) {
+          return echec(erreur);
+        }
+      });
+    },
+
+    /** Masque du sujet d'un carré de 320 × 320 pixels RGBA, préparé par le renderer à partir de l'icône recadrée. */
+    retirerLeFond: (demande: unknown): Promise<BackgroundRemovalResult> => {
+      const { pixels, cote } = champs(demande);
+      if (cote !== coteDuModele || !(pixels instanceof Uint8Array) || pixels.length !== coteDuModele * coteDuModele * 4) {
+        return Promise.resolve({ ok: false, message: 'Demande invalide.' });
+      }
+      return detourage.masque(pixels, coteDuModele);
+    },
   };
 }

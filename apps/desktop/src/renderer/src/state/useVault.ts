@@ -1,6 +1,7 @@
 import type { PageLocation, TreeNode } from '@notes/core';
 import { useCallback, useEffect, useState } from 'react';
 import type { VaultOperationResult, VaultState } from '../../../shared/ipc-contract';
+import { renommerEnSuivantLesMentions } from '../features/mentions/rename-follow';
 import { api } from '../lib/ipc';
 
 /**
@@ -71,7 +72,7 @@ export function useVault() {
       [appliquer],
     ),
     renommerPage: useCallback(
-      async (chemin: string, titre: string) => appliquer(await api.renommerPage({ chemin, titre })),
+      async (chemin: string, titre: string) => appliquer(await renommerEnSuivantLesMentions(chemin, titre)),
       [appliquer],
     ),
     deplacerPage: useCallback(
@@ -79,6 +80,18 @@ export function useVault() {
       [appliquer],
     ),
     dupliquerPage: useCallback(async (chemin: string) => appliquer(await api.dupliquerPage({ chemin })), [appliquer]),
+    /** Change l'icône d'une page (null la retire), ou en fait une de cette image recadrée. Rend le message d'erreur, null sinon. */
+    changerIcone: useCallback(
+      async (chemin: string, choix: { icone: string | null } | { octets: Uint8Array }) => {
+        const resultat = await ('octets' in choix ? api.ajouterIconeImage({ chemin, octets: choix.octets }) : api.changerIcone({ chemin, icone: choix.icone }));
+        if (!resultat.ok) {
+          return resultat.erreur.message;
+        }
+        appliquer(resultat);
+        return null;
+      },
+      [appliquer],
+    ),
     /** Supprime une page restée vide. null si elle a quelque chose : ce refus n'est pas une erreur à montrer. */
     supprimerPageVide: useCallback(
       async (chemin: string) => {

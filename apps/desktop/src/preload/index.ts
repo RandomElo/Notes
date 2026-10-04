@@ -34,6 +34,9 @@ const api: NotesApi = {
   lireArbre: () => ipcRenderer.invoke(canaux.lireArbre),
   creerPage: (demande) => ipcRenderer.invoke(canaux.creerPage, demande),
   renommerPage: (demande) => ipcRenderer.invoke(canaux.renommerPage, demande),
+  listerMentionsCassees: () => ipcRenderer.invoke(canaux.listerMentionsCassees),
+  changerIcone: (demande) => ipcRenderer.invoke(canaux.changerIcone, demande),
+  ajouterIconeImage: (demande) => ipcRenderer.invoke(canaux.ajouterIconeImage, demande),
   deplacerPage: (demande) => ipcRenderer.invoke(canaux.deplacerPage, demande),
   dupliquerPage: (demande) => ipcRenderer.invoke(canaux.dupliquerPage, demande),
   supprimerPageVide: (demande) => ipcRenderer.invoke(canaux.supprimerPageVide, demande),
@@ -102,6 +105,10 @@ const api: NotesApi = {
   lireImage: (demande) => ipcRenderer.invoke(canaux.lireImage, demande),
   convertirImage: (demande) => ipcRenderer.invoke(canaux.convertirImage, demande),
   listerImagesOrphelines: () => ipcRenderer.invoke(canaux.listerImagesOrphelines),
+  retirerLeFond: (demande) => ipcRenderer.invoke(canaux.retirerLeFond, demande),
+  copierImage: (demande) => ipcRenderer.invoke(canaux.copierImage, demande),
+  apercuDuSite: (demande) => ipcRenderer.invoke(canaux.apercuDuSite, demande),
+  enregistrerFavicon: (demande) => ipcRenderer.invoke(canaux.enregistrerFavicon, demande),
   montrerFichier: (demande) => ipcRenderer.invoke(canaux.montrerFichier, demande),
 };
 

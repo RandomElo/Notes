@@ -9,9 +9,9 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 | | |
 |---|---|
 | Dernière mise à jour | 2026-10-04 |
-| Version | 0.8.0 |
-| Avancement | J0 à J7 terminés : recette J7 validée par Eloi le 2026-10-04, retouches comprises |
-| Jalon en cours | J8 (liens et icônes), à lancer par `/jalon J8` |
+| Version | 0.9.0 |
+| Avancement | J0 à J8 terminés : recette J8 validée par Eloi le 2026-10-04, retouches 0.8.1 à 0.8.4 comprises |
+| Jalon en cours | J9 (export), à lancer par `/jalon J9` |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -33,18 +33,19 @@ Ce qui fonctionne aujourd'hui :
 - les blocs riches : blocs de code colorés (langage choisi dans une liste avec recherche ou deviné au collage, bouton copier, numéros de ligne et retour à la ligne réglables dans le thème), tableaux (grille de taille au `/tableau`, poignées pour ajouter ou retirer colonnes et lignes, navigation au clavier, alignement des colonnes), images (insertion, collage ou dépôt, copie dans `assets/`, largeur, alignement, texte alternatif, légende, visionneuse, liste des images inutilisées), callouts (nature, icône, texte mis en forme) ;
 - la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 10 secondes, une seconde après chaque modification et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail ; NAS injoignable, elle dit depuis quand, et une coupure du réseau se voit dans la seconde.
 - l'écran de résolution des conflits : la page et la version mise de côté face à face, bloc par bloc, avec garder A, B ou les deux, poignées pour placer une version ailleurs, aperçu et validation.
+- les liens et icônes (J8) : `@` ou `/lien` pour mentionner une page, affichée avec son icône et son titre du moment ; renommer une page fait suivre ses mentions, jusque dans les fichiers des autres pages ; un lien ou une mention s'ouvre d'un clic, et son infobulle permet de le modifier, le copier ou le retirer ; une adresse collée devient une mention de site (favicon et titre du site), ou un lien si le site ne répond pas ; mentions cassées barrées et listées dans les réglages ; icône de page (emoji cherché en français, icône Lucide cherchée par un mot français, image recadrée avec « Retirer le fond » par un modèle local), au-dessus du titre, dans l'arborescence, les onglets, la recherche et les mentions ; une image copiée d'une page et collée dans une autre y est copiée.
 - la navigation (J7) : onglets dans la barre de titre, retrouvés au redémarrage, avec un point quand la page n'est pas encore sur le NAS ; recherche `Ctrl+K` floue sur les titres, sans accents, pages récentes, création d'une page quand rien ne correspond ; sommaire à droite de la page, à jour à la frappe, qui suit la lecture, et sommaire complet avec filtre par l'icône du haut de la page ; recherche globale instantanée par `Ctrl+Alt+Espace`, dans une petite fenêtre, Notes restant en fond fenêtre fermée (`Ctrl+Q` pour quitter, démarrage avec la session en option) ; `Ctrl+\` et `Ctrl+Shift+\` masquent la barre latérale et le sommaire, `Ctrl+,` ouvre les réglages.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
-Ce qui n'existe pas encore : les liens et mentions de page (J8), la suppression de page, l'application Android.
+Ce qui n'existe pas encore : la suppression de page, l'application Android.
 
 Reste à faire :
 
-- l'intervalle de sync reste à 10 s : les durées de cycle de la partie 8 de la recette J5 n'ont pas été relevées. Le passage à 5 s se décidera quand elles le seront (elles s'écrivent dans la console du main) ;
-- lancer J8.
+- passer l'intervalle de sync de 10 à 5 s (décidé le 2026-10-04 sur les durées relevées par Eloi, environ 60 ms par cycle) : `intervalleParDefautMs` dans `main/sync/scheduler.ts`, pas encore fait ;
+- lancer J9.
 
-Pour reprendre : `npm install`, puis `npm run dev`. J8 se lance avec `/jalon J8`. Pour installer la version construite : `npm run installer`.
+Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J9 se lance avec `/jalon J9`. Pour installer la version construite : `npm run installer`.
 
 ## Sommaire
 
@@ -194,7 +195,7 @@ Pourquoi trois paquets : `core` se teste sans rien savoir de l'éditeur, `docume
 
 ### Dépendances clés
 
-`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `smol-toml` (thème), `markdown-it` et `markdown-it-mark` (lecture du Markdown), `prosemirror-markdown` (écriture, avec un sérialiseur maison), `@iarna/toml`, `lucide-react`, `@imgly/background-removal-node`.
+`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `smol-toml` (thème), `markdown-it` et `markdown-it-mark` (lecture du Markdown), `prosemirror-markdown` (écriture, avec un sérialiseur maison), `@iarna/toml`, `lucide-react`, `emojibase-data` (noms des emojis en français), `onnxruntime-web` (moteur ONNX en WebAssembly, pour le détourage des icônes, avec le modèle silueta de rembg).
 
 Côté Android : `@capacitor/core`, `@capacitor/filesystem`, plugin SMB maison en Kotlin s'appuyant sur `smbj` 0.13 (validé par un POC le 2026-10-01).
 
@@ -228,7 +229,7 @@ Nom de dossier = titre assaini (caractères refusés par SMB remplacés : `\ / :
 |---|---|
 | `id` | UUID v7 |
 | `title` | Titre de la page |
-| `icon` | Emoji, nom Lucide ou image |
+| `icon` | Emoji (`📚`), nom d'icône Lucide en kebab-case (`book-open`) ou image du dossier `assets/` de la page (`assets/icone.webp`) |
 | `created`, `updated` | Dates ISO |
 | `mode` | Optionnel, `todo` pour le mode liste de tâches (§14) |
 | `theme_overrides` | Optionnel, surcharges de couleurs (§8) |
@@ -240,7 +241,7 @@ Markdown standard : titres, gras, italique, barré, code, listes, tâches `- [ ]
 - Souligné : Markdown n'a pas de syntaxe pour lui, il s'écrit `<u>texte</u>`. C'est la seule balise HTML que l'application reconnaît.
 
 - Blocs avancés sans équivalent Markdown : bloc code fencé `notes-callout` contenant du YAML (type, icône, texte). Reste lisible dans n'importe quel éditeur.
-- Liens internes : syntaxe Markdown standard avec cible `notes://uuid`, résolue en titre courant à l'affichage, réécrite en chemin relatif à l'export. Lien cassé affiché barré.
+- Liens internes : syntaxe Markdown standard avec cible `notes://uuid` (`[Projets](notes://0199…)`), résolue en titre courant à l'affichage, réécrite en chemin relatif à l'export. Lien cassé affiché barré. Quand une page est renommée, le texte de ses mentions est réécrit dans les pages qui la citent, seulement dans les blocs concernés. Un lien interne dont le texte est mis en forme (`[*x*](notes://…)`) reste un lien ordinaire, que le renommage ne touche pas.
 - Liens externes : label nettoyé si identique à l'URL (`https://www.google.com/` devient `google.com`).
 - Couleurs de texte : non supportées en v1 (pas de syntaxe Markdown propre ; couvert par thème et callouts).
 - Ordre manuel : fichier `.order` (liste d'UUID) dans chaque dossier qui a des enfants.
@@ -407,7 +408,7 @@ Titres, paragraphe, listes, tâche, code, tableau, image, callout, page enfant, 
 - Dans un bloc vide, la commande transforme le bloc. Dans un bloc qui contient déjà du texte, elle crée le nouveau bloc en dessous.
 - « Page enfant » crée une sous-page de la page ouverte et l'ouvre : on tape son nom dans l'arborescence, et une fois le nom validé le curseur est dans son contenu. C'est vrai de toute page qu'on vient de créer (`Ctrl+N`, bouton, menu). « Date » écrit la date du jour en toutes lettres (« 2 octobre 2026 »).
 - « Tableau » ouvre une grille : on survole la taille voulue (en-tête compris), on clique ou on valide par `Entrée`. « Image » ouvre le sélecteur de fichiers. « Callout » transforme le paragraphe vide en callout « Info », ou en ajoute un dessous.
-- Le lien n'y figure pas tant que son jalon n'est pas fait (J8).
+- « Lien vers une page » (`/lien`) ouvre le même choix de page que `@`.
 
 ### Gestion des blocs au clavier
 
@@ -416,6 +417,7 @@ Comportement Notion, absent d'AppFlowy : `Échap` sélectionne le bloc, puis le 
 - Un bloc est un paragraphe, un titre, un bloc de code, ou un item de liste. Une liste n'est pas un bloc, ses items le sont. Un item sélectionné ne montre que sa ligne : ses sous-items ne sont pas mis en évidence, mais ils le suivent quand il est déplacé, dupliqué ou supprimé.
 - `Échap` sélectionne le bloc du curseur. Sur un paragraphe ou un titre sélectionné, un deuxième appui rend le curseur. Sur un item ou un sous-item sélectionné, le deuxième appui prend toute la liste, sous-listes comprises, et le troisième rend le curseur. Il n'y a pas d'étape intermédiaire (sous-liste, item parent).
 - Avec du texte déjà sélectionné, `Échap` prend tous les blocs que la sélection traverse. Une liste où elle commence ou finit est prise en entier. Après `Ctrl+A`, toute la page est prise.
+- Quand la sélection s'étend ou se déplace, la page défile pour garder à l'écran le bloc de tête (celui que les flèches déplacent), sous la barre du haut.
 - Les blocs sélectionnés se montrent par leur fond, de la même hauteur pour tous les blocs d'une ligne (titre, paragraphe ou item). Les flèches passent d'un bloc à l'autre dans l'ordre de lecture, sous-items compris. `Shift+↑/↓` étend la sélection aux blocs voisins de même niveau.
 - La règle des flèches : sans `Ctrl`, elles agissent sur la sélection (`↑/↓` la déplace, `Shift+↑/↓` l'étend). `Ctrl+Shift+↑/↓` déplace les blocs eux-mêmes. `Ctrl+↑/↓` seul ne fait rien sur des blocs.
 - `Entrée` rend le curseur, à la fin du bloc. `Suppr` ou `Retour arrière` supprime les blocs sélectionnés. Une frappe ordinaire ne remplace pas des blocs sélectionnés : elle est ignorée.
@@ -456,7 +458,7 @@ Insertion par `/image` (sélecteur de fichiers, plusieurs à la fois), glisser-d
 - Seules les images du dossier des notes s'affichent, servies par le main (protocole `notes-asset:`), qui vérifie le chemin et la nature du fichier. Une image d'Internet n'est jamais chargée : un cadre le dit à sa place.
 - Coller le lien d'une image d'Internet (`https://…/x.png`) demande s'il faut la télécharger dans la page. « Télécharger » : le main la récupère (http et https seulement, sans cookies, 20 s et 200 Mo au plus, nature vérifiée par les premiers octets), puis elle est convertie en WebP et copiée dans `assets/` sous le nom de l'adresse. Seul un lien qui finit par une extension d'image déclenche la question. « Garder le lien » ou `Échap` : le lien est collé comme du texte. Sans réseau, ou si le lien ne mène pas à une image, un message le dit et le lien reste en texte.
 - Images inutilisées : les réglages listent les fichiers des dossiers `assets/` dont la page ne parle plus, avec « Montrer » pour les voir dans le gestionnaire de fichiers. Rien n'est supprimé par l'application.
-- Limite connue : une image copiée d'une page et collée dans une autre garde son adresse relative et ne s'affiche plus. À traiter avec les liens (J8).
+- Une image copiée d'une page et collée dans une autre s'affiche aussitôt (son adresse renvoie à la page d'origine), puis son fichier est copié dans les `assets/` de la page, sans rien remplacer, et l'adresse devient locale.
 
 ### Callouts
 
@@ -476,9 +478,21 @@ text: |-
 
 `@` ou `/lien` pour mentionner une page (icône et titre courant, suit les renommages). URL collée sur une sélection ou seule. Mentions cassées signalées et listées dans les réglages.
 
+- `@` en début de bloc, après une espace ou une parenthèse (pas dans une adresse de courriel) ouvre la liste des pages : les récentes, puis, à la frappe, recherche floue sans accents. Flèches, `Entrée` ou `Tab`, `Échap` comme pour le menu `/`. La mention est suivie d'une espace.
+- À l'écran, une mention montre l'icône et le titre du moment de la page, soulignés finement. Le fichier garde le texte écrit, mis à jour au renommage (§4). Une page introuvable : le texte du fichier, barré et gris.
+- Tout lien s'ouvre d'un simple clic : une mention ou un lien `notes://` ouvre la page (`Ctrl+clic` ou clic du milieu : nouvel onglet), une adresse web part dans le navigateur, une adresse `mailto:` dans la messagerie. Pour modifier un lien, on y entre au clavier, ou par son infobulle.
+- Au survol d'un lien (ou quand le curseur y entre au clavier), une infobulle, collée au lien et qui reste ouverte tant que la souris va vers elle, donne son adresse, « Modifier » (texte et adresse, `exemple.fr` devient `https://exemple.fr`, une adresse vide retire le lien), « Copier l'adresse » et « Retirer le lien » (le texte reste). Sur une mention : le chemin de la page, « Changer de page » (la liste des pages se rouvre) et « Retirer la mention » (le titre reste en texte).
+- Une adresse web collée seule devient d'abord un lien dont le texte est l'adresse nettoyée, puis une mention de site : Notes demande au site son titre et sa favicon (http et https seulement, sans cookies, 8 secondes et 512 Ko au plus, favicon de 256 Ko au plus), et le lien prend ce titre, favicon devant, comme une mention de page. Dans le fichier : `[Titre du site](https://exemple.fr "mention")`. La favicon, ramenée à un PNG de 64 px, est gardée dans `.notes/favicons/<site>.png` et synchronisée ; l'affichage ne va jamais la chercher sur Internet (un globe à sa place s'il n'y en a pas). Site injoignable : le lien reste un lien. Dans l'infobulle, « En lien » ramène une mention de site à un simple lien, « Mention » fait l'inverse ; collée sur une sélection d'un seul bloc, elle fait de la sélection un lien. Un lien `notes://` vers une page connue collé devient une mention. Rien de cela dans un bloc de code ou du code en ligne. Le bouton « Lien » de la barre d'outils ouvre le même formulaire sur la sélection.
+- Les réglages listent les mentions cassées (« Chercher »), page par page, avec « Ouvrir la page ».
+
 ### Icônes de page
 
-Emoji (recherche FR), icône Lucide (table de correspondance FR vers EN), image (recadrage carré 128×128, détourage auto du fond via ONNX local).
+Emoji (recherche FR), icône Lucide (table de correspondance FR vers EN), image (recadrage carré 128×128, détourage du fond via ONNX local, à la demande).
+
+- L'icône s'affiche au-dessus du titre de la page, en grand, avec de l'espace au-dessus ; sans icône, le titre reste près du haut, et « Ajouter une icône » est centré dans l'espace au-dessus de lui (même écart en haut et en bas) ; un clic ouvre son choix. Sans icône, « Ajouter une icône » apparaît au survol du haut de la page. Le menu de l'arborescence a aussi « Icône ». Elle s'affiche dans l'arborescence, les onglets, la recherche et les mentions.
+- Trois onglets dans le choix. Emoji : tous les emojis d'Unicode, cherchés par leur nom et leurs mots-clés français (Emojibase). Icônes : les icônes Lucide, cherchées par un mot français d'une table tenue à la main (« maison » trouve `house`) ou par leur nom anglais. Image : une image de l'ordinateur, ou d'Internet par son adresse (téléchargée par le main, comme une image collée), recadrée en carré (glisser pour déplacer, molette ou curseur pour zoomer), enregistrée en WebP 128 × 128 sous `assets/icone.webp` (sans rien remplacer : `icone-2.webp`…). « Retirer » enlève l'icône.
+- « Retirer le fond » détoure le carré choisi par le modèle silueta (U²-Net allégé, 44 Mo), dans le main, par le moteur ONNX en WebAssembly : rien ne part sur le réseau, environ 2 secondes. Un damier montre ce qui est devenu transparent, « Garder le fond » revient en arrière. Le modèle et le moteur sont livrés dans l'AppImage (`npm run build:models` les prépare, empreinte du modèle vérifiée).
+- Une ancienne icône image reste dans `assets/` et passe dans les images inutilisées.
 
 ---
 
@@ -558,8 +572,8 @@ Desktop uniquement.
 | HTML autonome | Page seule | Oui (base64) | Maximale | Partage par fichier |
 | ZIP | Page et descendants | Oui | Selon format interne | Archivage |
 
-- PDF : rendu hors écran avec le thème actif (`printToPDF`). Règles de saut de page : titres jamais seuls en bas, code, images, tableaux et callouts non coupés (tableaux : en-tête répété si la coupure est inévitable), orphelines et veuves gérées. Pied de page : titre, auteur, numéro de page. Options : format papier, marges, icônes ou non.
-- Markdown : front-matter retirable, mentions réécrites en chemins relatifs, images remplacées par une mention textuelle, callouts convertis en citations.
+- PDF : rendu hors écran avec les couleurs du thème actif sur fond blanc (`printToPDF`). Règles de saut de page : titres jamais seuls en bas, code, images, tableaux et callouts non coupés (tableaux : en-tête répété si la coupure est inévitable), orphelines et veuves gérées. Pied de page : titre et numéro de page, sans auteur. Options : format papier, marges, icônes ou non.
+- Markdown : front-matter retirable, mentions de page écrites en texte simple (leur titre), images remplacées par une mention textuelle, jamais de citation : un callout ne devient pas une citation (sa forme exacte : P1).
 - HTML autonome : CSS et images inlinés en base64, coloration syntaxique précalculée, sommaire avec ancres. Format recommandé pour partager en conservant l'apparence exacte.
 - ZIP : page et enfants avec assets, arborescence conservée, option de sortie en HTML avec navigation entre pages.
 
@@ -740,7 +754,7 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J5 | Sync SMB | Deux machines pendant une journée sans perte ni écrasement | Fait |
 | J6 | Blocs riches (code, images, tableaux, callouts) | Page technique complète rédigée confortablement | Fait |
 | J7 | Navigation avancée | Raccourci global et sommaire toujours à jour | Fait |
-| J8 | Liens et icônes | Renommage sans mention cassée | À faire |
+| J8 | Liens et icônes | Renommage sans mention cassée | Fait |
 | J9 | Export | 20 pages en PDF sans coupure incorrecte | À faire |
 | J10 | Corbeille | Page supprimée restaurée intégralement | À faire |
 | J11 | Correction orthographique | Aucune latence perceptible à la frappe | À faire |
@@ -758,7 +772,8 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Réf | Question | Échéance |
 |---|---|---|
-| P1 | L'export Markdown convertit les callouts en citations (§9), alors que l'application ne propose plus de citation. Garder cette conversion pour les autres outils, ou écrire autre chose ? | J9 |
+| P1 | Export Markdown d'un callout : pas de citation (tranché), mais quelle forme à la place ? Garder le bloc `notes-callout` tel quel, ou écrire ses paragraphes en texte simple (avec son icône devant) ? | J9 |
+| P2 | Export Markdown d'une mention de site : lien Markdown normal sans le titre « mention », ou gardée telle quelle ? | J9 |
 
 ---
 
@@ -896,6 +911,13 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-04 | Version 0.7.5, retours d'Eloi sur le sommaire : la fenêtre du sommaire complet porte le titre « Sommaire » ; le sommaire latéral, qui prenait toute la hauteur avec beaucoup de titres, est limité à 60 % de la fenêtre (32 rem au plus) et défile pour garder le titre en cours au milieu, aligné avec son nom au survol. |
 | 2026-10-04 | Recette J7, questions tranchées par Eloi : `Ctrl+T` avec la recherche, dernier onglet vidé, `Ctrl+Z` perdu au changement d'onglet, tout acceptés ; le sommaire latéral montre tous les niveaux ; une page créée depuis la recherche se place au clavier, juste après la page ouverte par défaut, sinon dedans ou à la racine ; icône de liste pour le sommaire. Version 0.7.6. |
 | 2026-10-04 | Version 0.7.6, mise à jour locale (demande d'Eloi, remplace « pas d'auto-update » du §17) : AppImage au nom fixe, `npm run installer` qui la remplace par renommage, Notes qui surveille son fichier et se relance (en fond, ou par « Relancer » si la fenêtre est ouverte, page enregistrée d'abord). `app.relaunch` d'Electron ne marche pas depuis une AppImage : Notes lance la nouvelle par bash (`/bin/bash`, livré avec Mint), qui ferme les descripteurs hérités pour que l'ancien montage disparaisse, et la nouvelle attend la fin de l'ancienne. Sans bash, relance directe. |
+| 2026-10-04 | Recette J8, questions tranchées par Eloi, toutes acceptées : mention au titre du moment, lien interne mis en forme laissé en lien ; `Ctrl+Z` ne défait pas la mise à jour d'une mention ; détourage silueta suffisant ; icône image `icone-2.webp`, l'ancienne dans les images inutilisées ; `mailto:` ouvre la messagerie. Ses retours : infobulle qui se ferme quand la souris va vers elle, « Ajouter une icône » trop haut, sélection de blocs qui ne fait pas défiler la page, icône depuis l'adresse d'une image, et mention de site comme Notion. |
+| 2026-10-04 | Recette J8 validée par Eloi, retouches 0.8.1 à 0.8.4 comprises : J8 passe à « Fait », version 0.9.0. Il commite lui-même. |
+| 2026-10-04 | Durées de cycle de la sync relevées par Eloi (relevé du NAS 51 à 55 ms, cycle 56 à 61 ms) : l'intervalle passera de 10 à 5 s, réglage à faire. |
+| 2026-10-04 | Export (J9), choix d'Eloi : pas de citation dans l'export, un callout n'est pas converti en citation ; une mention de page s'exporte en texte simple (son titre) en Markdown ; PDF aux couleurs du thème sur fond blanc ; pas d'auteur dans le pied de page. |
+| 2026-10-04 | Mention de site (choix d'Eloi, comme « Mention » au collage dans Notion) : toute adresse collée seule devient une puce avec la favicon et le titre du site, contacté à chaque collage (sans cookies, délai court) ; l'infobulle la ramène à un simple lien. Dans le fichier, un lien Markdown standard au titre « mention » : `[Titre du site](https://exemple.fr "mention")`. La favicon est gardée dans `.notes/favicons/`, synchronisée, jamais rechargée d'Internet à l'affichage. |
+| 2026-10-04 | J8, choix faits sans Eloi (questions de la recette J8) : une mention est un nœud à part, pour tout lien `notes://uuid` au texte simple ; un lien interne mis en forme reste un lien. La page ouverte n'est pas réécrite par le main au renommage : son éditeur change ses mentions, enregistrées comme une frappe (pas de faux conflit). Icône : emoji tel quel, nom Lucide en kebab-case, ou `assets/…` de la page ; image en WebP 128 × 128. Détourage par `onnxruntime-web` en WebAssembly dans un worker du main, avec le modèle silueta (Apache 2.0) téléchargé au build et vérifié par empreinte : `@imgly/background-removal-node` écarté (AGPL, `sharp` et `onnxruntime-node` natifs). AppImage de 128 à 159 Mo. Les adresses `mailto:` s'ouvrent aussi depuis la fenêtre. Une image collée depuis une autre page est copiée dans la sienne. |
+| 2026-10-04 | J8, choix d'Eloi : tout lien s'ouvre d'un simple clic (mention : la page ; adresse : le navigateur) ; pour modifier un lien, on y entre au clavier ou par « Modifier » dans son infobulle. Renommer une page réécrit le libellé de ses mentions dans les pages qui la citent, pour que les fichiers restent justes hors de l'application. L'icône se choisit au-dessus du titre de la page et par le menu de l'arborescence. Icône image : recadrage carré 128×128, et un bouton « Retirer le fond » (détourage local, modèle compressé, lancé dans le main) plutôt qu'un détourage d'office. |
 | 2026-10-04 | Recette J7 validée par Eloi, retouches 0.7.1 à 0.7.7 comprises : J7 passe à « Fait », version 0.8.0. |
 | 2026-10-04 | Version 0.7.7 (Eloi) : le dégradé des traits du sommaire ne s'affiche que du côté où des traits sont cachés. Tout en haut de la page, pas de dégradé en haut ; tout en bas, pas en bas. |
 | 2026-10-04 | Version 0.7.6, défaut corrigé : avec plus de titres que la hauteur limitée du sommaire latéral, les traits se tassaient jusqu'à disparaître. |
@@ -1032,3 +1054,8 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-04 | 0.7.6 | Mise à jour automatique locale |
 | 2026-10-04 | 0.7.7 | Dégradé du sommaire ajusté |
 | 2026-10-04 | 0.8.0 | J7 : navigation validée |
+| 2026-10-04 | 0.8.1 | J8 : liens et icônes, en recette |
+| 2026-10-04 | 0.8.2 | Mentions de site, retouches J8 |
+| 2026-10-04 | 0.8.3 | Haut de page, boutons d'icône |
+| 2026-10-04 | 0.8.4 | « Ajouter une icône » centré |
+| 2026-10-04 | 0.9.0 | J8 : liens et icônes validés |

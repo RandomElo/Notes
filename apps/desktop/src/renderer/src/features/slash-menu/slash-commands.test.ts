@@ -11,10 +11,12 @@ describe('filtrerCommandes', () => {
     expect(libelles('')).toEqual(commandes.map((commande) => commande.libelle));
     expect(libelles('')).toEqual([
       'Texte', 'Titre 1', 'Titre 2', 'Titre 3', 'Titre 4', 'Titre 5', 'Liste à puces', 'Liste numérotée', 'Tâche', 'Code',
-      'Tableau', 'Image', 'Callout', 'Page enfant', 'Date',
+      'Tableau', 'Image', 'Callout', 'Page enfant', 'Lien vers une page', 'Date',
     ]);
-    // Le lien arrive en J8. Citation et séparateur ne sont pas proposés.
-    for (const absente of ['lien', 'citation', 'quote', 'separateur', 'divider', '---']) {
+    expect(libelles('lien')).toEqual(['Lien vers une page']);
+    expect(libelles('@')).toEqual(['Lien vers une page']);
+    // Citation et séparateur ne sont pas proposés.
+    for (const absente of ['citation', 'quote', 'separateur', 'divider', '---']) {
       expect(libelles(absente)).toEqual([]);
     }
   });

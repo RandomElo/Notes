@@ -1,4 +1,4 @@
-import { CalendarDays, FilePlus, Heading1, Heading2, Heading3, Heading4, Heading5, List, ListOrdered, ListTodo, MessageSquareText, Pilcrow, SquareCode, Table, Image } from 'lucide-react';
+import { AtSign, CalendarDays, FilePlus, Heading1, Heading2, Heading3, Heading4, Heading5, List, ListOrdered, ListTodo, MessageSquareText, Pilcrow, SquareCode, Table, Image } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 
 /** Ce que fait une commande du menu « / ». */
@@ -11,7 +11,8 @@ export type SlashAction =
   | { genre: 'image' }
   | { genre: 'callout' }
   | { genre: 'date' }
-  | { genre: 'sousPage' };
+  | { genre: 'sousPage' }
+  | { genre: 'lien' };
 
 export interface SlashCommand {
   libelle: string;
@@ -29,9 +30,8 @@ const titre = (niveau: 1 | 2 | 3 | 4 | 5, icone: LucideIcon): SlashCommand => ({
 });
 
 /**
- * Commandes du menu « / » (README §6). Le lien arrivera avec son jalon (J8) :
- * il n'est pas montré avant. Citation et séparateur n'y sont pas : Eloi n'en
- * veut pas.
+ * Commandes du menu « / » (README §6). Citation et séparateur n'y sont pas :
+ * Eloi n'en veut pas.
  */
 export const commandes: SlashCommand[] = [
   { libelle: 'Texte', alias: ['paragraphe', 'paragraph', 'text', 'p'], icone: Pilcrow, action: { genre: 'paragraphe' } },
@@ -48,6 +48,7 @@ export const commandes: SlashCommand[] = [
   { libelle: 'Image', alias: ['photo', 'img', 'picture', 'capture', '![]'], icone: Image, action: { genre: 'image' } },
   { libelle: 'Callout', alias: ['encadre', 'note', 'info', 'alerte', 'attention', 'admonition'], icone: MessageSquareText, action: { genre: 'callout' } },
   { libelle: 'Page enfant', alias: ['sous-page', 'nouvelle page', 'subpage', 'child page', 'page'], icone: FilePlus, action: { genre: 'sousPage' } },
+  { libelle: 'Lien vers une page', alias: ['lien', 'mention', 'link', 'mention page', '@'], icone: AtSign, action: { genre: 'lien' } },
   { libelle: 'Date', alias: ["aujourd'hui", 'jour', 'today', 'date'], icone: CalendarDays, action: { genre: 'date' } },
 ];
 

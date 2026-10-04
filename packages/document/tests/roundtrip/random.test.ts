@@ -13,7 +13,7 @@ function generateur(graine: number): () => number {
 const lignes = [
   '', '', '', '   ', '# Titre', '## Titre *en italique*', '###### six', 'Titre', '===', '---', '***', '- puce', '  - sous-puce', '* étoile',
   '+ plus', '1. un', '2) deux', '- [ ] tâche', '- [x] faite', '  suite de puce', '> citation', '> - puce citée', '```', '```ts', '~~~',
-  '    code indenté', 'texte **gras** et _italique_', 'un `code` et ==surligné==', '[lien](https://example.com "titre")', '![image](a.png)',
+  '    code indenté', 'texte **gras** et _italique_', 'un `code` et ==surligné==', '[lien](https://example.com "titre")', 'voir [Page *x*](notes://0199a0b0-0000-7000-8000-000000000002) et **[P](NOTES://0199A0B0-0000-7000-8000-000000000003)**', '[](notes://0199a0b0-0000-7000-8000-000000000002 "t")', '![image](a.png)',
   '![légende](assets/é t.png#largeur=33&align=droite "titre")', '![x](a.png#largeur=50)', '| a | b |', '|---|---|', '|:-:|--:|',
   '| `x\\|y` | **g** \\| |', '| seul |', '```notes-callout', 'type: info', 'icon: 💡', 'text: |-', '  du **texte**', 'text: une ligne', '[ref]: https://example.com', 'texte [ref] et <https://example.com>', '<div>html</div>', 'fin de ligne  ',
   'barre oblique\\', '\\* échappé \\# \\[x\\]', 'snake_case __init__ a*b*c', '&amp; &#35; =', 'du <u>souligné</u> et <u>*les deux*</u>', 'un <u> seul', '</u> perdu', '\ttabulation', '1.', '-', '>', '#', 'é à ü 👋 «»',

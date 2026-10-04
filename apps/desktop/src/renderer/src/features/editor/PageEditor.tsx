@@ -1,14 +1,15 @@
+import { natureDIcone } from '@notes/core';
 import type { TreeNode } from '@notes/core';
-import { ecrireMarkdown, lireMarkdown } from '@notes/document';
+import { ecrireMarkdown, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
 import type { ImageAttributes, OutlineEntry } from '@notes/document';
 import { classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
 import { Node as NoeudTiptap } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions';
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
-import type { Theme } from '@notes/ui';
+import type { MentionedPage, Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { List, Lock, X } from 'lucide-react';
+import { FileText, List, Lock, X } from 'lucide-react';
 import { Selection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -18,6 +19,7 @@ import { BlockKeys } from '../blocks/block-extension';
 import { CodeBlockView } from '../code-block/CodeBlockView';
 import { CodePaste } from '../code-block/code-paste';
 import { ConflictNotice, useConflits } from '../conflicts/ConflictNotice';
+import { ImageCopy } from '../images/image-copy';
 import { ImageFiles, ajouterEnWebp } from '../images/image-files';
 import { ImageLinkPrompt } from '../images/ImageLinkPrompt';
 import { ImageResizeHandles } from '../images/ImageResizeHandles';
@@ -25,6 +27,16 @@ import { adresseDImage } from '../images/image-url';
 import { ImageToolbar } from '../images/ImageToolbar';
 import { ImageViewer } from '../images/ImageViewer';
 import { insererImages } from '../images/insert-images';
+import { LinkBehaviour } from '../links/link-extension';
+import type { LinkOptions } from '../links/link-extension';
+import { LinkTooltip } from '../links/LinkTooltip';
+import { adresseDeFavicon, mentionnerLeSite } from '../links/site-mention';
+import { MentionKeys } from '../mentions/mention-extension';
+import { MentionMenu } from '../mentions/MentionMenu';
+import { annuaireDesPages } from '../mentions/pages-directory';
+import { inscrireEditeurOuvert } from '../mentions/rename-follow';
+import { PageHeaderIcon } from '../page-icon/PageHeaderIcon';
+import { PageIcon } from '../page-icon/PageIcon';
 import { SlashMenu } from '../slash-menu/SlashMenu';
 import { SlashKeys } from '../slash-menu/slash-extension';
 import type { SlashActions } from '../slash-menu/slash-extension';
@@ -54,6 +66,13 @@ interface ExtensionsDeLEditeur {
   agrandir: (attributs: ImageAttributes, adresse: string) => void;
   surErreurDImage: (message: string) => void;
   surLienDImage: (adresse: string, position: number) => void;
+  /** Ouverture d'une page par un lien ou une mention, et titre d'une page pour un lien collé. */
+  liens: LinkOptions;
+}
+
+/** Icône d'une page mentionnée : celle de la page, sinon une page blanche. */
+function IconeDeMention({ page }: { page: MentionedPage }) {
+  return <PageIcon icone={page.icone} chemin={page.chemin} defaut={<FileText className="inline size-[1em]" aria-hidden="true" />} />;
 }
 
 /**
@@ -62,17 +81,25 @@ interface ExtensionsDeLEditeur {
  * collées ou déposées, annuler et rétablir, curseur entre deux blocs, repère
  * de dépôt, invite.
  */
-function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage }: ExtensionsDeLEditeur): AnyExtension[] {
-  const affichage = extensionsDAffichage({ resoudre: (src) => adresseDImage(chemin(), src), agrandir });
+function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage, liens }: ExtensionsDeLEditeur): AnyExtension[] {
+  const affichage = extensionsDAffichage(
+    { resoudre: (src) => adresseDImage(chemin(), src), agrandir },
+    { pages: annuaireDesPages, Icone: IconeDeMention, ouvrir: liens.ouvrirPage },
+    { favicon: adresseDeFavicon },
+  );
   return [
     ...affichage.map((extension) =>
       extension instanceof NoeudTiptap && extension.name === 'codeBlock' ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(CodeBlockView) }) : extension,
     ),
     BlockKeys,
     SlashKeys,
+    MentionKeys,
     TableKeys,
     CodePaste,
     ImageFiles.configure({ chemin, surErreur: surErreurDImage, surLienDImage }),
+    ImageCopy.configure({ chemin, surErreur: surErreurDImage }),
+    // Après les images : un lien d'image collé leur revient.
+    LinkBehaviour.configure(liens),
     UndoRedo,
     Gapcursor,
     Dropcursor.configure({ color: 'var(--color-accent)', width: 2 }),
@@ -100,10 +127,14 @@ interface PageEditorProps {
   surConflit: (sauvegarde: string) => void;
   /** Sommaire latéral affiché (Ctrl+Maj+\ le masque). */
   sommaireVisible: boolean;
+  /** Ouvre une page depuis un lien ou une mention. « nouvelOnglet » : Ctrl+clic ou clic du milieu. */
+  surOuvrirPage: (id: string, nouvelOnglet: boolean) => void;
+  /** Ouvre le choix de l'icône de la page sous ce point. */
+  surIcone: (x: number, y: number) => void;
 }
 
 /** Page ouverte : fil d'Ariane, titre, puis l'éditeur de son contenu. */
-export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible }: PageEditorProps) {
+export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible, surOuvrirPage, surIcone }: PageEditorProps) {
   // Entrée ou flèche bas dans le titre : le curseur passe au début du contenu.
   const [descentes, descendre] = useState(0);
   const [chargement, definirChargement] = useState<Chargement>({ etat: 'lecture' });
@@ -168,7 +199,10 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           </div>
         </div>
         {/* Le titre de la page est le niveau 1 : dans le contenu, `#` est le premier niveau en dessous. */}
-        <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} lectureSeule={lectureSeule} />
+        <div className={`group/entete ${natureDIcone(noeud.icone) === null ? 'pt-3.5' : 'pt-6'}`}>
+          <PageHeaderIcon icone={noeud.icone} chemin={noeud.chemin} lectureSeule={lectureSeule} surOuverture={surIcone} />
+          <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} lectureSeule={lectureSeule} />
+        </div>
 
         {verrou.verrou.etat === 'autre' && <LockNotice nom={verrou.verrou.nom} surForcage={verrou.forcer} />}
         <ConflictNotice conflits={conflits} surResolution={surConflit} />
@@ -181,7 +215,9 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
         {chargement.etat === 'pret' && (
           <EditorSurface
             corps={chargement.corps}
+            id={noeud.id ?? ''}
             chemin={noeud.chemin}
+            surOuvrirPage={surOuvrirPage}
             surEtat={definirEnregistrement}
             surSousPage={surSousPage}
             descentes={descentes}
@@ -213,6 +249,9 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
 
 interface EditorSurfaceProps {
   corps: string;
+  /** Identifiant de la page : son éditeur suit le renommage des pages qu'elle mentionne. */
+  id: string;
+  surOuvrirPage: (id: string, nouvelOnglet: boolean) => void;
   /** Chemin actuel de la page : il change si elle est renommée ou déplacée pendant qu'elle est ouverte. */
   chemin: string;
   surEtat: (etat: SaveState) => void;
@@ -231,7 +270,7 @@ interface EditorSurfaceProps {
   surEditeur: (editeur: Editor | null) => void;
 }
 
-function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur }: EditorSurfaceProps) {
+function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur }: EditorSurfaceProps) {
   const [erreurDImage, definirErreurDImage] = useState<string | null>(null);
   // Position où ouvrir la grille de taille d'un tableau (`/tableau`), null quand elle est fermée.
   const [grille, definirGrille] = useState<number | null>(null);
@@ -243,9 +282,25 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
   const source = useRef(depart.source);
   const cheminActuel = useRef(chemin);
   const editeurActuel = useRef<Editor | null>(null);
+  const ouvrirPage = useRef(surOuvrirPage);
   useEffect(() => {
     cheminActuel.current = chemin;
-  }, [chemin]);
+    ouvrirPage.current = surOuvrirPage;
+  }, [chemin, surOuvrirPage]);
+  const liens = useMemo<LinkOptions>(
+    () => ({
+      ouvrirPage: (cible, nouvelOnglet) => ouvrirPage.current(cible, nouvelOnglet),
+      titreDePage: (cible) => annuaireDesPages.lire(cible)?.titre ?? null,
+      // Le lien collé reste un lien si le site ne répond pas, ou si on l'a déjà modifié entre-temps.
+      surAdresseCollee: (adresse) => {
+        const editeur = editeurActuel.current;
+        if (editeur !== null) {
+          void mentionnerLeSite(editeur, adresse, (lien) => lien.titre === null && lien.texte === libelleDAdresse(adresse));
+        }
+      },
+    }),
+    [],
+  );
 
   const sauvegarde = useMemo(
     () =>
@@ -276,8 +331,9 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
         agrandir: (attributs, adresse) => definirVisionneuse({ attributs, adresse }),
         surErreurDImage: definirErreurDImage,
         surLienDImage: (adresse, position) => definirLienColle({ adresse, position }),
+        liens,
       }),
-    [],
+    [liens],
   );
 
   const editeur = useEditor({
@@ -327,6 +383,26 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
     surEditeur(editeur);
     return () => surEditeur(null);
   }, [editeur, surEditeur]);
+
+  // Une page mentionnée ici est renommée : ses mentions prennent le nouveau titre dans l'éditeur, puis dans le
+  // fichier à l'enregistrement suivant. Le main ne touche pas au fichier de la page ouverte.
+  useEffect(
+    () =>
+      inscrireEditeurOuvert(id, (renommee, titre) => {
+        if (editeur.isDestroyed) {
+          return;
+        }
+        const positions = mentionsARenommer(editeur.state.doc, renommee, titre);
+        if (positions.length > 0) {
+          const transaction = editeur.state.tr;
+          for (const position of positions) {
+            transaction.setNodeAttribute(position, 'libelle', titre);
+          }
+          editeur.view.dispatch(transaction.setMeta('addToHistory', false));
+        }
+      }),
+    [editeur, id],
+  );
 
   useEffect(() => {
     if (descentes > 0) {
@@ -463,6 +539,8 @@ function EditorSurface({ corps, chemin, surEtat, surSousPage, descentes, entrer,
           <TableHandles editor={editeur} />
           <RowColumnGrips editor={editeur} />
           <SlashMenu editor={editeur} actions={actions} />
+          <MentionMenu editor={editeur} />
+          <LinkTooltip editor={editeur} options={liens} />
           {grille !== null && <TableGridPicker editor={editeur} position={grille} surFermeture={() => definirGrille(null)} />}
         </>
       )}

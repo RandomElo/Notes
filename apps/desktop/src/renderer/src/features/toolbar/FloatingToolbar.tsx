@@ -1,9 +1,10 @@
 import { TextSelection } from '@tiptap/pm/state';
 import type { Editor } from '@tiptap/react';
-import { Bold, ChevronDown, Code, Italic, Strikethrough, Underline } from 'lucide-react';
+import { Bold, ChevronDown, Code, Italic, Link, Strikethrough, Underline } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { CalloutMenu } from '../callout/CalloutMenu';
+import type { LinkStorage } from '../links/link-extension';
 import { slashOuvert } from '../slash-menu/slash-extension';
 import { TableMenu } from '../tables/TableMenu';
 import { changerType, typeCourant, typesDeBloc } from './toolbar-model';
@@ -173,6 +174,22 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
             </button>
           );
         })}
+      {!dansDuCode && (
+        <button
+          type="button"
+          title="Lien"
+          aria-label="Lien"
+          aria-pressed={editor.isActive('link')}
+          onMouseDown={sansFocus}
+          onClick={() => {
+            (editor.storage as unknown as { liens: LinkStorage }).liens.ouvrirFormulaire?.();
+            definirDemandee(false);
+          }}
+          className={`flex size-7 items-center justify-center rounded ${editor.isActive('link') ? 'bg-accent/25' : 'hover:bg-texte/10'}`}
+        >
+          <Link className="size-4" aria-hidden="true" />
+        </button>
+      )}
     </div>
   );
 }

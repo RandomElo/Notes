@@ -3,6 +3,10 @@ import { dossierParent, titreParDefaut, trouverNoeud } from '@notes/core';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConflictScreen } from './features/conflicts/ConflictScreen';
 import { PageEditor } from './features/editor/PageEditor';
+import { BrokenMentions } from './features/mentions/BrokenMentions';
+import { IconPicker } from './features/page-icon/IconPicker';
+import { annuaireDesPages } from './features/mentions/pages-directory';
+import { renommerEnSuivantLesMentions } from './features/mentions/rename-follow';
 import { toutEnregistrer } from './features/editor/pending-saves';
 import { PageSummary } from './features/page/PageSummary';
 import { UnusedImages } from './features/images/UnusedImages';
@@ -60,6 +64,8 @@ export function App() {
   const [rechercheOuverte, definirRechercheOuverte] = useState(false);
   const [listeDeplies, definirListeDeplies] = useStoredState<string[]>('notes.deplies', [], estListeDeTextes);
   const [renommage, definirRenommage] = useState<string | null>(null);
+  // Choix de l'icône d'une page ouvert, depuis le haut de la page ou le menu de l'arborescence.
+  const [choixDIcone, definirChoixDIcone] = useState<{ chemin: string; icone: string | null; x: number; y: number } | null>(null);
   // Version en conflit ouverte dans l'écran de résolution, à la place de la page.
   const [conflit, definirConflit] = useState<string | null>(null);
   // Augmente après une résolution : l'éditeur de la page repart du fichier enregistré.
@@ -71,6 +77,7 @@ export function App() {
   const [aEcrire, definirAEcrire] = useState<string | null>(null);
   const contenuRejoint = useCallback(() => definirAEcrire(null), []);
   const deplies = useMemo(() => new Set(listeDeplies), [listeDeplies]);
+  const fermerChoixDIcone = useCallback(() => definirChoixDIcone(null), []);
 
   const deplier = useCallback(
     (cles: string[], deplie = true) => {
@@ -167,6 +174,14 @@ export function App() {
     },
     [vault, selection, definirSelection],
   );
+
+  // Les mentions lisent titres et icônes dans l'annuaire des pages, tenu à jour depuis l'arborescence.
+  useEffect(() => {
+    annuaireDesPages.definirArbre(vault.arbre);
+  }, [vault.arbre]);
+  useEffect(() => {
+    annuaireDesPages.recentes = recentes;
+  }, [recentes]);
 
   const noeudSelectionne = trouverParCle(vault.arbre, selection);
 
@@ -311,6 +326,8 @@ export function App() {
         onglets={pagesDesOnglets.map(({ onglet, noeud }) => ({
           ...onglet,
           titre: noeud?.titre ?? 'Nouvel onglet',
+          icone: noeud?.icone ?? null,
+          chemin: noeud?.chemin ?? '',
           enAttente: noeud?.importe === true && enAttente.has(noeud.chemin),
         }))}
         actif={onglets.actif}
@@ -347,6 +364,7 @@ export function App() {
             }}
             surCreation={(parent) => void creer(parent)}
             surAbandon={abandonnerPage}
+            surIcone={(noeud, x, y) => definirChoixDIcone({ chemin: noeud.chemin, icone: noeud.icone, x, y })}
             reglagesOuverts={reglagesOuverts}
             surReglages={() => {
               definirReglagesOuverts((ouverts) => !ouverts);
@@ -371,6 +389,14 @@ export function App() {
                 <GlobalShortcutPanel />
                 <WebpConversion />
                 <UnusedImages />
+                <BrokenMentions
+                  surOuverture={(chemin) => {
+                    const page = trouverNoeud(vault.arbre, chemin);
+                    if (page !== null) {
+                      selectionner(cleDeNoeud(page));
+                    }
+                  }}
+                />
               </div>
             )
           ) : noeudSelectionne?.importe === true && conflit !== null ? (
@@ -389,7 +415,7 @@ export function App() {
             <PageEditor
               key={`${noeudSelectionne.id}:${rechargements}`}
               noeud={noeudSelectionne}
-              surRenommage={(titre) => api.renommerPage({ chemin: noeudSelectionne.chemin, titre }).then((resultat) => {
+              surRenommage={(titre) => renommerEnSuivantLesMentions(noeudSelectionne.chemin, titre).then((resultat) => {
                 if (!resultat.ok) {
                   return resultat.erreur.message;
                 }
@@ -402,6 +428,8 @@ export function App() {
               theme={theme.theme}
               surConflit={ouvrirConflit}
               sommaireVisible={sommaireVisible}
+              surOuvrirPage={selectionner}
+              surIcone={(x, y) => definirChoixDIcone({ chemin: noeudSelectionne.chemin, icone: noeudSelectionne.icone, x, y })}
             />
           ) : (
             <PageSummary
@@ -415,6 +443,15 @@ export function App() {
         </main>
       </div>
       <StatusBar surResolution={ouvrirConflit} />
+      {choixDIcone !== null && (
+        <IconPicker
+          icone={choixDIcone.icone}
+          x={choixDIcone.x}
+          y={choixDIcone.y}
+          surChoix={(choix) => vault.changerIcone(choixDIcone.chemin, choix.genre === 'image' ? { octets: choix.octets } : { icone: choix.icone })}
+          surFermeture={fermerChoixDIcone}
+        />
+      )}
       {rechercheOuverte && vault.etat?.dossier != null && (
         <SearchPalette
           arbre={vault.arbre}

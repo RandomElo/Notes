@@ -1,9 +1,13 @@
 import { Plus, X } from 'lucide-react';
 import type { MouseEvent } from 'react';
+import { PageIcon } from '../page-icon/PageIcon';
 import type { Tab } from './tabs-model';
 
 export interface TabView extends Tab {
   titre: string;
+  /** Icône de la page et son dossier (une icône image est dans ses `assets/`). */
+  icone: string | null;
+  chemin: string;
   /** La page a des modifications que le NAS n'a pas encore. */
   enAttente: boolean;
 }
@@ -56,6 +60,7 @@ export function TabBar({ onglets, actif, surActivation, surFermeture, surNouveau
                 className={`flex h-full min-w-0 flex-1 items-center gap-1.5 rounded-md pl-2.5 outline-0 ${estActif ? 'focus-visible:bg-accent/30' : 'focus-visible:bg-texte/20'}`}
               >
                 {onglet.enAttente && <span aria-hidden="true" className="bg-alerte size-1.5 shrink-0 rounded-full" />}
+                <PageIcon icone={onglet.icone} chemin={onglet.chemin} className="size-3.5 text-xs" />
                 <span className="truncate">{onglet.titre}</span>
                 {onglet.enAttente && <span className="sr-only">, pas encore synchronisée</span>}
               </button>

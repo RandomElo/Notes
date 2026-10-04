@@ -63,11 +63,20 @@ function blocsAEcrire(document: ProseMirrorNode): ProseMirrorNode[] {
   const blocs: ProseMirrorNode[] = [];
   document.forEach((bloc) => {
     // Un paragraphe sans texte (vide, ou fait d'espaces et de sauts de ligne) n'a pas d'écriture en Markdown.
-    if (!(bloc.type.name === 'paragraph' && bloc.textContent.trim() === '')) {
+    if (!(bloc.type.name === 'paragraph' && estSansTexte(bloc))) {
       blocs.push(bloc);
     }
   });
   return blocs;
+}
+
+/** Un paragraphe fait seulement d'espaces et de sauts de ligne. Une mention compte comme du texte, même au libellé vide. */
+function estSansTexte(paragraphe: ProseMirrorNode): boolean {
+  let vide = paragraphe.textContent.trim() === '';
+  paragraphe.forEach((enfant) => {
+    vide &&= enfant.isText || enfant.type.name === 'hardBreak';
+  });
+  return vide;
 }
 
 /**

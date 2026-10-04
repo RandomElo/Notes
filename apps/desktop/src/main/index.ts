@@ -7,7 +7,10 @@ import { evenements } from '../shared/ipc-contract';
 import type { BackgroundState, PageRequest } from '../shared/ipc-contract';
 import { declarerSchemaDesImages, servirLesImages } from './images/asset-protocol';
 import { telechargerImage } from './images/download';
+import { BackgroundRemoval } from './images/background-removal';
 import { creerHandlersImages } from './ipc/images';
+import { creerHandlersLiens } from './ipc/links';
+import { apercuDuSite } from './links/site-preview';
 import { cleMotDePasse, creerHandlersNas } from './ipc/nas';
 import { enregistrerCanaux } from './ipc/register';
 import { creerHandlersTheme } from './ipc/theme';
@@ -35,10 +38,14 @@ const urlDeveloppement = app.isPackaged ? undefined : process.env['ELECTRON_REND
 const fichierRenderer = join(import.meta.dirname, '../renderer/index.html');
 const urlApplication = urlDeveloppement ?? pathToFileURL(fichierRenderer).href;
 
+/** Ressources livrées avec l'application (compagnon, détourage), jamais cherchées sur le système. */
+function dossierRessources(): string {
+  return app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources');
+}
+
 /** Le binaire compagnon est livré avec l'application, jamais cherché sur le système. */
 function cheminCompagnon(): string {
-  const dossierRessources = app.isPackaged ? process.resourcesPath : join(app.getAppPath(), 'resources');
-  return join(dossierRessources, 'bin', 'smb-companion');
+  return join(dossierRessources(), 'bin', 'smb-companion');
 }
 
 let fenetre: BrowserWindow | null = null;
@@ -272,6 +279,8 @@ function demarrer(): void {
         demarrageAuto: demarrageAuto.disponible() ? await demarrageAuto.actif() : null,
       });
 
+      const detourage = new BackgroundRemoval(join(dossierRessources(), 'background-removal'));
+      app.on('will-quit', () => detourage.arreter());
       const handlersVault = creerHandlersVault({ vault, file: fileDuVault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
       const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
       enregistrerCanaux({
@@ -293,10 +302,17 @@ function demarrer(): void {
             }
           },
         }),
+        // Une session à part, sans cookies ni cache partagés avec la fenêtre, comme pour les images.
+        liens: creerHandlersLiens({
+          vault,
+          enSerie: handlersVault.enSerie,
+          apercu: (adresse) => apercuDuSite(adresse, (url, options) => session.fromPartition('apercus-sites').fetch(url, options)),
+        }),
         images: creerHandlersImages({
           vault,
           enSerie: handlersVault.enSerie,
           choisirFichiers: choisirImages,
+          detourage,
           // Une session à part, sans cookies ni cache partagés avec la fenêtre.
           telecharger: (adresse) => telechargerImage(adresse, (url, options) => session.fromPartition('telechargements-images').fetch(url, options)),
         }),

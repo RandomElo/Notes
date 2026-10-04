@@ -390,3 +390,25 @@ test('une grande image collée est réduite à 1920 px de large, en WebP', async
   expect(await readdir(join(vault, 'Projets', 'assets'))).toEqual(['grande.webp']);
   await fermer(session);
 });
+
+test('une image copiée d’une page et collée dans une autre y est copiée et s’affiche', async () => {
+  const session = await lancer(await preparer());
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Bienvenue');
+  // Clic sur l'image : elle est sélectionnée, Ctrl+C la copie avec sa page d'origine.
+  await editeur(page).locator('figure[data-image] img').first().click();
+  await page.keyboard.press('Control+c');
+  await ouvrirPage(page, 'Courses');
+  await editeur(page).click();
+  await page.waitForTimeout(100);
+  await page.keyboard.press('Control+End');
+  await page.keyboard.press('Control+v');
+  await attendreEnregistrement(page);
+  // Le fichier est copié dans les assets de Courses, et la page y renvoie.
+  await expect.poll(() => lireCorps(vault, 'Courses')).toContain('![');
+  await expect.poll(async () => (await lireCorps(vault, 'Courses')).match(/\]\((assets\/[^)\s#]+)/)?.[1] ?? '').toMatch(/^assets\/schema(-\d+)?\.png$/);
+  expect((await readdir(join(vault, 'Courses', 'assets'))).length).toBe(1);
+  const image = editeur(page).locator('figure[data-image] img').last();
+  await expect.poll(() => image.evaluate((element: { naturalWidth: number }) => element.naturalWidth)).toBeGreaterThan(0);
+  await fermer(session);
+});

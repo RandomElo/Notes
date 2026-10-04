@@ -186,4 +186,25 @@ describe('raisonDuRefus', () => {
     }
     expect(raisonDuRefus(join(homedir(), 'Notes'))).toBeNull();
   });
+
+  it('renomme les mentions dans les pages qui citent la page renommée, sauf la page ouverte', async () => {
+    const { handlers, vault } = await monter();
+    await handlers.choisirDossier();
+    const cible = await handlers.creerPage({ parent: '', titre: 'Cible' });
+    const citante = await handlers.creerPage({ parent: '', titre: 'Citante' });
+    const ouverte = await handlers.creerPage({ parent: '', titre: 'Ouverte' });
+    if (!cible.ok || !citante.ok || !ouverte.ok) {
+      throw new Error('création refusée');
+    }
+    const corps = `Intro  _gardée_.\n\nVoir [Cible](notes://${cible.page.id}).\n`;
+    for (const page of ['Citante', 'Ouverte']) {
+      expect(await handlers.enregistrerPage({ chemin: page, corps, corpsDeBase: '' })).toMatchObject({ ok: true, ecrit: true });
+    }
+
+    expect(await handlers.renommerPage({ chemin: 'Cible', titre: 'Nouveau nom', sauf: ouverte.page.id })).toMatchObject({ ok: true });
+    expect(await handlers.lirePage({ chemin: 'Citante' })).toMatchObject({ corps: `Intro  _gardée_.\n\nVoir [Nouveau nom](notes://${cible.page.id}).\n` });
+    expect(await handlers.lirePage({ chemin: 'Ouverte' })).toMatchObject({ corps });
+    expect(await handlers.listerMentionsCassees()).toEqual([]);
+    vault.arreter();
+  });
 });

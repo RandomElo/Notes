@@ -2,6 +2,7 @@ import type { TreeNode } from '@notes/core';
 import { ChevronRight, Ellipsis, FileQuestion, FileText, Folder, ListTodo, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent, MouseEvent } from 'react';
+import { PageIcon } from '../page-icon/PageIcon';
 import type { DropZone } from './tree-model';
 
 export interface TreeRowProps {
@@ -151,14 +152,6 @@ export function TreeRow(props: TreeRowProps) {
 
 function RowIcon({ noeud }: { noeud: TreeNode }) {
   const classe = 'text-discret size-4 shrink-0';
-  // Une icône emoji s'affiche telle quelle. Les icônes Lucide et image arrivent en J8.
-  if (noeud.icone !== null && /\P{ASCII}/u.test(noeud.icone)) {
-    return (
-      <span className="flex size-4 shrink-0 items-center justify-center text-xs" aria-hidden="true">
-        {noeud.icone}
-      </span>
-    );
-  }
   if (!noeud.importe) {
     return noeud.genre === 'fichier' ? (
       <FileQuestion className={classe} aria-hidden="true" />
@@ -166,11 +159,9 @@ function RowIcon({ noeud }: { noeud: TreeNode }) {
       <Folder className={classe} aria-hidden="true" />
     );
   }
-  return noeud.mode === 'todo' ? (
-    <ListTodo className={classe} aria-hidden="true" />
-  ) : (
-    <FileText className={classe} aria-hidden="true" />
-  );
+  const defaut =
+    noeud.mode === 'todo' ? <ListTodo className={classe} aria-hidden="true" /> : <FileText className={classe} aria-hidden="true" />;
+  return <PageIcon icone={noeud.icone} chemin={noeud.chemin} className="text-discret size-4 text-sm" defaut={defaut} />;
 }
 
 /** Champ de renommage : Entrée ou la perte du focus valide, Échap abandonne. */

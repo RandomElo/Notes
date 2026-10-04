@@ -109,7 +109,14 @@ export function agrandir(sens: 'colonne' | 'ligne', position: number) {
   };
 }
 
-const estVide = (noeud: ProseMirrorNode): boolean => noeud.textContent.trim() === '';
+// Une mention n'a pas de texte dans le document, mais une cellule qui en contient une n'est pas vide.
+const estVide = (noeud: ProseMirrorNode): boolean => {
+  let vide = noeud.textContent.trim() === '';
+  noeud.descendants((enfant) => {
+    vide &&= enfant.type.name !== 'pageMention';
+  });
+  return vide;
+};
 
 /**
  * Retire la dernière colonne ou la dernière ligne du tableau, si elle est vide.

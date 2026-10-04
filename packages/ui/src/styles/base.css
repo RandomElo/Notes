@@ -97,6 +97,70 @@
   text-underline-offset: 0.15em;
 }
 
+/* Un lien s'ouvre d'un clic (README §6). */
+.notes-page a {
+  cursor: pointer;
+}
+
+/* Mention d'une page : son icône et son titre courant, soulignés finement comme dans Notion. Le survol se montre par le fond. */
+.notes-page .mention {
+  display: inline;
+  cursor: pointer;
+  border-radius: 0.25em;
+  padding: 0 0.1em;
+  white-space: normal;
+}
+
+.notes-page .mention:hover {
+  background-color: color-mix(in srgb, var(--color-texte) 10%, transparent);
+}
+
+.notes-page .mention > :not(.mention-titre) {
+  margin-right: 0.25em;
+  vertical-align: -0.1em;
+}
+
+.notes-page .mention-titre {
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, var(--color-texte) 35%, transparent);
+  text-underline-offset: 0.18em;
+}
+
+/* Mention de site : la favicon et le titre du site, comme une mention de page. */
+.notes-page a.mention-site {
+  color: inherit;
+  text-decoration-color: color-mix(in srgb, var(--color-texte) 35%, transparent);
+  text-underline-offset: 0.18em;
+  border-radius: 0.25em;
+}
+
+.notes-page a.mention-site:hover {
+  background-color: color-mix(in srgb, var(--color-texte) 10%, transparent);
+}
+
+.notes-page .mention-site-icone {
+  display: inline-flex;
+  margin-right: 0.25em;
+  vertical-align: -0.12em;
+}
+
+.notes-page .mention-site-icone > img,
+.notes-page .mention-site-icone > svg {
+  width: 1em;
+  height: 1em;
+  border-radius: 0.15em;
+}
+
+/* Page introuvable : le texte du fichier, barré. */
+.notes-page .mention[data-cassee] {
+  cursor: default;
+  color: var(--color-discret);
+}
+
+.notes-page .mention[data-cassee] .mention-titre {
+  text-decoration: line-through;
+}
+
 .notes-page u {
   text-decoration: underline;
   text-underline-offset: 0.18em;

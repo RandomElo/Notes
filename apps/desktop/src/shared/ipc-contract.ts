@@ -1,4 +1,4 @@
-import type { ConflictVersions, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TreeNode, VaultErrorCode } from '@notes/core';
+import type { BrokenMention, ConflictVersions, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TreeNode, VaultErrorCode } from '@notes/core';
 
 /**
  * Contrat IPC entre le main, le preload et le renderer. Tout canal ajouté ici
@@ -57,6 +57,13 @@ export const canaux = {
   lireImage: 'images:lire',
   convertirImage: 'images:convertir',
   listerImagesOrphelines: 'images:orphelines',
+  retirerLeFond: 'images:retirer-le-fond',
+  copierImage: 'images:copier',
+  apercuDuSite: 'liens:apercu-du-site',
+  enregistrerFavicon: 'liens:enregistrer-favicon',
+  listerMentionsCassees: 'vault:mentions-cassees',
+  changerIcone: 'vault:changer-icone',
+  ajouterIconeImage: 'vault:ajouter-icone-image',
 } as const;
 
 /**
@@ -105,7 +112,7 @@ export interface PageRequest {
 /** Verrou d'une page vu du renderer : « inconnu » quand la sync est coupée ou le NAS injoignable. */
 export type LockView = LockState | { etat: 'inconnu' };
 
-export type { SyncStatus, TakeResult };
+export type { BrokenMention, SyncStatus, TakeResult };
 
 export interface VaultState {
   /** Dossier du vault sur ce poste, null tant qu'il n'est pas choisi. */
@@ -142,6 +149,15 @@ export type ImagesAddResult = { ok: true; adresses: string[] } | VaultFailure;
 
 /** Images reçues (choisies ou téléchargées), pas encore copiées : le renderer les convertit en WebP d'abord. */
 export type ImagesReceivedResult = { ok: true; fichiers: { nom: string | null; octets: Uint8Array }[] } | VaultFailure;
+
+/** Titre et favicon (octets d'une image, ICO compris, à convertir en PNG) d'un site, pour une mention de site. */
+export type SitePreviewResult = { ok: true; titre: string | null; favicon: Uint8Array | null } | { ok: false; message: string };
+
+/** Favicon d'un site gardée dans `.notes/favicons/` : son chemin dans le dossier des notes. */
+export type FaviconSaveResult = { ok: true; chemin: string } | VaultFailure;
+
+/** Masque du sujet d'une icône : 0 pour le fond, 255 pour le sujet, un octet par pixel. Ou la raison de l'échec. */
+export type BackgroundRemovalResult = { ok: true; masque: Uint8Array } | { ok: false; message: string };
 
 /** Octets d'une image du dossier des notes, pour la convertir. */
 export type ImageReadResult = { ok: true; octets: Uint8Array } | VaultFailure;
@@ -221,7 +237,17 @@ export interface NotesApi {
   utiliserDossierPropose(): Promise<VaultState | VaultFailure>;
   lireArbre(): Promise<TreeNode[]>;
   creerPage(demande: { parent: string; titre: string; index?: number }): Promise<VaultOperationResult>;
-  renommerPage(demande: { chemin: string; titre: string }): Promise<VaultOperationResult>;
+  /**
+   * Renomme une page. Les pages qui la mentionnent sont réécrites avec le nouveau titre,
+   * sauf la page d'identifiant « sauf », ouverte dans l'éditeur, qui s'en charge.
+   */
+  renommerPage(demande: { chemin: string; titre: string; sauf?: string }): Promise<VaultOperationResult>;
+  /** Mentions dont la page n'existe pas dans le dossier des notes. Ne modifie rien. */
+  listerMentionsCassees(): Promise<BrokenMention[]>;
+  /** Change l'icône d'une page (emoji, nom Lucide, image de ses `assets/`), ou la retire (null). */
+  changerIcone(demande: { chemin: string; icone: string | null }): Promise<VaultOperationResult>;
+  /** Copie une image déjà recadrée (128 × 128, WebP) dans les `assets/` de la page et en fait son icône. */
+  ajouterIconeImage(demande: { chemin: string; octets: Uint8Array }): Promise<VaultOperationResult>;
   deplacerPage(demande: { chemin: string; parent: string; index?: number }): Promise<VaultOperationResult>;
   dupliquerPage(demande: { chemin: string }): Promise<VaultOperationResult>;
   /** Supprime une page sans contenu, sous-page ni fichier. Refusée (`page_non_vide`) sinon. */
@@ -300,4 +326,12 @@ export interface NotesApi {
   convertirImage(demande: { page: string; ancien: string; octets: Uint8Array }): Promise<ImagesAddResult>;
   /** Les images des dossiers `assets/` auxquelles leur page ne renvoie plus. Ne modifie rien. */
   listerImagesOrphelines(): Promise<string[]>;
+  /** Copie une image d'une page (« source », chemin dans le dossier des notes) dans les `assets/` d'une autre, sans rien remplacer. */
+  copierImage(demande: { source: string; page: string }): Promise<ImagesAddResult>;
+  /** Titre et favicon d'un site (http ou https, sans cookies, délai court), pour une mention de site. */
+  apercuDuSite(demande: { adresse: string }): Promise<SitePreviewResult>;
+  /** Garde la favicon d'un site (PNG) dans `.notes/favicons/`, sans remplacer celle qui y est. */
+  enregistrerFavicon(demande: { hote: string; octets: Uint8Array }): Promise<FaviconSaveResult>;
+  /** Détoure une icône : pixels RGBA d'un carré de 320 × 320, rend le masque du sujet. Local, sans réseau. */
+  retirerLeFond(demande: { pixels: Uint8Array; cote: number }): Promise<BackgroundRemovalResult>;
 }

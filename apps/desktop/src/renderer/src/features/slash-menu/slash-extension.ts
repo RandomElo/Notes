@@ -106,6 +106,10 @@ export function appliquerCommande(editor: Editor, action: SlashAction, plage: Sl
     case 'callout':
       insererCallout(editor);
       return;
+    case 'lien':
+      // « @ » ouvre la liste des pages, comme si on l'avait tapé.
+      editor.chain().insertContent('@').run();
+      return;
   }
 
   const bloc = editor.state.selection.$from;

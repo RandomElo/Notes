@@ -2,6 +2,7 @@ import { app, ipcMain } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { canaux } from '../../shared/ipc-contract';
 import type { creerHandlersImages } from './images';
+import type { creerHandlersLiens } from './links';
 import type { creerHandlersNas } from './nas';
 import type { creerHandlersSync } from './sync';
 import type { creerHandlersTheme } from './theme';
@@ -15,6 +16,7 @@ export interface IpcDependencies {
   theme: ReturnType<typeof creerHandlersTheme>;
   sync: ReturnType<typeof creerHandlersSync>;
   images: ReturnType<typeof creerHandlersImages>;
+  liens: ReturnType<typeof creerHandlersLiens>;
   recherche: {
     etatDuFond: () => unknown;
     definirDemarrageAuto: (actif: unknown) => unknown;
@@ -31,7 +33,7 @@ export interface IpcDependencies {
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, recherche, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, recherche, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -60,6 +62,9 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, re
   brancher(canaux.lireArbre, () => vault.lireArbre());
   brancher(canaux.creerPage, (demande) => vault.creerPage(demande));
   brancher(canaux.renommerPage, (demande) => vault.renommerPage(demande));
+  brancher(canaux.listerMentionsCassees, () => vault.listerMentionsCassees());
+  brancher(canaux.changerIcone, (demande) => vault.changerIcone(demande));
+  brancher(canaux.ajouterIconeImage, (demande) => vault.ajouterIconeImage(demande));
   brancher(canaux.deplacerPage, (demande) => vault.deplacerPage(demande));
   brancher(canaux.dupliquerPage, (demande) => vault.dupliquerPage(demande));
   brancher(canaux.supprimerPageVide, (demande) => vault.supprimerPageVide(demande));
@@ -100,4 +105,8 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, re
   brancher(canaux.lireImage, (demande) => images.lire(demande));
   brancher(canaux.convertirImage, (demande) => images.convertir(demande));
   brancher(canaux.listerImagesOrphelines, () => images.orphelines());
+  brancher(canaux.retirerLeFond, (demande) => images.retirerLeFond(demande));
+  brancher(canaux.copierImage, (demande) => images.copier(demande));
+  brancher(canaux.apercuDuSite, (demande) => liens.apercuDuSite(demande));
+  brancher(canaux.enregistrerFavicon, (demande) => liens.enregistrerFavicon(demande));
 }

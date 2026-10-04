@@ -12,6 +12,34 @@ import { BlockSelection } from './block-selection';
 export const classeBlocSelectionne = 'bloc-selectionne';
 
 const blocsSelectionnes = (etat: EditorState): boolean => etat.selection instanceof BlockSelection;
+/** Hauteur de la barre collante du haut de la page (chemin, état de l'enregistrement), avec un peu d'air. */
+const margeDuHaut = 56;
+const margeDuBas = 24;
+
+/**
+ * Le bloc de tête d'une sélection de blocs (celui que les flèches déplacent) reste visible : la page
+ * défile juste assez. Le curseur du navigateur étant masqué, ProseMirror ne le fait pas de lui-même.
+ */
+function montrerLaTete(editor: Editor): void {
+  const { selection } = editor.state;
+  if (!(selection instanceof BlockSelection)) {
+    return;
+  }
+  const bloc = editor.view.nodeDOM(selection.tete);
+  const defilement = editor.view.dom.closest('main');
+  if (!(bloc instanceof HTMLElement) || defilement === null) {
+    return;
+  }
+  const boite = bloc.getBoundingClientRect();
+  const zone = defilement.getBoundingClientRect();
+  if (boite.top < zone.top + margeDuHaut) {
+    defilement.scrollTop -= zone.top + margeDuHaut - boite.top;
+  } else if (boite.bottom > zone.bottom - margeDuBas) {
+    // Un bloc plus haut que la fenêtre montre son début.
+    defilement.scrollTop += Math.min(boite.bottom - (zone.bottom - margeDuBas), boite.top - (zone.top + margeDuHaut));
+  }
+}
+
 const tabPourLeBloc = (editor: Editor): boolean => editor.isActive('table') || editor.isActive('codeBlock');
 
 /**
@@ -31,6 +59,7 @@ export const BlockKeys = Extension.create({
       const transaction = commande(editor.state);
       if (transaction !== null) {
         editor.view.dispatch(transaction);
+        montrerLaTete(editor);
       }
       return transaction !== null;
     };

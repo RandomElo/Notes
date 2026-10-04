@@ -168,3 +168,10 @@ body {
 .notes-page figure[data-image].ProseMirror-selectednode {
   background-color: var(--page-selection);
 }
+
+/* Aperçu d'une icône détourée : le damier montre ce qui est devenu transparent. */
+.damier {
+  background-color: color-mix(in srgb, var(--color-texte) 8%, transparent);
+  background-image: conic-gradient(color-mix(in srgb, var(--color-texte) 16%, transparent) 25%, transparent 0 50%, color-mix(in srgb, var(--color-texte) 16%, transparent) 0 75%, transparent 0);
+  background-size: 16px 16px;
+}

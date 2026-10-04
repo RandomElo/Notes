@@ -11,8 +11,9 @@ declare function getComputedStyle(element: unknown): { maskImage: string };
 // Critère de J7 : raccourci global et sommaire toujours à jour. Plus les onglets et la recherche Ctrl+K.
 
 const onglets = (page: Page) => page.getByRole('tablist', { name: 'Onglets' }).getByRole('tab');
-const titresDesOnglets = (page: Page) => onglets(page).evaluateAll((elements) => elements.map((element) => element.textContent));
-const ongletActif = (page: Page) => page.getByRole('tab', { selected: true });
+// Le titre seul, sans l'icône de la page (un emoji fait partie du texte de l'onglet).
+const titresDesOnglets = (page: Page) => onglets(page).locator('span.truncate').allTextContents();
+const ongletActif = (page: Page) => page.getByRole('tab', { selected: true }).locator('span.truncate');
 const recherche = (page: Page) => page.getByRole('dialog', { name: 'Rechercher une page' });
 
 /** La petite fenêtre de la recherche globale : créée cachée au lancement, ou à venir. */

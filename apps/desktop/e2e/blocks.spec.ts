@@ -127,7 +127,7 @@ test('le menu « / » se filtre sans accents, se ferme sur Échap et insère tit
   const menu = page.getByRole('listbox', { name: 'Commandes' });
 
   await taper(page, '/');
-  await expect(menu.getByRole('option')).toHaveCount(15);
+  await expect(menu.getByRole('option')).toHaveCount(16);
   // Ni citation ni séparateur dans le menu.
   await taper(page, 'sepa');
   await expect(menu.getByRole('option')).toHaveCount(0);
@@ -360,5 +360,28 @@ test('un clic sous le dernier bloc met le curseur dans un paragraphe vide, sans 
   await taper(page, 'Pain');
   await attendreEnregistrement(page);
   expect(await lireCorps(vault, 'Courses')).toBe(`${avant}\nPain\n`);
+  await fermer(session);
+});
+
+test('une sélection de blocs étendue vers le haut fait défiler la page jusqu’à son premier bloc', async () => {
+  const session = await lancer(await preparer());
+  const { page } = session;
+  await ouvrirPage(page, 'Projets');
+  await editeur(page).click();
+  await page.waitForTimeout(100);
+  await page.keyboard.press('Control+End');
+  for (let numero = 1; numero <= 60; numero++) {
+    await page.keyboard.press('Enter');
+    await page.keyboard.insertText(`Ligne ${numero}`);
+  }
+  await page.keyboard.press('Escape');
+  await page.keyboard.down('Shift');
+  for (let fois = 0; fois < 50; fois++) {
+    await page.keyboard.press('ArrowUp', { delay: 10 });
+    await page.waitForTimeout(20);
+  }
+  await page.keyboard.up('Shift');
+  // Le bloc de tête, le plus haut de la sélection, est à l'écran, sous la barre du haut.
+  await expect(editeur(page).getByText('Ligne 10', { exact: true })).toBeInViewport();
   await fermer(session);
 });

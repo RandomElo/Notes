@@ -4,6 +4,8 @@ import { MarkdownSerializer } from 'prosemirror-markdown';
 import type { MarkdownSerializerState } from 'prosemirror-markdown';
 import { schema } from '../schema/extensions';
 import type { ImageAttributes } from '../schema/nodes/image';
+import { prefixeDeLienInterne } from '../schema/nodes/page-mention';
+import type { PageMentionAttributes } from '../schema/nodes/page-mention';
 import { ecrireCallout, langageDuCallout } from './callout';
 import { ecrireImage } from './image';
 import { ecrireTableau } from './table';
@@ -77,11 +79,10 @@ function accentsGraves(noeud: ProseMirrorNode, sens: -1 | 1): string {
   return resultat;
 }
 
-function cibleDeLien(marque: Mark): string {
-  const adresse = String(marque.attrs['href'] ?? '')
+function cibleDeLien(href: unknown, titre: unknown): string {
+  const adresse = String(href ?? '')
     .replace(/[\s]/g, (espace) => encodeURIComponent(espace))
     .replace(/[()\\]/g, '\\$&');
-  const titre = marque.attrs['title'];
   return typeof titre === 'string' && titre !== '' ? `${adresse} "${titre.replace(/["\\]/g, '\\$&')}"` : adresse;
 }
 
@@ -241,6 +242,10 @@ const serialiseur = new MarkdownSerializer(
       etat.write('```');
       etat.closeBlock(noeud);
     },
+    pageMention(etat, noeud) {
+      const { id, libelle, title } = noeud.attrs as PageMentionAttributes;
+      etat.write(`[${echapper(libelle.replace(/\n/g, ' '), false)}](${cibleDeLien(prefixeDeLienInterne + id, title)})`);
+    },
     rawBlock(etat, noeud) {
       etat.text(String(noeud.attrs['source']).replace(/\r\n?/g, '\n'), false);
       etat.closeBlock(noeud);
@@ -255,7 +260,7 @@ const serialiseur = new MarkdownSerializer(
     underline: { open: '<u>', close: '</u>', ...emphase },
     link: {
       open: '[',
-      close: (_etat, marque) => `](${cibleDeLien(marque)})`,
+      close: (_etat, marque) => `](${cibleDeLien(marque.attrs['href'], marque.attrs['title'])})`,
       mixable: true,
     },
     code: {

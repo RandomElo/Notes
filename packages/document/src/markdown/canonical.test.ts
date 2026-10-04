@@ -107,8 +107,11 @@ describe('forme canonique', () => {
 
   it('écrit les liens, leur titre et les caractères gênants de leur adresse', () => {
     const lien = (href: string, title: string | null = null) => ({ type: 'link', attrs: { href, title } });
-    expect(attendreAllerRetour(paragraphe(texte('page', lien('notes://0199a0b0-0000-7000-8000-000000000003'))))).toBe(
-      '[page](notes://0199a0b0-0000-7000-8000-000000000003)',
+    // Un lien interne au texte simple est une mention ; mis en forme, il reste un lien.
+    const mention = { type: 'pageMention', attrs: { id: '0199a0b0-0000-7000-8000-000000000003', libelle: 'page [1]', title: null } };
+    expect(attendreAllerRetour(paragraphe(texte('Voir '), mention))).toBe('Voir [page \\[1\\]](notes://0199a0b0-0000-7000-8000-000000000003)');
+    expect(attendreAllerRetour(paragraphe(texte('page', 'bold', lien('notes://0199a0b0-0000-7000-8000-000000000003'))))).toBe(
+      '[**page**](notes://0199a0b0-0000-7000-8000-000000000003)',
     );
     expect(attendreAllerRetour(paragraphe(texte('lien', lien('https://example.com/a_(b)', 'un "titre"'))))).toBe(
       '[lien](https://example.com/a_\\(b\\) "un \\"titre\\"")',

@@ -11,6 +11,9 @@ files:
 extraResources:
   - from: resources/bin/smb-companion
     to: bin/smb-companion
+  # Détourage des icônes : modèle et moteur ONNX en WebAssembly, préparés par scripts/prepare-models.sh.
+  - from: resources/background-removal
+    to: background-removal
 linux:
   executableName: notes
   target:

@@ -10,6 +10,8 @@ export type { NasSettings, NasSettingsField, NasSettingsValidation, Settings } f
 export { estId, genererId } from './page/id';
 export { longueurMaxTitre, nomDeDossier, nomLibre, titreParDefaut, verifierTitre } from './page/naming';
 export { analyserPage, cheminDuFichierPage, lirePage } from './page/page-file';
+export { natureDIcone } from './page/icon';
+export type { PageIcon } from './page/icon';
 export { fichierPage } from './page/types';
 export type { PageFile, PageMeta, PageMode } from './page/types';
 
@@ -26,6 +28,10 @@ export type { ConflictVersions } from './vault/conflicts';
 export { importer } from './vault/import';
 export { chargerPage, creerPage, deplacerPage, dupliquerPage, renommerPage, supprimerPageVide } from './vault/operations';
 export type { PageLocation } from './vault/operations';
+export { mentionsCassees, mentionsDuCorps, pagesQuiMentionnent, reecrireCorps } from './vault/links';
+export type { BrokenMention, MentionFound } from './vault/links';
+export { cheminDeFavicon, dossierFavicons, enregistrerFavicon } from './vault/favicons';
+export { ajouterIconeImage, changerIcone } from './vault/icon';
 export { indexerTitres } from './vault/titles-index';
 export type { TitleEntry } from './vault/titles-index';
 export { lireArbre, trouverNoeud } from './vault/tree';

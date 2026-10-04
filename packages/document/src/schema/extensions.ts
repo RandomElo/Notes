@@ -19,6 +19,7 @@ import { avecElision } from './marks/elision';
 import { Highlight } from './marks/highlight';
 import { Callout } from './nodes/callout';
 import { Image } from './nodes/image';
+import { PageMention } from './nodes/page-mention';
 import { BulletList, NestedTaskItem, OrderedList, TaskList } from './nodes/lists';
 import { RawBlock } from './nodes/raw-block';
 import { Table, TableCell, TableHeader, TableHeaderRow, TableRow } from './nodes/table';
@@ -61,7 +62,8 @@ export const extensionsDuSchema: Extensions = [
   HorizontalRule.extend(sansSaisie),
   HardBreak,
   RawBlock,
-  // Les liens ne s'ouvrent pas au clic et ne se créent pas tout seuls : leur édition arrive en J8.
+  PageMention,
+  // Les liens s'ouvrent et se créent par l'application (clic, collage d'une adresse), pas par l'extension.
   Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['notes'] }),
   avecElision(Bold, '**'),
   avecElision(Italic, '*'),
