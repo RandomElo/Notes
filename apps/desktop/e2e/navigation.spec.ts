@@ -3,7 +3,7 @@ import { access, appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
-import { argumentsDeLancement, attendreEnregistrement, dossierApplication, editeur, fenetres, fermer, lancer, ligne, ouvrirPage, preparer, titreDePage } from './app';
+import { argumentsDeLancement, attendreEnregistrement, dossierApplication, editeur, environnementDEssai, fenetres, fermer, lancer, ligne, ouvrirPage, preparer, titreDePage } from './app';
 
 // Types du DOM, évalués dans la fenêtre : le projet des essais n'a pas la bibliothèque DOM.
 declare function getComputedStyle(element: unknown): { maskImage: string };
@@ -147,7 +147,7 @@ test('Ctrl+K : recherche floue sans accents, pages récentes, création si rien 
 
 test('recherche globale, Notes pas lancée : seule la recherche s’affiche, la page choisie s’ouvre dans la fenêtre principale', async () => {
   const preparation = await preparer();
-  const application = await electron.launch({ args: argumentsDeLancement(preparation.profil, ['--recherche']), cwd: dossierApplication });
+  const application = await electron.launch({ args: argumentsDeLancement(preparation.profil, ['--recherche']), cwd: dossierApplication, env: environnementDEssai(preparation.profil) });
   const petite = await fenetreDeRecherche(application);
   await expect(petite.getByRole('combobox', { name: 'Rechercher une page' })).toBeFocused();
   // Rien d'autre à l'écran : pas de fenêtre principale.

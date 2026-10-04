@@ -38,6 +38,8 @@ import { inscrireEditeurOuvert } from '../mentions/rename-follow';
 import { PageHeaderIcon } from '../page-icon/PageHeaderIcon';
 import { PageIcon } from '../page-icon/PageIcon';
 import { SlashMenu } from '../slash-menu/SlashMenu';
+import { SpellcheckDecorations } from '../spellcheck/spellcheck-extension';
+import { SpellPopover } from '../spellcheck/SpellPopover';
 import { SlashKeys } from '../slash-menu/slash-extension';
 import type { SlashActions } from '../slash-menu/slash-extension';
 import { TableGridPicker } from '../tables/TableGridPicker';
@@ -78,8 +80,8 @@ function IconeDeMention({ page }: { page: MentionedPage }) {
 /**
  * Ce que l'éditeur ajoute au schéma partagé et à son affichage : barre des
  * blocs de code, gestion des blocs au clavier, menu « / », tableaux, images
- * collées ou déposées, annuler et rétablir, curseur entre deux blocs, repère
- * de dépôt, invite.
+ * collées ou déposées, correction orthographique, annuler et rétablir,
+ * curseur entre deux blocs, repère de dépôt, invite.
  */
 function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage, liens }: ExtensionsDeLEditeur): AnyExtension[] {
   const affichage = extensionsDAffichage(
@@ -100,6 +102,7 @@ function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage
     ImageCopy.configure({ chemin, surErreur: surErreurDImage }),
     // Après les images : un lien d'image collé leur revient.
     LinkBehaviour.configure(liens),
+    SpellcheckDecorations,
     UndoRedo,
     Gapcursor,
     Dropcursor.configure({ color: 'var(--color-accent)', width: 2 }),
@@ -533,6 +536,7 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
         </div>
       )}
       <EditorContent editor={editeur} />
+      <SpellPopover editor={editeur} />
       {!lectureSeule && (
         <>
           <BlockHandle editor={editeur} />

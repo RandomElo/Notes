@@ -75,6 +75,14 @@ export const canaux = {
   restaurerDeLaCorbeille: 'corbeille:restaurer',
   supprimerDeLaCorbeille: 'corbeille:supprimer',
   viderCorbeille: 'corbeille:vider',
+  etatCorrection: 'correction:etat',
+  installerCorrection: 'correction:installer',
+  annulerInstallationCorrection: 'correction:annuler-installation',
+  desinstallerCorrection: 'correction:desinstaller',
+  relancerCorrection: 'correction:relancer',
+  verifierOrthographe: 'correction:verifier',
+  lireDictionnaire: 'correction:lire-dictionnaire',
+  ajouterAuDictionnaire: 'correction:ajouter-au-dictionnaire',
 } as const;
 
 /**
@@ -102,7 +110,55 @@ export const evenements = {
   rechercheCachee: 'recherche:cachee',
   /** Une nouvelle version de l'AppImage vient d'être installée : la barre de titre propose de relancer. */
   miseAJourInstallee: 'maj:installee',
+  /** L'installation ou le serveur de la correction orthographique a changé d'état. Porte le nouvel état. */
+  etatCorrectionModifie: 'correction:etat-modifie',
 } as const;
+
+/** Une étape de l'installation de la correction orthographique : un fichier à télécharger, vérifier, décompresser. */
+export interface SpellcheckStep {
+  id: 'java' | 'languagetool' | 'ngrammes';
+  libelle: string;
+  etat: 'a_faire' | 'en_cours' | 'fait' | 'echec';
+  phase: 'telechargement' | 'verification' | 'decompression' | null;
+  /** Octets téléchargés, ou lus dans l'archive pendant la décompression. */
+  fait: number;
+  total: number;
+}
+
+/** Correction orthographique (README §11) : LanguageTool installé par Notes, lancé par elle. */
+export interface SpellcheckState {
+  installation: 'absente' | 'en_cours' | 'installee';
+  serveur: 'arrete' | 'demarrage' | 'pret' | 'erreur';
+  /** Dossier où LanguageTool est ou sera installé. */
+  dossier: string;
+  /** Taille totale à télécharger. */
+  taille: number;
+  /** Étapes de l'installation en cours, ou de la dernière ratée. Vide sinon. */
+  etapes: SpellcheckStep[];
+  /** Ce qui n'a pas marché (installation ou démarrage). */
+  erreur: string | null;
+}
+
+/** Texte d'un bloc à vérifier. Les plages exclues (code, adresses, mentions) ne sont pas vérifiées. */
+export interface SpellcheckRequest {
+  texte: string;
+  /** Plages [début, fin[ dans le texte, dans l'ordre, sans chevauchement. */
+  exclus: [number, number][];
+}
+
+/** Une faute trouvée dans un bloc, positions dans son texte. */
+export interface SpellIssue {
+  de: number;
+  a: number;
+  /** Le passage souligné, tel qu'il était dans le texte vérifié. */
+  mot: string;
+  message: string;
+  /** Identifiant de la règle de LanguageTool. */
+  regle: string;
+  /** Orthographe : souligné rouge ; grammaire, style et le reste : bleu. */
+  nature: 'orthographe' | 'grammaire';
+  suggestions: string[];
+}
 
 /** Notes gardée en fond pour le raccourci global (README §7). */
 export interface BackgroundState {
@@ -404,4 +460,21 @@ export interface NotesApi {
   supprimerDeLaCorbeille(demande: { entree: string; emplacement: TrashPlace }): Promise<TrashActionResult>;
   /** Vide la corbeille du poste et celle du NAS. */
   viderCorbeille(): Promise<TrashActionResult>;
+
+  /** État de la correction orthographique : installée ou non, serveur prêt ou non. */
+  etatCorrection(): Promise<SpellcheckState>;
+  surEtatCorrection(ecouteur: (etat: SpellcheckState) => void): () => void;
+  /** Télécharge, vérifie et installe LanguageTool, puis le lance. L'avancement arrive par surEtatCorrection. */
+  installerCorrection(): Promise<SpellcheckState>;
+  annulerInstallationCorrection(): Promise<void>;
+  /** Arrête LanguageTool et supprime son dossier. */
+  desinstallerCorrection(): Promise<SpellcheckState>;
+  /** Relance LanguageTool après un arrêt imprévu. */
+  relancerCorrection(): Promise<SpellcheckState>;
+  /** Fautes d'un bloc. null si la correction n'est pas prête ou ne répond pas : rien n'est alors souligné. */
+  verifierOrthographe(demande: SpellcheckRequest): Promise<SpellIssue[] | null>;
+  /** Mots du dictionnaire personnel (`.notes/dictionary.txt`). */
+  lireDictionnaire(): Promise<string[]>;
+  /** Ajoute un mot au dictionnaire personnel. Rend la liste à jour. */
+  ajouterAuDictionnaire(demande: { mot: string }): Promise<string[]>;
 }

@@ -31,6 +31,7 @@ export type { PageLocation } from './vault/operations';
 export { mentionsCassees, mentionsDuCorps, pagesQuiMentionnent, reecrireCorps } from './vault/links';
 export type { BrokenMention, MentionFound } from './vault/links';
 export { cheminDeFavicon, dossierFavicons, enregistrerFavicon } from './vault/favicons';
+export { ajouterAuDictionnaire, fichierDuDictionnaire, lireDictionnaire, motValide, motsDuDictionnaire } from './vault/dictionary';
 export { ajouterIconeImage, changerIcone } from './vault/icon';
 export { indexerTitres } from './vault/titles-index';
 export type { TitleEntry } from './vault/titles-index';

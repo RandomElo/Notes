@@ -17,6 +17,7 @@ import { apercuDuSite } from './links/site-preview';
 import { cleMotDePasse, creerHandlersNas } from './ipc/nas';
 import { enregistrerCanaux } from './ipc/register';
 import { creerHandlersTheme } from './ipc/theme';
+import { creerHandlersCorrection } from './ipc/spellcheck';
 import { creerHandlersCorbeille } from './ipc/trash';
 import { creerHandlersVault } from './ipc/vault';
 import { creerHandlersSync } from './ipc/sync';
@@ -35,6 +36,8 @@ import { PendingRequest, demandeLaRecherche } from './search/search-request';
 import { SearchWindow } from './search/search-window';
 import { attendreLaFinDeLAncienne, relancerApresLaFin } from './update/relaunch';
 import { UpdateWatcher } from './update/update-watcher';
+import { dossierDeLanguageTool } from './languagetool/location';
+import { SpellcheckService } from './languagetool/spellcheck-service';
 import { creerFileDAttente } from './vault/serial-queue';
 import { VaultService } from './vault/vault-service';
 
@@ -307,6 +310,18 @@ function demarrer(): void {
 
       const detourage = new BackgroundRemoval(join(dossierRessources(), 'background-removal'));
       app.on('will-quit', () => detourage.arreter());
+      // Correction orthographique (README §11) : LanguageTool installé par Notes à côté de l'AppImage, lancé par elle.
+      // Hors AppImage, NOTES_LANGUAGETOOL_ADRESSE désigne un serveur déjà lancé (essais de bout en bout).
+      const adresseExterne = app.isPackaged ? undefined : process.env['NOTES_LANGUAGETOOL_ADRESSE'];
+      const correction = new SpellcheckService({
+        dossier: dossierDeLanguageTool(process.env, homedir()),
+        // Une session à part, sans cookies ni cache partagés avec la fenêtre.
+        telecharger: (adresse, signal) => session.fromPartition('telechargements-languagetool').fetch(adresse, { signal }),
+        surEtat: (etat) => fenetre?.webContents.send(evenements.etatCorrectionModifie, etat),
+        ...(adresseExterne === undefined || adresseExterne === '' ? {} : { adresseExterne }),
+      });
+      void correction.demarrer();
+      app.on('will-quit', () => correction.arreter());
       const handlersVault = creerHandlersVault({ vault, file: fileDuVault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
       const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
       const handlersCorbeille = creerHandlersCorbeille({ vault, file: fileDuVault, avecNas: (action) => sync.avecNas(action) });
@@ -355,6 +370,7 @@ function demarrer(): void {
           lireImage: (chemin) => lireImageDuVault(chemin, vault.fsOuNull()),
         }),
         corbeille: handlersCorbeille,
+        correction: creerHandlersCorrection({ correction, vault, enSerie: handlersVault.enSerie }),
         recherche: {
           etatDuFond: () => etatDuFond(),
           definirDemarrageAuto: async (actif) => {

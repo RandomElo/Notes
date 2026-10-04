@@ -23,6 +23,8 @@ import { TrashScreen } from './features/trash/TrashScreen';
 import { cleDeNoeud, clesDesAncetres, trouverParCle } from './features/sidebar/tree-model';
 import { StatusBar } from './features/status-bar/StatusBar';
 import { GlobalShortcutPanel } from './features/search/GlobalShortcutPanel';
+import { SpellcheckPanel } from './features/spellcheck/SpellcheckPanel';
+import { useSpellcheck } from './features/spellcheck/useSpellcheck';
 import { demandeDeCreation } from './features/search/creation-place';
 import { ajouterRecente } from './features/search/recent-pages';
 import { SearchPalette } from './features/search/SearchPalette';
@@ -53,6 +55,7 @@ export function App() {
   const vault = useVault();
   // undefined tant que l'état du vault n'est pas connu : le thème attend de savoir quel dossier lire.
   const theme = useTheme(vault.etat === null ? undefined : vault.etat.dossier);
+  useSpellcheck();
   const [reglagesOuverts, definirReglagesOuverts] = useState(false);
   // L'éditeur de thème est un écran à part, auquel on arrive depuis les réglages.
   const [themeOuvert, definirThemeOuvert] = useState(false);
@@ -442,6 +445,7 @@ export function App() {
                 <ThemeSummary theme={theme} surOuverture={() => definirThemeOuvert(true)} />
                 <NasConnectionPanel />
                 <GlobalShortcutPanel />
+                <SpellcheckPanel />
                 <WebpConversion />
                 <UnusedImages />
                 <BrokenMentions

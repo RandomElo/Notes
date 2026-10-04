@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { canaux, evenements } from '../shared/ipc-contract';
-import type { NotesApi, SyncStatus } from '../shared/ipc-contract';
+import type { NotesApi, SpellcheckState, SyncStatus } from '../shared/ipc-contract';
 
 // Seule surface offerte au renderer : des fonctions nommées, jamais ipcRenderer lui-même.
 const api: NotesApi = {
@@ -122,6 +122,20 @@ const api: NotesApi = {
   restaurerDeLaCorbeille: (demande) => ipcRenderer.invoke(canaux.restaurerDeLaCorbeille, demande),
   supprimerDeLaCorbeille: (demande) => ipcRenderer.invoke(canaux.supprimerDeLaCorbeille, demande),
   viderCorbeille: () => ipcRenderer.invoke(canaux.viderCorbeille),
+
+  etatCorrection: () => ipcRenderer.invoke(canaux.etatCorrection),
+  surEtatCorrection: (ecouteur) => {
+    const relais = (_evenement: unknown, etat: SpellcheckState): void => ecouteur(etat);
+    ipcRenderer.on(evenements.etatCorrectionModifie, relais);
+    return () => ipcRenderer.removeListener(evenements.etatCorrectionModifie, relais);
+  },
+  installerCorrection: () => ipcRenderer.invoke(canaux.installerCorrection),
+  annulerInstallationCorrection: () => ipcRenderer.invoke(canaux.annulerInstallationCorrection),
+  desinstallerCorrection: () => ipcRenderer.invoke(canaux.desinstallerCorrection),
+  relancerCorrection: () => ipcRenderer.invoke(canaux.relancerCorrection),
+  verifierOrthographe: (demande) => ipcRenderer.invoke(canaux.verifierOrthographe, demande),
+  lireDictionnaire: () => ipcRenderer.invoke(canaux.lireDictionnaire),
+  ajouterAuDictionnaire: (demande) => ipcRenderer.invoke(canaux.ajouterAuDictionnaire, demande),
 };
 
 contextBridge.exposeInMainWorld('notes', api);

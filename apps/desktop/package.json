@@ -1,7 +1,7 @@
 {
   "name": "@notes/desktop",
   "productName": "Notes",
-  "version": "0.11.0",
+  "version": "0.11.1",
   "private": true,
   "type": "module",
   "description": "Éditeur de notes local-first avec synchronisation SMB",
@@ -28,6 +28,7 @@
     "@types/node": "^24.0.0",
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
+    "@types/yauzl": "^3.4.0",
     "@vitejs/plugin-react": "^5.2.0",
     "electron": "44.5.1",
     "electron-builder": "^26.15.3",
@@ -39,6 +40,8 @@
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
     "tailwindcss": "^4.3.3",
-    "vite": "^7.3.6"
+    "tar": "^7.5.22",
+    "vite": "^7.3.6",
+    "yauzl": "^3.4.0"
   }
 }

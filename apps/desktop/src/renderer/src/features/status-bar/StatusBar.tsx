@@ -2,6 +2,7 @@ import { CloudAlert, CloudCheck, CloudOff, Clock, RefreshCw, TriangleAlert } fro
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { SyncStatusKind } from '@notes/core';
+import { SpellCounter } from '../spellcheck/SpellCounter';
 import { SyncPanel } from './SyncPanel';
 import { libelleDeSync } from './sync-labels';
 import { useSyncStatus } from './useSyncStatus';
@@ -16,8 +17,8 @@ const icones: Record<SyncStatusKind, { icone: LucideIcon; couleur: string }> = {
 };
 
 /**
- * Barre de statut en bas de la fenêtre (README §7). Pour l'instant elle ne
- * porte que l'état de la sync ; un clic ouvre le détail au-dessus.
+ * Barre de statut en bas de la fenêtre (README §7) : l'état de la sync, dont
+ * un clic ouvre le détail au-dessus, et le nombre de fautes de la page (§11).
  */
 export function StatusBar({ surResolution }: { surResolution: (sauvegarde: string) => void }) {
   const etat = useSyncStatus();
@@ -47,7 +48,11 @@ export function StatusBar({ surResolution }: { surResolution: (sauvegarde: strin
   }, [ouvert]);
 
   if (etat === null) {
-    return <footer className="bg-surface h-7 shrink-0" />;
+    return (
+      <footer className="bg-surface text-discret flex h-7 shrink-0 items-center justify-end px-2 text-xs">
+        <SpellCounter />
+      </footer>
+    );
   }
   const { icone: Icone, couleur } = icones[etat.etat];
   const libelle = libelleDeSync(etat, maintenant);
@@ -91,6 +96,9 @@ export function StatusBar({ surResolution }: { surResolution: (sauvegarde: strin
               surResolution(sauvegarde);
             }}
           />}
+      </div>
+      <div className="ml-auto">
+        <SpellCounter />
       </div>
     </footer>
   );

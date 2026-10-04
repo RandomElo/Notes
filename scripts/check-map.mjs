@@ -12,7 +12,7 @@ const parties = [
   { dossier: 'packages/core', cartes: ['core.md'], sources: ['src'] },
   { dossier: 'packages/document', cartes: ['document.md'], sources: ['src'] },
   { dossier: 'packages/ui', cartes: ['ui.md'], sources: ['src'] },
-  { dossier: 'apps/desktop', cartes: ['desktop.md', 'desktop-renderer.md', 'desktop-blocs-riches.md', 'desktop-liens-icones.md', 'desktop-export.md', 'desktop-corbeille.md'], sources: ['src'] },
+  { dossier: 'apps/desktop', cartes: ['desktop.md', 'desktop-renderer.md', 'desktop-blocs-riches.md', 'desktop-liens-icones.md', 'desktop-export.md', 'desktop-corbeille.md', 'desktop-correction.md'], sources: ['src'] },
   { dossier: 'apps/mobile', cartes: ['mobile.md'], sources: ['src'] },
   { dossier: 'apps/smb-companion', cartes: ['smb-companion.md'], sources: ['main.go', 'internal'] },
   { dossier: '.', cartes: ['racine.md'], sources: ['scripts'] },

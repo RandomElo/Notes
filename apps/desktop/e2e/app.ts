@@ -27,9 +27,22 @@ export async function preparer(): Promise<{ vault: string; profil: string }> {
   return { vault, profil };
 }
 
-/** Lance l'application construite sur un vault et un profil donnés. */
-export async function lancer({ vault, profil }: { vault: string; profil: string }, argumentsEnPlus: string[] = []): Promise<Session> {
-  const application = await electron.launch({ args: [dossierApplication, `--user-data-dir=${profil}`, ...argumentsEnPlus], cwd: dossierApplication });
+/** Variables d'un lancement d'essai : LanguageTool cherché dans un dossier vide à côté du profil. */
+export function environnementDEssai(profil: string): Record<string, string> {
+  return { ...(process.env as Record<string, string>), NOTES_DOSSIER_LANGUAGETOOL: join(dirname(profil), 'LanguageTool') };
+}
+
+/**
+ * Lance l'application construite sur un vault et un profil donnés. LanguageTool
+ * est cherché dans un dossier vide à côté du profil : un essai ne lance jamais
+ * celui installé sur le poste. `env` ajoute des variables (faux serveur).
+ */
+export async function lancer({ vault, profil }: { vault: string; profil: string }, argumentsEnPlus: string[] = [], env: Record<string, string> = {}): Promise<Session> {
+  const application = await electron.launch({
+    args: [dossierApplication, `--user-data-dir=${profil}`, ...argumentsEnPlus],
+    cwd: dossierApplication,
+    env: { ...environnementDEssai(profil), ...env },
+  });
   // La petite fenêtre de la recherche globale, créée cachée au lancement, n'est pas celle qu'on pilote.
   // Une fenêtre tout juste créée n'a pas encore d'adresse : on attend de pouvoir les distinguer.
   const estPrincipale = (fenetre: Page): boolean => fenetre.url().startsWith('file:') && !fenetre.url().endsWith('#recherche');

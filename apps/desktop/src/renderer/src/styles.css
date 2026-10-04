@@ -175,3 +175,22 @@ body {
   background-image: conic-gradient(color-mix(in srgb, var(--color-texte) 16%, transparent) 25%, transparent 0 50%, color-mix(in srgb, var(--color-texte) 16%, transparent) 0 75%, transparent 0);
   background-size: 16px 16px;
 }
+
+/* Correction orthographique : trait ondulé fin sous le mot, rouge pour l'orthographe, bleu pour la grammaire et le style. */
+.notes-page .faute-orthographe,
+.notes-page .faute-grammaire {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+  text-decoration-skip-ink: none;
+  cursor: pointer;
+}
+
+.notes-page .faute-orthographe {
+  text-decoration-color: var(--color-erreur);
+}
+
+.notes-page .faute-grammaire {
+  text-decoration-color: var(--color-accent);
+}

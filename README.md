@@ -9,9 +9,9 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 | | |
 |---|---|
 | Dernière mise à jour | 2026-10-04 |
-| Version | 0.11.0 |
-| Avancement | J0 à J10 terminés : recette J10 validée par Eloi le 2026-10-04, retouches 0.10.1 et 0.10.2 comprises |
-| Jalon en cours | J11 (correction orthographique), à lancer par `/jalon J11` |
+| Version | 0.11.1 |
+| Avancement | J0 à J10 terminés. J11 livré en 0.11.1, recette `docs/recettes/J11.md` en attente du retour d'Eloi |
+| Jalon en cours | J11 (correction orthographique), en recette |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -39,6 +39,8 @@ Ce qui fonctionne aujourd'hui :
 
 - l'export (J9) : par l'icône en haut de la page, en PDF (A4, fond blanc, couleurs du thème, marges, icônes, sauts de page soignés, pied de page avec titre et numéro), en Markdown (lisible partout : mentions en texte, callouts en paragraphes, images en mention), en HTML autonome (images et styles dedans, sommaire) ou en archive ZIP de la page et des sous-pages choisies, en pages web reliées entre elles.
 
+- la correction orthographique (J11, en recette) : LanguageTool s'installe d'un clic depuis les réglages, avec son Java et les n-grammes français, dans `~/Applications/LanguageTool/`, et Notes le lance elle-même ; les fautes de chaque bloc modifié sont soulignées une seconde après la frappe (rouge pour l'orthographe, bleu pour le reste), sans jamais ralentir l'écriture ; un clic ouvre la bulle (suggestions, « Ignorer », « Ajouter au dictionnaire ») ; le code et les adresses ne sont pas vérifiés ; le nombre de fautes est dans la barre de statut.
+
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
 Ce qui n'existe pas encore : la suppression de page, l'application Android.
@@ -46,9 +48,9 @@ Ce qui n'existe pas encore : la suppression de page, l'application Android.
 Reste à faire :
 
 - passer l'intervalle de sync de 10 à 5 s (décidé le 2026-10-04 sur les durées relevées par Eloi, environ 60 ms par cycle) : `intervalleParDefautMs` dans `main/sync/scheduler.ts`, pas encore fait ;
-- lancer J10 : préciser d'abord avec Eloi le comportement de la sélection multiple dans l'arborescence (§10).
+- recette J11 à faire par Eloi (`docs/recettes/J11.md`), avec ses questions.
 
-Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J10 se lance avec `/jalon J10`. Pour installer la version construite : `npm run installer`.
+Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J12 se lancera avec `/jalon J12`, une fois J11 validé. Pour installer la version construite : `npm run installer`.
 
 ## Sommaire
 
@@ -606,7 +608,13 @@ Rétention de 30 jours, purge automatique au démarrage. Interface : liste, pré
 
 ## 11. Correction orthographique
 
-Desktop uniquement. LanguageTool, français seulement. Le serveur LanguageTool tourne en local sur le PC (choix d'Eloi, 2026-10-04), lancé hors de l'application : image Docker ou serveur Java autonome, démarré avec la session. L'application l'appelle à l'adresse des réglages (`http://localhost:8081` par défaut) et ne l'embarque pas : Java n'entre pas dans l'AppImage (règle de l'application autonome). Compter environ 1 Go de mémoire, plus quelques gigaoctets de disque si on ajoute les n-grammes français, qui améliorent la détection des confusions (« a » et « à », « ces » et « ses »). Sur ce poste, une vérification de bloc répond en quelques dizaines de millisecondes, bien en deçà du délai de 800 ms. Le téléphone n'a pas de correction. Vérification par bloc modifié (debounce 800 ms), pas sur la page entière. Soulignement rouge (orthographe) ou bleu (grammaire, style). Popover : suggestion, règle, « Ignorer », « Ajouter au dictionnaire » (`.notes/dictionary.txt`, synchronisé). Code et URL exclus. Compteur dans la barre de statut. Désactivation silencieuse si le serveur est injoignable : l'édition n'est jamais bloquée.
+Desktop uniquement. LanguageTool, français seulement, sur le PC (choix d'Eloi, 2026-10-04).
+
+Installation par l'application, en un clic : tant que LanguageTool n'est pas installé, les réglages proposent « Installer la correction orthographique » et montrent chaque étape avec sa progression (téléchargement, vérification, décompression, démarrage). Trois fichiers sont téléchargés, chacun à une version fixée et vérifié par son empreinte SHA-256 avant d'être décompressé : un Java autonome (Temurin 17, 47 Mo), LanguageTool 6.6 (252 Mo) et les n-grammes français (1,8 Go, voulus par Eloi). Environ 4 Go sur le disque une fois décompressés. Tout va dans le dossier de l'AppImage, sous `LanguageTool/` (`~/Applications/LanguageTool/`, ou `~/Applications` en développement), hors des fichiers de l'application : rien n'entre dans l'AppImage, et le Java du poste n'est jamais utilisé (règle de l'application autonome). Une installation interrompue ne laisse rien de bancal : elle se fait dans un dossier à part, renommé à la fin. Désinstaller supprime le dossier.
+
+Démarrage automatique : une fois installé, Notes lance le serveur à son ouverture et l'arrête en quittant. Il n'écoute que sur ce poste, sur un port choisi par Notes, avec le cache de règles activé (`pipelineCaching`) : sans lui, chaque vérification prend environ 760 ms ; avec, 45 à 50 ms pour une phrase comme pour un bloc de 230 mots (mesures du 2026-10-04 sur le PC d'Eloi). Compter 3 à 4 s avant la première vérification et environ 900 Mo de mémoire. En français, les n-grammes ne servent qu'à une trentaine de paires de mots (« moi » et « mois », « prix » et « pris », « vin » et « vain ») ; « ces » et « ses » n'en font pas partie.
+
+Le téléphone n'a pas de correction. Vérification par bloc modifié (debounce 800 ms), pas sur la page entière. Soulignement rouge (orthographe) ou bleu (grammaire, style). Popover : suggestion, règle, « Ignorer », « Ajouter au dictionnaire » (`.notes/dictionary.txt`, synchronisé). Code et URL exclus. Compteur dans la barre de statut. Désactivation silencieuse si le serveur est absent ou injoignable : l'édition n'est jamais bloquée.
 
 ---
 
@@ -734,6 +742,7 @@ L'app se connecte en SMB avec le compte personnel d'Eloi, pas avec un compte dé
 | Thème | `vault/.notes/theme.toml` | Oui |
 | Dictionnaire | `vault/.notes/dictionary.txt` | Oui |
 | Historique IA | `vault/.notes/ai-usage.json` | Oui |
+| LanguageTool, son Java et ses n-grammes | `~/Applications/LanguageTool/` | Non |
 
 Sur Android, cache des pages, index et réglages vivent dans le stockage privé de l'application.
 
@@ -776,7 +785,7 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J8 | Liens et icônes | Renommage sans mention cassée | Fait |
 | J9 | Export | 20 pages en PDF sans coupure incorrecte | Fait |
 | J10 | Corbeille, sélection multiple | Page supprimée restaurée intégralement ; plusieurs pages sélectionnées dans l'arborescence, déplacées ou supprimées ensemble | Fait |
-| J11 | Correction orthographique | Aucune latence perceptible à la frappe | À faire |
+| J11 | Correction orthographique | Aucune latence perceptible à la frappe | En cours |
 | J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | À faire |
 | J13 | Mémos vocaux, côté PC | Un mémo déposé dans `.notes/memos/` devient une page transcrite et mise en forme ; 30 s transcrites en moins de 5 s | À faire |
 | J14 | Mode liste de tâches, finition desktop | L'outil remplace AppFlowy au quotidien | À faire |
@@ -800,6 +809,7 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Date | Décision |
 |---|---|
+| 2026-10-04 | J11, choix d'Eloi après mesure de LanguageTool en local : c'est Notes qui installe LanguageTool, par un bouton des réglages qui montre les étapes, dans `~/Applications/LanguageTool/` hors des fichiers de l'application, avec son propre Java et les n-grammes français ; Notes le lance elle-même à son ouverture. Remplace « lancé hors de l'application, à l'adresse des réglages ». Le cache de règles du serveur est indispensable (760 ms par vérification sans lui, 45 ms avec). |
 | 2026-10-04 | Recette J10 validée par Eloi, retouches 0.10.1 et 0.10.2 comprises. Dernière question tranchée : les images inutilisées ont aussi un bouton « Tout mettre à la corbeille », avec confirmation. J10 passe à « Fait », version 0.11.0. |
 | 2026-10-04 | Choix d'Eloi pour les services : pas de dictée en direct ; les mémos vocaux s'enregistrent sur le téléphone, vont sur le NAS (`.notes/memos/`, gardés sur le téléphone sans réseau, seule exception à « pas de file d'attente ») et se transcrivent sur le PC (Whisper, puis mise en forme par le modèle local), chacun en sous-page d'une page « Mémos vocaux » masquable qui réapparaît à l'arrivée d'un mémo ou par clic droit dans la zone vide des pages ; l'audio part ensuite à la corbeille. J13 devient « Mémos vocaux, côté PC », J17 « Android, mémos vocaux » est ajouté. LanguageTool tourne en local sur le PC, hors de l'application. P1 tranché : Ollama sur le PC, API externe toujours en option ; les modèles dépendent de la carte graphique (P2). |
 | 2026-10-04 | Version 0.10.2, réponses d'Eloi aux questions de la recette J10 : mettre à la corbeille reste sans confirmation, sauf pour une page qui a des sous-pages ; une page restaurée revient à sa place d'origine parmi ses sœurs, plus en dernière position ; la sélection défaite par les flèches sans `Maj` ou un clic, l'aperçu sans images, le vidage partiel quand le NAS est injoignable et le retour partiel d'une page modifiée sur l'autre appareil lui conviennent. Reste la question 5 (tout mettre à la corbeille d'un coup dans les images inutilisées). |
@@ -1107,3 +1117,4 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-04 | 0.10.1 | J10 : corbeille, en recette |
 | 2026-10-04 | 0.10.2 | Corbeille : confirmation, place d'origine |
 | 2026-10-04 | 0.11.0 | J10 : corbeille validée |
+| 2026-10-04 | 0.11.1 | J11 : correction, en recette |

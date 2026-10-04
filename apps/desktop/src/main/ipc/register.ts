@@ -5,6 +5,7 @@ import type { creerHandlersExport } from './export';
 import type { creerHandlersImages } from './images';
 import type { creerHandlersLiens } from './links';
 import type { creerHandlersNas } from './nas';
+import type { creerHandlersCorrection } from './spellcheck';
 import type { creerHandlersSync } from './sync';
 import type { creerHandlersTheme } from './theme';
 import type { creerHandlersCorbeille } from './trash';
@@ -21,6 +22,7 @@ export interface IpcDependencies {
   liens: ReturnType<typeof creerHandlersLiens>;
   exports: ReturnType<typeof creerHandlersExport>;
   corbeille: ReturnType<typeof creerHandlersCorbeille>;
+  correction: ReturnType<typeof creerHandlersCorrection>;
   recherche: {
     etatDuFond: () => unknown;
     definirDemarrageAuto: (actif: unknown) => unknown;
@@ -37,7 +39,7 @@ export interface IpcDependencies {
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, recherche, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, recherche, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -126,4 +128,13 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.restaurerDeLaCorbeille, (demande) => corbeille.restaurer(demande));
   brancher(canaux.supprimerDeLaCorbeille, (demande) => corbeille.supprimer(demande));
   brancher(canaux.viderCorbeille, () => corbeille.vider());
+
+  brancher(canaux.etatCorrection, () => correction.etat());
+  brancher(canaux.installerCorrection, () => correction.installer());
+  brancher(canaux.annulerInstallationCorrection, () => correction.annuler());
+  brancher(canaux.desinstallerCorrection, () => correction.desinstaller());
+  brancher(canaux.relancerCorrection, () => correction.relancer());
+  brancher(canaux.verifierOrthographe, (demande) => correction.verifier(demande));
+  brancher(canaux.lireDictionnaire, () => correction.lireDictionnaire());
+  brancher(canaux.ajouterAuDictionnaire, (demande) => correction.ajouterAuDictionnaire(demande));
 }
