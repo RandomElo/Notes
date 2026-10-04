@@ -1,5 +1,5 @@
 import { renommerMentions } from '@notes/document';
-import { LocalFsError, VaultError, ajouterIconeImage, changerIcone, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
+import { LocalFsError, VaultError, ajouterIconeImage, changerIcone, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, deplacerPages, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
 import type { BrokenMention, PageLocation, TreeNode, VaultContext } from '@notes/core';
 import type { ConflictReadResult, PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
 import { creerFileDAttente } from '../vault/serial-queue';
@@ -96,6 +96,22 @@ export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAtt
         return Promise.resolve(requeteInvalide());
       }
       return operation((contexte) => deplacerPage(contexte, chemin, { parent, ...(index === undefined ? {} : { index }) }));
+    },
+
+    deplacerPages: (demande: unknown) => {
+      const { chemins, parent, index } = champs(demande);
+      if (!Array.isArray(chemins) || chemins.length === 0 || chemins.length > 500 || !chemins.every(estChemin) || !estParent(parent) || !estIndex(index)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          const contexte = vault.contexte();
+          const pages = await deplacerPages(contexte, chemins, { parent, ...(index === undefined ? {} : { index }) });
+          return { ok: true as const, page: pages[0] ?? { chemin: parent, id: '' }, arbre: await lireArbre(contexte.fs) };
+        } catch (erreur) {
+          return { ok: false as const, erreur: versErreur(erreur) };
+        }
+      });
     },
 
     dupliquerPage: (demande: unknown) => {

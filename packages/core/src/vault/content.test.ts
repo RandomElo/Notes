@@ -33,7 +33,9 @@ describe('lireContenu', () => {
 
   it('rend le corps et les surcharges de thème telles qu’elles sont écrites', async () => {
     const fs = avec('theme_overrides:\n  accent: "#ff8800"\n  background: 000\n');
-    expect(await lireContenu(fs, 'Alpha')).toEqual({ corps: 'corps\n', surcharges: { accent: '#ff8800', background: '000' } });
+    expect(await lireContenu(fs, 'Alpha')).toMatchObject({ corps: 'corps\n', surcharges: { accent: '#ff8800', background: '000' } });
+    expect((await lireContenu(fs, 'Alpha')).enTete).toContain('theme_overrides:');
+    expect((await lireContenu(monter().fs, 'volante.md')).enTete).toBeNull();
     expect(fs.ecritures).toBe(0);
   });
 

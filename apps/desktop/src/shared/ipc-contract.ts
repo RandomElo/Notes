@@ -1,4 +1,4 @@
-import type { BrokenMention, ConflictVersions, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TreeNode, VaultErrorCode } from '@notes/core';
+import type { BrokenMention, ConflictVersions, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, VaultErrorCode } from '@notes/core';
 
 /**
  * Contrat IPC entre le main, le preload et le renderer. Tout canal ajouté ici
@@ -22,6 +22,7 @@ export const canaux = {
   creerPage: 'vault:creer-page',
   renommerPage: 'vault:renommer-page',
   deplacerPage: 'vault:deplacer-page',
+  deplacerPages: 'vault:deplacer-pages',
   dupliquerPage: 'vault:dupliquer-page',
   supprimerPageVide: 'vault:supprimer-page-vide',
   importer: 'vault:importer',
@@ -64,6 +65,16 @@ export const canaux = {
   listerMentionsCassees: 'vault:mentions-cassees',
   changerIcone: 'vault:changer-icone',
   ajouterIconeImage: 'vault:ajouter-icone-image',
+  exporter: 'export:exporter',
+  montrerExport: 'export:montrer',
+  lireImageDExport: 'export:lire-image',
+  mettreALaCorbeille: 'corbeille:mettre',
+  mettreImageALaCorbeille: 'corbeille:mettre-image',
+  listerCorbeille: 'corbeille:lister',
+  apercuCorbeille: 'corbeille:apercu',
+  restaurerDeLaCorbeille: 'corbeille:restaurer',
+  supprimerDeLaCorbeille: 'corbeille:supprimer',
+  viderCorbeille: 'corbeille:vider',
 } as const;
 
 /**
@@ -124,12 +135,12 @@ export interface VaultState {
 /** Résultat d'une opération sur le vault : la page concernée et l'arbre à jour, ou l'erreur. */
 export type VaultOperationResult =
   | { ok: true; page: PageLocation; arbre: TreeNode[] }
-  | { ok: false; erreur: { code: VaultErrorCode | LocalFsErrorCode | 'requete_invalide' | 'interne'; message: string } };
+  | { ok: false; erreur: { code: VaultErrorCode | LocalFsErrorCode | 'requete_invalide' | 'nas_indisponible' | 'interne'; message: string } };
 
 export type VaultFailure = Extract<VaultOperationResult, { ok: false }>;
 
 /** Corps Markdown d'une page (sans son front-matter) et ses surcharges de thème non vérifiées, ou l'erreur. */
-export type PageReadResult = { ok: true; corps: string; surcharges: Record<string, string> } | VaultFailure;
+export type PageReadResult = { ok: true; corps: string; surcharges: Record<string, string>; enTete: string | null } | VaultFailure;
 
 /** Le fichier de thème du dossier des notes, tel qu'il est sur le disque. */
 export interface ThemeFile {
@@ -167,6 +178,43 @@ export type PageSaveResult = ({ ok: true } & SaveResult) | VaultFailure;
 
 /** Les deux versions d'une page en conflit : la page (A) et la version mise de côté (B). */
 export type ConflictReadResult = ({ ok: true } & ConflictVersions) | VaultFailure;
+
+/** Où se trouve une entrée de la corbeille : encore sur le poste (pas encore transférée) ou sur le NAS. */
+export type TrashPlace = 'poste' | 'nas';
+
+/** Entrées des deux corbeilles, les plus récentes en premier, et ce qu'il en est du NAS. */
+export interface TrashListResult {
+  entrees: (TrashEntry & { emplacement: TrashPlace })[];
+  nas: 'joignable' | 'injoignable' | 'non_regle';
+}
+
+export type TrashPreviewResult = ({ ok: true } & TrashPreview) | VaultFailure;
+
+/** Entrée restaurée : où elle est revenue (l'identifiant est null pour une image) et l'arbre à jour. */
+export type TrashRestoreResult = { ok: true; page: { chemin: string; id: string | null }; arbre: TreeNode[] } | VaultFailure;
+
+export type TrashActionResult = { ok: true } | VaultFailure;
+
+/** Formats de papier et marges d'un export PDF (README §9). */
+export const formatsDePapier = ['A4', 'A5', 'Letter'] as const;
+export type PaperFormat = (typeof formatsDePapier)[number];
+export const margesDePage = ['etroites', 'normales', 'larges'] as const;
+export type PageMargins = (typeof margesDePage)[number];
+
+/**
+ * Un export à enregistrer (README §9). « nom » : nom de fichier proposé, sans
+ * extension. Le main demande où l'enregistrer, puis convertit (PDF, ZIP) et écrit.
+ */
+export type ExportRequest =
+  | { format: 'markdown' | 'html'; nom: string; texte: string }
+  | { format: 'pdf'; nom: string; titre: string; html: string; papier: PaperFormat; marges: PageMargins }
+  | { format: 'zip'; nom: string; fichiers: { chemin: string; octets: Uint8Array }[] };
+
+/** Résultat d'un export : le fichier écrit, l'abandon (boîte « Enregistrer sous » fermée) ou l'échec. */
+export type ExportResult = { ok: true; chemin: string; nom: string } | { ok: false; annule: true } | { ok: false; annule: false; message: string };
+
+/** Une image du dossier des notes pour un export, avec sa nature (`image/webp`…). */
+export type ExportImageResult = { ok: true; octets: Uint8Array; type: string } | { ok: false };
 
 /**
  * Où se trouve le mot de passe du NAS. Le renderer ne reçoit jamais le mot de
@@ -249,6 +297,8 @@ export interface NotesApi {
   /** Copie une image déjà recadrée (128 × 128, WebP) dans les `assets/` de la page et en fait son icône. */
   ajouterIconeImage(demande: { chemin: string; octets: Uint8Array }): Promise<VaultOperationResult>;
   deplacerPage(demande: { chemin: string; parent: string; index?: number }): Promise<VaultOperationResult>;
+  /** Déplace plusieurs pages ensemble, à la suite, dans l'ordre donné. Une page dont un ancêtre est aussi déplacé suit celui-ci. */
+  deplacerPages(demande: { chemins: string[]; parent: string; index?: number }): Promise<VaultOperationResult>;
   dupliquerPage(demande: { chemin: string }): Promise<VaultOperationResult>;
   /** Supprime une page sans contenu, sous-page ni fichier. Refusée (`page_non_vide`) sinon. */
   supprimerPageVide(demande: { chemin: string }): Promise<VaultOperationResult>;
@@ -334,4 +384,24 @@ export interface NotesApi {
   enregistrerFavicon(demande: { hote: string; octets: Uint8Array }): Promise<FaviconSaveResult>;
   /** Détoure une icône : pixels RGBA d'un carré de 320 × 320, rend le masque du sujet. Local, sans réseau. */
   retirerLeFond(demande: { pixels: Uint8Array; cote: number }): Promise<BackgroundRemovalResult>;
+
+  /** Demande où enregistrer l'export, puis l'écrit (PDF imprimé, ZIP assemblé par le main). */
+  exporter(demande: ExportRequest): Promise<ExportResult>;
+  /** Montre dans le gestionnaire de fichiers un fichier exporté depuis le lancement, et rien d'autre. */
+  montrerExport(demande: { chemin: string }): Promise<void>;
+  /** Octets d'une image du dossier des notes (chemin relatif à lui), pour la mettre dans un export. */
+  lireImageDExport(demande: { chemin: string }): Promise<ExportImageResult>;
+
+  /** Met des pages à la corbeille, chacune avec sa descendance (README §10). */
+  mettreALaCorbeille(demande: { chemins: string[] }): Promise<VaultOperationResult>;
+  /** Met une image d'un dossier `assets/` à la corbeille (image inutilisée). */
+  mettreImageALaCorbeille(demande: { chemin: string }): Promise<TrashActionResult>;
+  /** Entrées de la corbeille du poste et de celle du NAS. Ne modifie rien. */
+  listerCorbeille(): Promise<TrashListResult>;
+  /** Texte et sous-pages d'une page de la corbeille, ou octets d'une image. Ne modifie rien. */
+  apercuCorbeille(demande: { entree: string; emplacement: TrashPlace }): Promise<TrashPreviewResult>;
+  restaurerDeLaCorbeille(demande: { entree: string; emplacement: TrashPlace }): Promise<TrashRestoreResult>;
+  supprimerDeLaCorbeille(demande: { entree: string; emplacement: TrashPlace }): Promise<TrashActionResult>;
+  /** Vide la corbeille du poste et celle du NAS. */
+  viderCorbeille(): Promise<TrashActionResult>;
 }

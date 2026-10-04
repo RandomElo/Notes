@@ -9,7 +9,7 @@ import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import type { MentionedPage, Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { FileText, List, Lock, X } from 'lucide-react';
+import { Download, FileText, List, Lock, X } from 'lucide-react';
 import { Selection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -131,10 +131,12 @@ interface PageEditorProps {
   surOuvrirPage: (id: string, nouvelOnglet: boolean) => void;
   /** Ouvre le choix de l'icône de la page sous ce point. */
   surIcone: (x: number, y: number) => void;
+  /** Ouvre la fenêtre d'export de la page. */
+  surExport: () => void;
 }
 
 /** Page ouverte : fil d'Ariane, titre, puis l'éditeur de son contenu. */
-export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible, surOuvrirPage, surIcone }: PageEditorProps) {
+export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible, surOuvrirPage, surIcone, surExport }: PageEditorProps) {
   // Entrée ou flèche bas dans le titre : le curseur passe au début du contenu.
   const [descentes, descendre] = useState(0);
   const [chargement, definirChargement] = useState<Chargement>({ etat: 'lecture' });
@@ -195,6 +197,15 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
               className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0"
             >
               <List className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
+              onClick={surExport}
+              aria-label="Exporter la page"
+              title="Exporter la page"
+              className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0"
+            >
+              <Download className="size-4" aria-hidden="true" />
             </button>
           </div>
         </div>

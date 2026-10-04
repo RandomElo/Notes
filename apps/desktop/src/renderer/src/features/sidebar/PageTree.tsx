@@ -1,13 +1,14 @@
 import { dossierParent, titreParDefaut, trouverNoeud } from '@notes/core';
 import type { TreeNode } from '@notes/core';
-import { ArrowDownToLine, Copy, FilePlus, Pencil, Smile } from 'lucide-react';
+import { ArrowDownToLine, Copy, FilePlus, Pencil, Smile, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import type { Vault } from '../../state/useVault';
 import { ContextMenu } from './ContextMenu';
+import { DeleteConfirmation } from './DeleteConfirmation';
 import type { MenuItem } from './ContextMenu';
 import { TreeRow } from './TreeRow';
-import { cibleDeDecalage, cibleDeDepot, cleDeNoeud, lignesVisibles, zoneDeDepot } from './tree-model';
+import { cibleDeDecalage, cibleDeDepot, cleDeNoeud, ligneApresSuppression, lignesVisibles, plageDeSelection, racinesDeSelection, zoneDeDepot } from './tree-model';
 import type { DropZone } from './tree-model';
 
 export interface PageTreeProps {
@@ -28,6 +29,8 @@ export interface PageTreeProps {
   surAbandon: (noeud: TreeNode) => Promise<string | null>;
   /** Ouvre le choix de l'icône de la page, à cet endroit de la fenêtre. */
   surIcone: (noeud: TreeNode, x: number, y: number) => void;
+  /** Met ces pages à la corbeille (sans leurs sous-pages sélectionnées, qui partent avec elles). Vrai si c'est fait. */
+  surCorbeille: (noeuds: TreeNode[]) => Promise<boolean>;
 }
 
 interface Survol {
@@ -35,19 +38,45 @@ interface Survol {
   zone: DropZone;
 }
 
-/** L'arborescence des pages : sélection, dépliage, clavier, glisser-déposer et menu contextuel. */
+/**
+ * L'arborescence des pages : page ouverte, sélection multiple (`Maj+clic`,
+ * `Maj+↑/↓`), dépliage, clavier, glisser-déposer et menu contextuel.
+ */
 export function PageTree(props: PageTreeProps) {
   const { vault, selection, deplies, renommage } = props;
   const lignes = useMemo(() => lignesVisibles(vault.arbre, deplies), [vault.arbre, deplies]);
   const [focus, definirFocus] = useState<string | null>(null);
   const [aFocaliser, definirAFocaliser] = useState<string | null>(null);
-  const [deplace, definirDeplace] = useState<string | null>(null);
+  // Pages glissées : une seule, ou toute la sélection quand on glisse une page sélectionnée.
+  const [deplaces, definirDeplaces] = useState<string[] | null>(null);
+  // Sélection multiple, par clés stables, et la ligne d'où elle part.
+  const [choix, definirChoix] = useState<ReadonlySet<string>>(new Set());
+  const [ancre, definirAncre] = useState<string | null>(null);
   const [survol, definirSurvol] = useState<Survol | null>(null);
   const [menu, definirMenu] = useState<{ noeud: TreeNode; x: number; y: number } | null>(null);
+  // Pages avec sous-pages en attente de confirmation avant la corbeille.
+  const [aConfirmer, definirAConfirmer] = useState<{ noeuds: TreeNode[]; x: number; y: number } | null>(null);
   const elements = useRef(new Map<string, HTMLDivElement>());
 
   // La ligne qui porte le focus clavier : celle qu'on a visitée, sinon la sélection, sinon la première.
   const cles = lignes.map((ligne) => cleDeNoeud(ligne.noeud));
+  // Une page sortie de l'arbre (supprimée ailleurs) quitte la sélection ; une page repliée y reste.
+  const choisis = useMemo(() => {
+    const presentes = new Set<string>();
+    const parcourir = (noeuds: readonly TreeNode[]) => {
+      for (const noeud of noeuds) {
+        presentes.add(cleDeNoeud(noeud));
+        parcourir(noeud.enfants);
+      }
+    };
+    parcourir(vault.arbre);
+    return new Set([...choix].filter((cle) => presentes.has(cle)));
+  }, [choix, vault.arbre]);
+  const viderChoix = () => {
+    if (choix.size > 0) {
+      definirChoix(new Set());
+    }
+  };
   const cleFocalisable =
     (focus !== null && cles.includes(focus) ? focus : null) ??
     (selection !== null && cles.includes(selection) ? selection : null) ??
@@ -71,7 +100,44 @@ export function PageTree(props: PageTreeProps) {
     [vault],
   );
 
+  /**
+   * Met des pages à la corbeille, sans confirmation sauf si l'une d'elles a des sous-pages (choix
+   * d'Eloi). « point » : où afficher la confirmation, sous la première ligne par défaut.
+   */
+  const supprimer = (noeuds: TreeNode[], point?: { x: number; y: number }) => {
+    const [premiere] = noeuds;
+    if (premiere === undefined) {
+      return;
+    }
+    if (noeuds.some((noeud) => noeud.enfants.length > 0)) {
+      const ligneDOrigine = elements.current.get(cleDeNoeud(premiere))?.getBoundingClientRect();
+      definirAConfirmer({ noeuds, x: point?.x ?? (ligneDOrigine?.left ?? 0) + 24, y: point?.y ?? ligneDOrigine?.bottom ?? 0 });
+      return;
+    }
+    void mettreALaCorbeille(noeuds);
+  };
+
+  /** Met des pages à la corbeille, puis donne le focus à la ligne qui les suit. */
+  const mettreALaCorbeille = async (noeuds: TreeNode[]) => {
+    const suivante = ligneApresSuppression(lignes, noeuds);
+    if (await props.surCorbeille(noeuds)) {
+      definirChoix(new Set());
+      definirAncre(null);
+      if (suivante !== null) {
+        definirAFocaliser(suivante);
+      }
+    }
+  };
+
+  /** Pages concernées par une action sur cette ligne : toute la sélection si elle en fait partie, sinon elle seule. */
+  const pagesVisees = (noeud: TreeNode): TreeNode[] =>
+    choisis.size > 1 && choisis.has(cleDeNoeud(noeud)) ? racinesDeSelection(lignes, choisis) : noeud.importe ? [noeud] : [];
+
   const elementsDuMenu = (noeud: TreeNode, x: number, y: number): MenuItem[] => {
+    const visees = pagesVisees(noeud);
+    if (visees.length > 1) {
+      return [{ libelle: `Mettre les ${visees.length} pages à la corbeille`, icone: Trash2, raccourci: 'Suppr', action: () => supprimer(visees, { x, y }) }];
+    }
     if (!noeud.importe) {
       return [
         {
@@ -94,17 +160,47 @@ export function PageTree(props: PageTreeProps) {
           void vault.dupliquerPage(noeud.chemin).then((page) => page !== null && props.surSelection(page.id));
         },
       },
+      { libelle: 'Mettre à la corbeille', icone: Trash2, raccourci: 'Suppr', action: () => supprimer([noeud], { x, y }) },
     ];
+  };
+
+  /** Clic sur une ligne : `Maj` étend la sélection sans ouvrir de page, sinon la page s'ouvre et la sélection se défait. */
+  const surClic = (noeud: TreeNode, nouvelOnglet: boolean, etendre: boolean) => {
+    const cle = cleDeNoeud(noeud);
+    if (etendre) {
+      const depart = (choisis.size > 0 ? ancre : null) ?? (selection !== null && cles.includes(selection) ? selection : cle);
+      definirAncre(depart);
+      definirChoix(new Set(plageDeSelection(lignes, depart, cle)));
+      return;
+    }
+    viderChoix();
+    definirAncre(cle);
+    props.surSelection(cle, nouvelOnglet);
   };
 
   const surTouche = (evenement: KeyboardEvent<HTMLDivElement>, noeud: TreeNode, rang: number) => {
     const cle = cleDeNoeud(noeud);
     const allerA = (cible: TreeNode | undefined) => {
       if (cible !== undefined) {
+        // Se déplacer sans Maj défait la sélection : `Suppr` vise alors la ligne du focus.
+        viderChoix();
         elements.current.get(cleDeNoeud(cible))?.focus();
       }
     };
     const deplie = deplies.has(cle);
+
+    // Maj+↑/↓ : la sélection s'étend de la ligne de départ jusqu'à la ligne suivante ou précédente.
+    if (evenement.shiftKey && !evenement.ctrlKey && !evenement.altKey && (evenement.key === 'ArrowUp' || evenement.key === 'ArrowDown')) {
+      evenement.preventDefault();
+      const cible = lignes[rang + (evenement.key === 'ArrowUp' ? -1 : 1)]?.noeud;
+      if (cible !== undefined) {
+        const depart = (choisis.size > 0 ? ancre : null) ?? cle;
+        definirAncre(depart);
+        definirChoix(new Set(plageDeSelection(lignes, depart, cleDeNoeud(cible))));
+        elements.current.get(cleDeNoeud(cible))?.focus();
+      }
+      return;
+    }
 
     if (evenement.altKey && (evenement.key === 'ArrowUp' || evenement.key === 'ArrowDown')) {
       evenement.preventDefault();
@@ -151,6 +247,15 @@ export function PageTree(props: PageTreeProps) {
           props.surRenommage(cle);
         }
         break;
+      case 'Delete':
+        supprimer(choisis.size > 0 ? racinesDeSelection(lignes, choisis) : pagesVisees(noeud));
+        break;
+      case 'Escape':
+        if (choisis.size === 0) {
+          return;
+        }
+        definirChoix(new Set());
+        break;
       case 'ContextMenu': {
         const boite = evenement.currentTarget.getBoundingClientRect();
         definirMenu({ noeud, x: boite.left + 24, y: boite.bottom });
@@ -163,12 +268,12 @@ export function PageTree(props: PageTreeProps) {
   };
 
   const surSurvol = (evenement: DragEvent<HTMLDivElement>, noeud: TreeNode) => {
-    if (deplace === null) {
+    if (deplaces === null) {
       return;
     }
     const boite = evenement.currentTarget.getBoundingClientRect();
     const zone = zoneDeDepot((evenement.clientY - boite.top) / boite.height, noeud.importe);
-    if (cibleDeDepot(vault.arbre, deplace, noeud.chemin, zone) === null) {
+    if (cibleDeDepot(vault.arbre, deplaces, noeud.chemin, zone) === null) {
       definirSurvol(null);
       return;
     }
@@ -183,33 +288,42 @@ export function PageTree(props: PageTreeProps) {
   const surDepot = (evenement: DragEvent<HTMLDivElement>, noeud: TreeNode) => {
     evenement.preventDefault();
     evenement.stopPropagation();
-    const origine = deplace === null ? null : trouverNoeud(vault.arbre, deplace);
-    const cible = deplace !== null && survol !== null ? cibleDeDepot(vault.arbre, deplace, noeud.chemin, survol.zone) : null;
-    if (origine !== null && cible !== null) {
+    const cible = deplaces !== null && survol !== null ? cibleDeDepot(vault.arbre, deplaces, noeud.chemin, survol.zone) : null;
+    if (deplaces !== null && cible !== null) {
       if (survol?.zone === 'dedans') {
         props.surDepliage(cleDeNoeud(noeud), true);
       }
-      void deplacer(origine, cible.parent, cible.index);
+      void deposer(deplaces, cible.parent, cible.index);
     }
-    definirDeplace(null);
+    definirDeplaces(null);
     definirSurvol(null);
   };
 
   // Dépôt dans l'espace vide sous l'arborescence : la page va à la fin de la racine.
   const surSurvolDuFond = (evenement: DragEvent<HTMLDivElement>) => {
     // Seulement le fond lui-même : une ligne qui refuse le dépôt ne doit pas le laisser passer par ici.
-    if (deplace !== null && evenement.target === evenement.currentTarget) {
+    if (deplaces !== null && evenement.target === evenement.currentTarget) {
       evenement.preventDefault();
       definirSurvol(null);
     }
   };
   const surDepotSurLeFond = (evenement: DragEvent<HTMLDivElement>) => {
     evenement.preventDefault();
-    const origine = deplace === null ? null : trouverNoeud(vault.arbre, deplace);
-    if (origine !== null) {
-      void deplacer(origine, '', vault.arbre.filter((noeud) => noeud.importe && noeud.chemin !== origine.chemin).length);
+    if (deplaces !== null) {
+      void deposer(deplaces, '', vault.arbre.filter((noeud) => noeud.importe && !deplaces.includes(noeud.chemin)).length);
     }
-    definirDeplace(null);
+    definirDeplaces(null);
+  };
+
+  /** Dépose une page, ou plusieurs ensemble dans leur ordre d'affichage. */
+  const deposer = async (chemins: string[], parent: string, index: number) => {
+    const [seule] = chemins;
+    const origine = chemins.length === 1 && seule !== undefined ? trouverNoeud(vault.arbre, seule) : null;
+    if (origine !== null) {
+      await deplacer(origine, parent, index);
+    } else if (chemins.length > 1) {
+      await vault.deplacerPages(chemins, parent, index);
+    }
   };
 
   return (
@@ -229,7 +343,8 @@ export function PageTree(props: PageTreeProps) {
             noeud={noeud}
             profondeur={profondeur}
             deplie={deplies.has(cle)}
-            selectionne={selection === cle}
+            // Tant qu'il y a une sélection multiple, elle seule a le fond bleu : `Suppr` vise ce qu'on voit.
+            selectionne={choisis.size > 0 ? choisis.has(cle) : selection === cle}
             focalisable={cleFocalisable === cle}
             enRenommage={renommage === cle}
             zoneDeDepot={survol?.chemin === noeud.chemin ? survol.zone : null}
@@ -240,11 +355,16 @@ export function PageTree(props: PageTreeProps) {
                 elements.current.set(cle, element);
               }
             }}
-            surSelection={(nouvelOnglet) => props.surSelection(cle, nouvelOnglet)}
+            surSelection={(nouvelOnglet, etendre) => surClic(noeud, nouvelOnglet, etendre)}
             surBascule={() => props.surDepliage(cle, !deplies.has(cle))}
             surFocus={() => definirFocus(cle)}
             surTouche={(evenement) => surTouche(evenement, noeud, rang)}
-            surMenu={(x, y) => definirMenu({ noeud, x, y })}
+            surMenu={(x, y) => {
+              if (!choisis.has(cle)) {
+                viderChoix();
+              }
+              definirMenu({ noeud, x, y });
+            }}
             surAjoutDeSousPage={() => props.surCreation(noeud)}
             surAbandonDuRenommage={() => {
               // Avant la fin du renommage : une page abandonnée ne doit pas recevoir le curseur.
@@ -262,19 +382,41 @@ export function PageTree(props: PageTreeProps) {
               }
             }}
             surDebutDeGlisser={(evenement) => {
+              const visees = pagesVisees(noeud);
+              if (visees.length <= 1) {
+                viderChoix();
+              }
               evenement.dataTransfer.effectAllowed = 'move';
-              evenement.dataTransfer.setData('text/plain', noeud.titre);
-              definirDeplace(noeud.chemin);
+              evenement.dataTransfer.setData('text/plain', visees.map((page) => page.titre).join('\n') || noeud.titre);
+              definirDeplaces(visees.length > 0 ? visees.map((page) => page.chemin) : [noeud.chemin]);
             }}
             surSurvol={(evenement) => surSurvol(evenement, noeud)}
             surDepot={(evenement) => surDepot(evenement, noeud)}
             surFinDeGlisser={() => {
-              definirDeplace(null);
+              definirDeplaces(null);
               definirSurvol(null);
             }}
           />
         );
       })}
+      {aConfirmer !== null && (
+        <DeleteConfirmation
+          noeuds={aConfirmer.noeuds}
+          x={aConfirmer.x}
+          y={aConfirmer.y}
+          surConfirmation={() => {
+            definirAConfirmer(null);
+            void mettreALaCorbeille(aConfirmer.noeuds);
+          }}
+          surAbandon={() => {
+            const [premiere] = aConfirmer.noeuds;
+            definirAConfirmer(null);
+            if (premiere !== undefined) {
+              definirAFocaliser(cleDeNoeud(premiere));
+            }
+          }}
+        />
+      )}
       {menu !== null && (
         <ContextMenu x={menu.x} y={menu.y} elements={elementsDuMenu(menu.noeud, menu.x, menu.y)} surFermeture={() => definirMenu(null)} />
       )}

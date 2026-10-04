@@ -9,9 +9,9 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 | | |
 |---|---|
 | Dernière mise à jour | 2026-10-04 |
-| Version | 0.9.0 |
-| Avancement | J0 à J8 terminés : recette J8 validée par Eloi le 2026-10-04, retouches 0.8.1 à 0.8.4 comprises |
-| Jalon en cours | J9 (export), à lancer par `/jalon J9` |
+| Version | 0.11.0 |
+| Avancement | J0 à J10 terminés : recette J10 validée par Eloi le 2026-10-04, retouches 0.10.1 et 0.10.2 comprises |
+| Jalon en cours | J11 (correction orthographique), à lancer par `/jalon J11` |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -33,8 +33,11 @@ Ce qui fonctionne aujourd'hui :
 - les blocs riches : blocs de code colorés (langage choisi dans une liste avec recherche ou deviné au collage, bouton copier, numéros de ligne et retour à la ligne réglables dans le thème), tableaux (grille de taille au `/tableau`, poignées pour ajouter ou retirer colonnes et lignes, navigation au clavier, alignement des colonnes), images (insertion, collage ou dépôt, copie dans `assets/`, largeur, alignement, texte alternatif, légende, visionneuse, liste des images inutilisées), callouts (nature, icône, texte mis en forme) ;
 - la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 10 secondes, une seconde après chaque modification et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail ; NAS injoignable, elle dit depuis quand, et une coupure du réseau se voit dans la seconde.
 - l'écran de résolution des conflits : la page et la version mise de côté face à face, bloc par bloc, avec garder A, B ou les deux, poignées pour placer une version ailleurs, aperçu et validation.
+- la corbeille : une page supprimée part avec ses sous-pages et ses images dans la corbeille, sur le NAS au cycle suivant ; l'écran de la corbeille la montre, la restaure à sa place ou l'efface. Plusieurs pages se sélectionnent (`Maj+↑/↓`, `Maj+clic`) pour être déplacées ou supprimées ensemble.
 - les liens et icônes (J8) : `@` ou `/lien` pour mentionner une page, affichée avec son icône et son titre du moment ; renommer une page fait suivre ses mentions, jusque dans les fichiers des autres pages ; un lien ou une mention s'ouvre d'un clic, et son infobulle permet de le modifier, le copier ou le retirer ; une adresse collée devient une mention de site (favicon et titre du site), ou un lien si le site ne répond pas ; mentions cassées barrées et listées dans les réglages ; icône de page (emoji cherché en français, icône Lucide cherchée par un mot français, image recadrée avec « Retirer le fond » par un modèle local), au-dessus du titre, dans l'arborescence, les onglets, la recherche et les mentions ; une image copiée d'une page et collée dans une autre y est copiée.
 - la navigation (J7) : onglets dans la barre de titre, retrouvés au redémarrage, avec un point quand la page n'est pas encore sur le NAS ; recherche `Ctrl+K` floue sur les titres, sans accents, pages récentes, création d'une page quand rien ne correspond ; sommaire à droite de la page, à jour à la frappe, qui suit la lecture, et sommaire complet avec filtre par l'icône du haut de la page ; recherche globale instantanée par `Ctrl+Alt+Espace`, dans une petite fenêtre, Notes restant en fond fenêtre fermée (`Ctrl+Q` pour quitter, démarrage avec la session en option) ; `Ctrl+\` et `Ctrl+Shift+\` masquent la barre latérale et le sommaire, `Ctrl+,` ouvre les réglages.
+
+- l'export (J9) : par l'icône en haut de la page, en PDF (A4, fond blanc, couleurs du thème, marges, icônes, sauts de page soignés, pied de page avec titre et numéro), en Markdown (lisible partout : mentions en texte, callouts en paragraphes, images en mention), en HTML autonome (images et styles dedans, sommaire) ou en archive ZIP de la page et des sous-pages choisies, en pages web reliées entre elles.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
@@ -43,9 +46,9 @@ Ce qui n'existe pas encore : la suppression de page, l'application Android.
 Reste à faire :
 
 - passer l'intervalle de sync de 10 à 5 s (décidé le 2026-10-04 sur les durées relevées par Eloi, environ 60 ms par cycle) : `intervalleParDefautMs` dans `main/sync/scheduler.ts`, pas encore fait ;
-- lancer J9.
+- lancer J10 : préciser d'abord avec Eloi le comportement de la sélection multiple dans l'arborescence (§10).
 
-Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J9 se lance avec `/jalon J9`. Pour installer la version construite : `npm run installer`.
+Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J10 se lance avec `/jalon J10`. Pour installer la version construite : `npm run installer`.
 
 ## Sommaire
 
@@ -61,7 +64,7 @@ Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèl
 10. [Corbeille](#10-corbeille)
 11. [Correction orthographique](#11-correction-orthographique)
 12. [Fonctions IA](#12-fonctions-ia)
-13. [Dictée vocale](#13-dictée-vocale)
+13. [Mémos vocaux](#13-mémos-vocaux)
 14. [Mode liste de tâches](#14-mode-liste-de-tâches)
 15. [Application Android](#15-application-android)
 16. [Sécurité et configuration](#16-sécurité-et-configuration)
@@ -106,7 +109,7 @@ Windows, iOS, bases de données relationnelles, vidéos embarquées, publication
 | C6 | Plusieurs appareils ouverts simultanément (postes Linux, téléphone), donc gestion des accès concurrents |
 | C7 | Identifiants SMB stockés chiffrés |
 | C8 | Design inspiré d'AppFlowy, typographie corrigée |
-| C9 | Services réseau : LanguageTool, LiteLLM, Whisper (optionnel) |
+| C9 | Services optionnels : LanguageTool, IA en local (avec option d'API externe), Whisper |
 | C10 | Android : consultation hors ligne possible, modification uniquement avec le NAS joignable |
 
 ### Périmètre fonctionnel desktop
@@ -115,13 +118,14 @@ Windows, iOS, bases de données relationnelles, vidéos embarquées, publication
 - Organisation : arborescence réordonnable, icônes (emoji, Lucide, image), onglets multiples, recherche `Ctrl+K` et raccourci global, sommaire latéral et modal.
 - Persistance : Markdown avec front-matter YAML, assets par page, sync par cycle de 10 s avec verrou distant, corbeille NAS (rétention 30 jours).
 - Export : PDF (sauts de page propres), Markdown, HTML autonome, ZIP.
-- Assistance : correction FR (LanguageTool), relecture et mise au propre (LiteLLM, avec estimation de coût), dictée vocale (Whisper).
+- Assistance : correction FR (LanguageTool), relecture et mise au propre (modèle d'IA en local, ou API externe sur option, avec estimation de coût), mémos vocaux enregistrés sur le téléphone, transcrits et mis en forme sur le PC (Whisper et modèle local).
 
 ### Périmètre fonctionnel Android
 
 - Consultation : arborescence, recherche par titre, lecture de toutes les pages avec le même rendu que le desktop, accès direct aux listes de tâches.
 - Modification légère : cocher et décocher, ajouter, modifier, supprimer et réordonner une tâche, compléter une liste à puces, retoucher un texte, créer une page simple.
-- Tout le reste (blocs riches, export, corbeille, IA, dictée, correction, réglage du thème) reste sur le desktop.
+- Mémos vocaux : enregistrer un mémo, envoyé sur le NAS (transcrit ensuite sur le PC, §13).
+- Tout le reste (blocs riches, export, corbeille, IA, transcription, correction, réglage du thème) reste sur le desktop.
 
 Détail en [section 15](#15-application-android).
 
@@ -188,14 +192,14 @@ Pourquoi trois paquets : `core` se teste sans rien savoir de l'éditeur, `docume
 
 ### Processus desktop
 
-- Main (Node) : cycle SMB, verrous distants, lecture et écriture du vault, watcher FS, raccourci global, coffre à secrets, export PDF, appels LanguageTool, LiteLLM et Whisper.
+- Main (Node) : cycle SMB, verrous distants, lecture et écriture du vault, watcher FS, raccourci global, coffre à secrets, export PDF, appels LanguageTool, IA (modèle local ou API) et Whisper.
 - Renderer (React) : éditeur, arborescence, onglets, sommaires, palette `Ctrl+K`, modales IA, réglages.
 
 `nodeIntegration` désactivé, `contextIsolation` activé, communication via `preload` et `contextBridge` typé.
 
 ### Dépendances clés
 
-`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `smol-toml` (thème), `markdown-it` et `markdown-it-mark` (lecture du Markdown), `prosemirror-markdown` (écriture, avec un sérialiseur maison), `@iarna/toml`, `lucide-react`, `emojibase-data` (noms des emojis en français), `onnxruntime-web` (moteur ONNX en WebAssembly, pour le détourage des icônes, avec le modèle silueta de rembg).
+`@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `smol-toml` (thème), `markdown-it` et `markdown-it-mark` (lecture du Markdown), `prosemirror-markdown` (écriture, avec un sérialiseur maison), `@iarna/toml`, `lucide-react`, `emojibase-data` (noms des emojis en français), `onnxruntime-web` (moteur ONNX en WebAssembly, pour le détourage des icônes, avec le modèle silueta de rembg), `fflate` (archives ZIP de l'export, MIT, sans dépendance).
 
 Côté Android : `@capacitor/core`, `@capacitor/filesystem`, plugin SMB maison en Kotlin s'appuyant sur `smbj` 0.13 (validé par un POC le 2026-10-01).
 
@@ -241,7 +245,7 @@ Markdown standard : titres, gras, italique, barré, code, listes, tâches `- [ ]
 - Souligné : Markdown n'a pas de syntaxe pour lui, il s'écrit `<u>texte</u>`. C'est la seule balise HTML que l'application reconnaît.
 
 - Blocs avancés sans équivalent Markdown : bloc code fencé `notes-callout` contenant du YAML (type, icône, texte). Reste lisible dans n'importe quel éditeur.
-- Liens internes : syntaxe Markdown standard avec cible `notes://uuid` (`[Projets](notes://0199…)`), résolue en titre courant à l'affichage, réécrite en chemin relatif à l'export. Lien cassé affiché barré. Quand une page est renommée, le texte de ses mentions est réécrit dans les pages qui la citent, seulement dans les blocs concernés. Un lien interne dont le texte est mis en forme (`[*x*](notes://…)`) reste un lien ordinaire, que le renommage ne touche pas.
+- Liens internes : syntaxe Markdown standard avec cible `notes://uuid` (`[Projets](notes://0199…)`), résolue en titre courant à l'affichage. À l'export Markdown, elle devient le titre de la page en texte simple ; dans une archive en pages web, un lien vers la page si elle est dans l'archive (§9). Lien cassé affiché barré. Quand une page est renommée, le texte de ses mentions est réécrit dans les pages qui la citent, seulement dans les blocs concernés. Un lien interne dont le texte est mis en forme (`[*x*](notes://…)`) reste un lien ordinaire, que le renommage ne touche pas.
 - Liens externes : label nettoyé si identique à l'URL (`https://www.google.com/` devient `google.com`).
 - Couleurs de texte : non supportées en v1 (pas de syntaxe Markdown propre ; couvert par thème et callouts).
 - Ordre manuel : fichier `.order` (liste d'UUID) dans chaque dossier qui a des enfants.
@@ -502,7 +506,7 @@ Section desktop. L'interface Android est décrite en §15.
 
 - Barre de titre : la fenêtre n'a pas le cadre du système. L'application dessine sa propre barre, comme Firefox : nom et version à gauche, boutons réduire, agrandir et fermer à droite. Toute la barre sert à déplacer la fenêtre.
 - Disposition : onglets en haut, barre latérale (arborescence) à gauche, éditeur au centre, sommaire à droite, barre de statut en bas (sync, corrections, coût IA du jour).
-- Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, exporter, supprimer), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Pendant un glisser-déposer, un trait plat de 2 px à la couleur d'accent montre où la page tombera, un fond bleu qu'elle deviendra sous-page. `Ctrl+N` crée une page sœur de la page ouverte, juste après elle (à la racine si aucune n'est ouverte), `Ctrl+Shift+N` une page à la racine. `Échap` dans le nom d'une page encore « Sans titre » la supprime si elle n'a ni contenu, ni sous-page, ni fichier, et la page ouverte avant revient ; sinon il annule seulement le renommage. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
+- Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, mettre à la corbeille), sélection multiple (`Maj+↑/↓`, `Maj+clic`, détail en §10), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Pendant un glisser-déposer, un trait plat de 2 px à la couleur d'accent montre où la page tombera, un fond bleu qu'elle deviendra sous-page. `Ctrl+N` crée une page sœur de la page ouverte, juste après elle (à la racine si aucune n'est ouverte), `Ctrl+Shift+N` une page à la racine. `Échap` dans le nom d'une page encore « Sans titre » la supprime si elle n'a ni contenu, ni sous-page, ni fichier, et la page ouverte avant revient ; sinon il annule seulement le renommage. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
 - Réglages : `Échap` les ferme et rend la page ; depuis l'écran du thème, il revient d'abord aux réglages.
 - Onglets : dans la barre de titre, comme Firefox, entre le nom de l'application et les boutons de fenêtre. Multiples dans une seule fenêtre, `Ctrl+T` (onglet vide, recherche ouverte), `Ctrl+W` (le dernier onglet se vide au lieu de se fermer), `Ctrl+Tab` et `Ctrl+Shift+Tab`, `Ctrl+1` à `9`, clic du milieu pour fermer, restaurés au démarrage, point si la page n'est pas encore sur le NAS. Une page n'est ouverte que dans un onglet : un clic dans l'arborescence ramène à son onglet s'il existe, sinon elle remplace la page de l'onglet affiché. `Ctrl+clic` ou clic du milieu l'ouvre dans un nouvel onglet.
 - Recherche `Ctrl+K` : sur les titres de page uniquement (pas de full-text en v1), floue, insensible aux accents, pages récentes par défaut, proposition de création si aucun résultat : juste après la page ouverte (choisi d'office), dedans, ou à la racine, une ligne chacun, au clavier. `Entrée` ouvre la page comme un clic dans l'arborescence, `Ctrl+Entrée` dans un nouvel onglet.
@@ -572,10 +576,11 @@ Desktop uniquement.
 | HTML autonome | Page seule | Oui (base64) | Maximale | Partage par fichier |
 | ZIP | Page et descendants | Oui | Selon format interne | Archivage |
 
-- PDF : rendu hors écran avec les couleurs du thème actif sur fond blanc (`printToPDF`). Règles de saut de page : titres jamais seuls en bas, code, images, tableaux et callouts non coupés (tableaux : en-tête répété si la coupure est inévitable), orphelines et veuves gérées. Pied de page : titre et numéro de page, sans auteur. Options : format papier, marges, icônes ou non.
-- Markdown : front-matter retirable, mentions de page écrites en texte simple (leur titre), images remplacées par une mention textuelle, jamais de citation : un callout ne devient pas une citation (sa forme exacte : P1).
-- HTML autonome : CSS et images inlinés en base64, coloration syntaxique précalculée, sommaire avec ancres. Format recommandé pour partager en conservant l'apparence exacte.
-- ZIP : page et enfants avec assets, arborescence conservée, option de sortie en HTML avec navigation entre pages.
+- PDF : la page est rendue hors écran avec les vues de l'éditeur, puis imprimée par Chromium (`printToPDF`) dans une fenêtre cachée, sans script ni réseau. Couleurs adaptées au papier : fond blanc et texte sombre ; les couleurs du thème (titres, accent, natures des callouts, puces) gardent leur teinte et sont foncées juste assez pour atteindre un contraste de 4,5:1 sur le blanc pour le texte, 3:1 pour les traits (vérifié par test). Les blocs de code gardent le fond sombre du thème et leurs couleurs. Titre de la page en tête, son icône à gauche sur la même ligne. Sommaire en tête quand la page est longue (au moins six titres de niveau 1 à 3, dont trois sous-parties), limité aux titres `#`, `##` et `###`, chaque entrée un lien vers son titre, de la couleur des liens. Règles de saut de page : titres jamais seuls en bas, code, images, tableaux et callouts non coupés quand ils tiennent sur une page (tableaux : en-tête répété si la coupure est inévitable), orphelines et veuves gérées. Pied de page : titre et numéro de page (« 3 / 12 »), sans auteur. Papier A4 (choix d'Eloi, pas d'autre format). Options : marges (étroites 12 mm, normales 20 mm, larges 30 mm), icônes ou non (de la page, des mentions, favicons des sites).
+- Markdown : front-matter retiré par défaut, gardé tel quel sur option, mentions de page écrites en texte simple (leur titre), images remplacées par une mention textuelle en italique (`*Image : texte alternatif, légende*`, le nom du fichier sans description), liens `notes://` mis en forme réduits à leur texte, jamais de citation : un callout s'écrit en paragraphes simples, son icône au début du premier. Une mention de site devient un lien Markdown normal.
+- HTML autonome : CSS et images inlinés en base64, coloration syntaxique précalculée, sommaire avec ancres (même règle que le PDF : six titres dont trois sous-parties ; ouvert, repliable), icône de la page à gauche du titre, aux couleurs du thème tel qu'à l'écran. Aucun script, et une politique de sécurité qui interdit tout chargement. Format recommandé pour partager en conservant l'apparence exacte.
+- ZIP : la page et ses sous-pages en pages web (choix d'Eloi, remplace la sortie Markdown), reliées par une navigation en tête de chacune ; une mention d'une page de l'archive mène à elle. À la racine de l'archive : `assets/images/` (toutes les images, une fois chacune), `assets/html/style.css` (la feuille de style commune), et le fichier de la page (`Projets.html`) ; à côté de chaque fichier, un dossier à son nom avec ses sous-pages (`Projets/Refonte.html`, `Projets/Refonte/Étape 1.html`). Dans la fenêtre d'export, la liste des pages se coche et se décoche : décocher une page décoche ses sous-pages, qu'on peut recocher une à une ; une page décochée qui garde une sous-page reste dans la navigation, sans lien.
+- Accès : l'icône en haut de la page ouverte, sans raccourci, et pas dans le menu de l'arborescence (demande d'Eloi). Une fenêtre choisit le format dans un menu déroulant (PDF, Markdown, HTML, Archive ZIP), dessiné comme le choix du type de bloc de la barre d'outils, avec une ligne d'explication et seulement les options du format choisi, puis la boîte « Enregistrer sous » du système. Le fichier écrit s'ouvre aussitôt avec le programme du système (lecteur PDF, navigateur, éditeur), pour voir le résultat.
 
 ---
 
@@ -585,19 +590,29 @@ Desktop uniquement. La corbeille est sur le NAS (`.trash/`), sans copie locale. 
 
 Une image retirée d'une page (son fichier dans `assets/` n'étant plus utilisé) part aussi dans la corbeille, à la demande d'Eloi (2026-10-03).
 
+Supprimer se fait par le menu de l'arborescence ou `Suppr` sur la page choisie, et s'applique à toutes les pages sélectionnées (sélection multiple, ci-dessous).
+
+Sélection multiple dans l'arborescence (demande d'Eloi, précisée au début de J10) : `Maj+↑/↓` étend la sélection depuis la page choisie, `Maj+clic` prend toutes les pages entre la page choisie et celle cliquée ; `Ctrl+clic` garde son rôle (nouvel onglet). La sélection se montre par le fond. `Échap` ou un simple clic la défait. Les pages choisies se suppriment ensemble (`Suppr` ou « Mettre à la corbeille » dans le menu) et se déplacent ensemble par glisser-déposer, dans leur ordre d'affichage. Une page choisie avec une de ses sous-pages emmène celle-ci : la sous-page n'est pas traitée à part. Pas d'export de plusieurs pages (choix d'Eloi).
+
+Déroulé d'une suppression : la page part d'abord dans un `.trash/` du dossier des notes sur le poste, que la sync ne transporte pas, puis disparaît de l'arborescence. Au cycle suivant, la sync la retire du NAS comme toute page supprimée, dépose l'entrée dans le `.trash/` du NAS, puis la retire du poste. Un fichier de la page modifié sur l'autre appareil entre-temps revient, comme pour toute suppression (§5). La page ouverte est enregistrée avant d'être mise à la corbeille, et son onglet se vide. Pas de confirmation, la page se restaure, sauf quand une des pages a des sous-pages : une petite fenêtre à côté de la ligne dit combien partent avec elle (`Entrée` confirme, `Échap` abandonne).
+
+Écran de la corbeille : il remplace la page au centre, comme les réglages, par une ligne en bas de la barre latérale ; `Échap` rend la page. Liste des entrées (les plus récentes en haut, celles du NAS et celles encore sur le poste), aperçu en lecture seule de l'entrée choisie, « Restaurer », « Supprimer définitivement » (confirmation), « Vider la corbeille » (confirmation). NAS injoignable, la liste montre les entrées du poste et le dit. Une page restaurée revient sous son parent d'origine (retrouvé par son identifiant, même déplacé), à sa place parmi ses sœurs (avant celle qui la suivait, sinon après celle qui la précédait, sinon à son ancien rang), à la racine et en dernier si son parent n'existe plus, avec ses sous-pages, ses images et son identifiant : ses mentions remarchent. Une image revient dans le dossier `assets/` de sa page.
+
+Images inutilisées : dans les réglages, chacune a un bouton « Mettre à la corbeille », et « Tout mettre à la corbeille » les envoie toutes d'un coup, après confirmation à côté du bouton.
+
 Rétention de 30 jours, purge automatique au démarrage. Interface : liste, prévisualisation, restaurer, supprimer définitivement (confirmation requise), vider. Si le NAS est injoignable, corbeille locale temporaire transférée au cycle suivant.
 
 ---
 
 ## 11. Correction orthographique
 
-Desktop uniquement. LanguageTool, français seulement. Vérification par bloc modifié (debounce 800 ms), pas sur la page entière. Soulignement rouge (orthographe) ou bleu (grammaire, style). Popover : suggestion, règle, « Ignorer », « Ajouter au dictionnaire » (`.notes/dictionary.txt`, synchronisé). Code et URL exclus. Compteur dans la barre de statut. Désactivation silencieuse si le serveur est injoignable : l'édition n'est jamais bloquée.
+Desktop uniquement. LanguageTool, français seulement. Le serveur LanguageTool tourne en local sur le PC (choix d'Eloi, 2026-10-04), lancé hors de l'application : image Docker ou serveur Java autonome, démarré avec la session. L'application l'appelle à l'adresse des réglages (`http://localhost:8081` par défaut) et ne l'embarque pas : Java n'entre pas dans l'AppImage (règle de l'application autonome). Compter environ 1 Go de mémoire, plus quelques gigaoctets de disque si on ajoute les n-grammes français, qui améliorent la détection des confusions (« a » et « à », « ces » et « ses »). Sur ce poste, une vérification de bloc répond en quelques dizaines de millisecondes, bien en deçà du délai de 800 ms. Le téléphone n'a pas de correction. Vérification par bloc modifié (debounce 800 ms), pas sur la page entière. Soulignement rouge (orthographe) ou bleu (grammaire, style). Popover : suggestion, règle, « Ignorer », « Ajouter au dictionnaire » (`.notes/dictionary.txt`, synchronisé). Code et URL exclus. Compteur dans la barre de statut. Désactivation silencieuse si le serveur est injoignable : l'édition n'est jamais bloquée.
 
 ---
 
 ## 12. Fonctions IA
 
-Desktop uniquement. Toutes les requêtes passent par le proxy LiteLLM du réseau.
+Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, servi sur le PC (choix d'Eloi, 2026-10-04), sans rien envoyer sur Internet. En option, on peut faire appel à une API externe (fournisseur en ligne), choisie dans les réglages, fonction par fonction. Ollama est lancé hors de l'application, qui l'appelle par son API à l'adresse des réglages (`http://localhost:11434` par défaut). Les modèles se choisissent selon la carte graphique (P2). Le même modèle sert à la mise en forme des mémos vocaux (§13). Comme les autres services, l'IA est facultative : sans modèle joignable, ses fonctions se désactivent, l'édition n'est jamais bloquée.
 
 ### Deux fonctions, appliquées à la page entière
 
@@ -610,7 +625,7 @@ Jamais de remplacement direct. Sélection de la fonction, modale d'estimation (m
 
 ### Coût
 
-Tokens d'entrée calculés localement, sortie estimée par ratio calibré, tarifs récupérés depuis LiteLLM (`/model/info`). Historique dans `.notes/ai-usage.json` (synchronisé), agrégé par jour, semaine, mois et année avec graphiques. Dépense du jour affichée en permanence.
+Avec un modèle local, rien n'est facturé : l'estimation affiche la taille de la demande et la durée attendue, sans coût. Avec une API externe : tokens d'entrée calculés localement, sortie estimée par ratio calibré, tarifs du fournisseur. Historique dans `.notes/ai-usage.json` (synchronisé), agrégé par jour, semaine, mois et année avec graphiques. Dépense du jour (API externe seulement) affichée en permanence.
 
 ### Nettoyage des sorties LLM
 
@@ -618,18 +633,21 @@ Systématique avant insertion : suppression des fences englobantes, des préambu
 
 ### Configuration
 
-URL du proxy, clé API chiffrée, modèle par fonction, prompts système éditables, seuil d'alerte de dépense mensuelle.
+Adresse du modèle local, et sur option fournisseur d'API et clé chiffrée ; modèle (local ou API) par fonction, prompts système éditables, seuil d'alerte de dépense mensuelle.
 
 ---
 
-## 13. Dictée vocale
+## 13. Mémos vocaux
 
-Desktop uniquement. Whisper en local, via un serveur `faster-whisper` dédié sur la machine GPU du réseau. Il n'est pas embarqué dans l'app : cohérent avec LanguageTool et LiteLLM, et cela évite 1 Go d'installeur et CUDA côté client.
+Pas de dictée en direct dans l'application (choix d'Eloi, 2026-10-04). On enregistre un mémo sur le téléphone, le fichier part sur le NAS, et c'est le PC qui le transcrit puis le met en forme avec le modèle local.
 
-- Config recommandée : modèle `large-v3-turbo`, quantification `int8_float16`, environ 2 Go de VRAM, langue FR forcée. Une dictée de 30 s est transcrite en 1 à 3 s.
-- Flux : déclenchement (micro ou raccourci), enregistrement (forme d'onde), arrêt manuel ou sur silence prolongé, envoi, transcription insérée au curseur. L'audio est supprimé après transcription, jamais stocké dans `assets/`.
-- Chaînage optionnel avec la Mise au propre (§12), toujours via la modale de coût, jamais automatique.
-- Repli : dictée désactivée avec un message explicite si le serveur est injoignable.
+- Téléphone (J17) : un bouton enregistre un mémo (AAC en `.m4a`, mono, 16 kHz, assez pour la voix). Le fichier est écrit directement sur le NAS dans `.notes/memos/memo-<date>.m4a`. Sans NAS joignable, il reste sur le téléphone et part dès que le NAS répond : c'est la seule exception à la règle « pas de file d'attente » (§5), puisqu'un mémo n'est pas une page et ne peut pas créer de conflit. L'application montre les mémos pas encore envoyés.
+- Le dossier `.notes/memos/` fait partie du dossier des notes : la sync l'amène sur le PC comme le reste. Il n'apparaît pas dans l'arborescence.
+- PC (J13) : les mémos en attente sont listés dans une page « Mémos vocaux ». « Transcrire » envoie l'audio au serveur Whisper, puis le texte au modèle local (§12) pour la mise en forme, avec la vue de comparaison avant acceptation, jamais d'insertion directe. Chaque mémo accepté devient une sous-page de « Mémos vocaux », titrée par sa date (ou un titre proposé par le modèle), qu'on déplace ensuite où on veut. L'audio part alors à la corbeille (§10), récupérable 30 jours.
+- La page « Mémos vocaux » peut être masquée de l'arborescence (menu de la page, réglage propre à ce poste). Elle réapparaît d'elle-même quand un nouveau mémo arrive, et un clic droit dans une zone vide des pages de la barre latérale propose de la réafficher.
+- Whisper : serveur `faster-whisper` lancé hors de l'application, sur le PC (ou une autre machine du réseau), adresse dans les réglages. Il n'est pas embarqué dans l'AppImage. Config de départ : modèle `large-v3-turbo`, quantification `int8_float16`, environ 2 Go de mémoire vidéo, langue FR forcée. Un mémo de 30 s se transcrit en 1 à 3 s. Les modèles exacts dépendent de la carte graphique (P2).
+- Repli : serveur ou modèle injoignable, « Transcrire » est désactivé avec un message explicite ; les mémos attendent, rien n'est perdu.
+- Détail de l'écran à préciser avec Eloi au début de J13.
 
 ---
 
@@ -668,6 +686,7 @@ Compagnon de consultation, pas un second éditeur. Construite avec Capacitor à 
 
 | Action | Où |
 |---|---|
+| Enregistrer un mémo vocal (envoyé sur le NAS, gardé sur le téléphone tant qu'il ne répond pas) | Partout |
 | Cocher, décocher une tâche | Toutes les pages |
 | Ajouter une tâche (champ d'ajout rapide) | Pages en mode liste |
 | Modifier le texte, supprimer, réordonner une tâche | Pages en mode liste |
@@ -675,13 +694,13 @@ Compagnon de consultation, pas un second éditeur. Construite avec Capacitor à 
 | Retoucher un paragraphe ou un titre, en Markdown brut | Toutes les pages |
 | Créer une page simple (titre, parent, classique ou mode liste) | Arborescence |
 
-Toute modification exige une connexion SMB directe au NAS au moment où elle est faite (déroulé en §5). Quand le NAS est injoignable, les cases, champs et boutons de modification sont désactivés et un bandeau l'indique. Il n'y a pas de file d'attente de modifications.
+Toute modification exige une connexion SMB directe au NAS au moment où elle est faite (déroulé en §5). Seule exception, le mémo vocal (§13). Quand le NAS est injoignable, les cases, champs et boutons de modification sont désactivés et un bandeau l'indique. Il n'y a pas de file d'attente de modifications.
 
 Techniquement, le téléphone n'embarque pas l'éditeur complet : la page est rendue par TipTap en lecture seule, et chaque modification est une opération ciblée de `packages/document` (basculer une tâche, insérer un item, remplacer le texte d'un bloc) suivie de la même sérialisation Markdown que sur le desktop.
 
 ### Hors périmètre Android
 
-Menu `/`, gestion des blocs, barre d'outils, édition de tableaux, insertion d'images, renommage, déplacement et suppression de pages, corbeille, export, onglets, correction orthographique, IA, dictée, réglage du thème, synchronisation en arrière-plan, widget.
+Menu `/`, gestion des blocs, barre d'outils, édition de tableaux, insertion d'images, renommage, déplacement et suppression de pages, corbeille, export, onglets, correction orthographique, IA, transcription des mémos, réglage du thème, synchronisation en arrière-plan, widget.
 
 ### Réseau
 
@@ -693,7 +712,7 @@ Le téléphone est sur Tailscale, lancé au démarrage. L'adresse du NAS configu
 
 ### Secrets
 
-Règle : aucun identifiant n'est écrit en clair sur le disque, ni dans le vault, ni dans les réglages, ni dans les journaux. Concerne le mot de passe SMB, la clé API LiteLLM, et les identifiants LanguageTool et Whisper le cas échéant. Les secrets sont stockés hors du vault et jamais synchronisés.
+Règle : aucun identifiant n'est écrit en clair sur le disque, ni dans le vault, ni dans les réglages, ni dans les journaux. Concerne le mot de passe SMB, la clé de l'API d'IA externe, et les identifiants LanguageTool et Whisper le cas échéant. Les secrets sont stockés hors du vault et jamais synchronisés.
 
 - Desktop : `safeStorage` d'Electron, qui s'appuie sur le trousseau du système (`libsecret`, KWallet). Sans trousseau disponible, Electron retomberait sur un stockage non chiffré (backend `basic_text`) : l'app le détecte, refuse d'enregistrer le secret, le garde en mémoire le temps de la session et le redemande au lancement suivant.
 - Android : clé générée dans l'Android Keystore, qui chiffre le mot de passe SMB stocké dans le stockage privé de l'app. Seul ce secret est concerné.
@@ -755,14 +774,15 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J6 | Blocs riches (code, images, tableaux, callouts) | Page technique complète rédigée confortablement | Fait |
 | J7 | Navigation avancée | Raccourci global et sommaire toujours à jour | Fait |
 | J8 | Liens et icônes | Renommage sans mention cassée | Fait |
-| J9 | Export | 20 pages en PDF sans coupure incorrecte | À faire |
-| J10 | Corbeille | Page supprimée restaurée intégralement | À faire |
+| J9 | Export | 20 pages en PDF sans coupure incorrecte | Fait |
+| J10 | Corbeille, sélection multiple | Page supprimée restaurée intégralement ; plusieurs pages sélectionnées dans l'arborescence, déplacées ou supprimées ensemble | Fait |
 | J11 | Correction orthographique | Aucune latence perceptible à la frappe | À faire |
 | J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | À faire |
-| J13 | Dictée vocale | 30 s transcrites en moins de 5 s | À faire |
+| J13 | Mémos vocaux, côté PC | Un mémo déposé dans `.notes/memos/` devient une page transcrite et mise en forme ; 30 s transcrites en moins de 5 s | À faire |
 | J14 | Mode liste de tâches, finition desktop | L'outil remplace AppFlowy au quotidien | À faire |
 | J15 | Android, consultation | APK installé, toutes les pages lisibles hors ligne, cache à jour après passage sur le wifi | À faire |
 | J16 | Android, modification légère | Tâche cochée sur le téléphone visible sur le desktop au cycle suivant, modification refusée proprement sans NAS | À faire |
+| J17 | Android, mémos vocaux | Mémo enregistré sans réseau envoyé sur le NAS au retour du réseau, puis transcrit sur le PC | À faire |
 
 Android arrive en dernier, mais deux choses se préparent dès le début pour ne pas tout reprendre en J15 : `packages/core` reste sans dépendance Node (J1), et les opérations ciblées sur une page (basculer une tâche, insérer un item) sont écrites dans `packages/document` au moment du mode liste (J14).
 
@@ -772,8 +792,7 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Réf | Question | Échéance |
 |---|---|---|
-| P1 | Export Markdown d'un callout : pas de citation (tranché), mais quelle forme à la place ? Garder le bloc `notes-callout` tel quel, ou écrire ses paragraphes en texte simple (avec son icône devant) ? | J9 |
-| P2 | Export Markdown d'une mention de site : lien Markdown normal sans le titre « mention », ou gardée telle quelle ? | J9 |
+| P2 | Carte graphique et mémoire vidéo du PC : quels modèles Ollama pour la relecture, la mise au propre et la mise en forme des mémos, et quel modèle Whisper à côté (ils partagent la mémoire vidéo) ? | J12 |
 
 ---
 
@@ -781,6 +800,10 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Date | Décision |
 |---|---|
+| 2026-10-04 | Recette J10 validée par Eloi, retouches 0.10.1 et 0.10.2 comprises. Dernière question tranchée : les images inutilisées ont aussi un bouton « Tout mettre à la corbeille », avec confirmation. J10 passe à « Fait », version 0.11.0. |
+| 2026-10-04 | Choix d'Eloi pour les services : pas de dictée en direct ; les mémos vocaux s'enregistrent sur le téléphone, vont sur le NAS (`.notes/memos/`, gardés sur le téléphone sans réseau, seule exception à « pas de file d'attente ») et se transcrivent sur le PC (Whisper, puis mise en forme par le modèle local), chacun en sous-page d'une page « Mémos vocaux » masquable qui réapparaît à l'arrivée d'un mémo ou par clic droit dans la zone vide des pages ; l'audio part ensuite à la corbeille. J13 devient « Mémos vocaux, côté PC », J17 « Android, mémos vocaux » est ajouté. LanguageTool tourne en local sur le PC, hors de l'application. P1 tranché : Ollama sur le PC, API externe toujours en option ; les modèles dépendent de la carte graphique (P2). |
+| 2026-10-04 | Version 0.10.2, réponses d'Eloi aux questions de la recette J10 : mettre à la corbeille reste sans confirmation, sauf pour une page qui a des sous-pages ; une page restaurée revient à sa place d'origine parmi ses sœurs, plus en dernière position ; la sélection défaite par les flèches sans `Maj` ou un clic, l'aperçu sans images, le vidage partiel quand le NAS est injoignable et le retour partiel d'une page modifiée sur l'autre appareil lui conviennent. Reste la question 5 (tout mettre à la corbeille d'un coup dans les images inutilisées). |
+| 2026-10-04 | J10, choix d'Eloi : sélection multiple par `Maj+↑/↓` et `Maj+clic` seulement, `Ctrl+clic` reste « nouvel onglet » ; les pages sélectionnées se suppriment et se déplacent ensemble ; pas d'export de plusieurs pages (retiré du critère de sortie de J10) ; corbeille ouverte au centre, comme les réglages. Choix faits sans lui (questions de la recette J10) : une suppression passe par un `.trash/` local, non synchronisé, que le cycle suivant transfère sur le NAS, NAS joignable ou non ; pas de confirmation pour mettre à la corbeille ; restauration sous le parent d'origine retrouvé par identifiant, sinon à la racine, en dernière position. |
 | 2026-10-01 | Windows abandonné. Cibles : Linux (desktop) et Android (compagnon). |
 | 2026-10-01 | Android en Capacitor, pour partager le code React et TypeScript avec le desktop. |
 | 2026-10-01 | Android accède au vault en SMB direct, avec un cache local pour la consultation hors ligne. |
@@ -914,6 +937,17 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 | 2026-10-04 | Recette J8, questions tranchées par Eloi, toutes acceptées : mention au titre du moment, lien interne mis en forme laissé en lien ; `Ctrl+Z` ne défait pas la mise à jour d'une mention ; détourage silueta suffisant ; icône image `icone-2.webp`, l'ancienne dans les images inutilisées ; `mailto:` ouvre la messagerie. Ses retours : infobulle qui se ferme quand la souris va vers elle, « Ajouter une icône » trop haut, sélection de blocs qui ne fait pas défiler la page, icône depuis l'adresse d'une image, et mention de site comme Notion. |
 | 2026-10-04 | Recette J8 validée par Eloi, retouches 0.8.1 à 0.8.4 comprises : J8 passe à « Fait », version 0.9.0. Il commite lui-même. |
 | 2026-10-04 | Durées de cycle de la sync relevées par Eloi (relevé du NAS 51 à 55 ms, cycle 56 à 61 ms) : l'intervalle passera de 10 à 5 s, réglage à faire. |
+| 2026-10-04 | Recette J9 validée par Eloi, retouches 0.9.1 à 0.9.7 comprises : J9 passe à « Fait », version 0.10.0. |
+| 2026-10-04 | Version 0.9.7 (retour d'Eloi, capture) : dans le PDF, la case d'une tâche était plus haute que son texte et restait vide pour une tâche faite. L'export n'emportait pas la remise à zéro des styles du navigateur que Tailwind fait dans l'application (marge d'un paragraphe, d'où aussi des puces trop écartées) : ses règles utiles sont reprises en CSS ordinaire dans `styles/reset.css`. L'état coché, propriété du DOM, est écrit en attribut ; la case n'est plus « désactivée », ce qui la pâlissait. |
+| 2026-10-04 | Version 0.9.6 (retours d'Eloi sur un PDF) : le fichier exporté s'ouvre dès qu'il est écrit ; sommaire limité aux titres de niveau 1 à 3 ; sur le papier, ses entrées ont la couleur des liens (elles se cliquaient déjà, sans que rien ne le montre). Corrigé : la racine du document restait sombre sous le papier (variables du papier posées sur `html`, plus faible que `:root`), d'où un grand rectangle noir sous la fin du contenu et un liseré autour des pages. |
+| 2026-10-04 | Version 0.9.5 (demande d'Eloi) : les listes de la fenêtre d'export (format, marges) reprennent le style du choix du type de bloc de la barre d'outils au lieu de la liste du système ; `Échap` ferme la liste ouverte sans fermer la fenêtre. |
+| 2026-10-04 | Version 0.9.4 (demandes d'Eloi, la fenêtre d'export montrait trop de choses) : le format se choisit dans un menu déroulant, « Page web » devient « HTML », le PDF est toujours en A4 (le choix du papier est retiré, les marges restent) ; fenêtre plus grande et plus contrastée, bouton « Exporter » plein. |
+| 2026-10-04 | Version 0.9.3 (demande d'Eloi) : « Exporter… » retiré du menu du clic droit de l'arborescence ; l'export se lance par l'icône en haut de la page ouverte (remplace la décision du même jour). |
+| 2026-10-04 | Recette J9, questions tranchées par Eloi : la page web et les pages du ZIP gardent le thème sombre de l'écran ; seuil du sommaire (six titres dont trois sous-parties) d'accord ; une page décochée qui mène à une sous-page cochée reste dans la navigation en italique, sans lien. |
+| 2026-10-04 | Version 0.9.2, réponses d'Eloi à la recette J9 (questions 1 à 6) : PDF aux couleurs adaptées au papier, contraste vérifié (4,5:1 texte, 3:1 traits), blocs de code sur fond sombre ; sommaire dans le PDF comme dans la page web quand la page est longue (six titres dont trois sous-parties) ; Markdown sans front-matter par défaut, image en mention, d'accord ; icône de la page à gauche du titre ; ZIP en pages web seulement, `assets/images/` et `assets/html/` à la racine, la page à la racine et ses sous-pages dans un dossier à côté ; tout export de plusieurs pages a une liste de pages à décocher. Reste la question 7 (thème sombre de la page web). |
+| 2026-10-04 | Demandes d'Eloi : les fonctions IA tournent en local par défaut, avec toujours l'option d'appeler une API externe (remplace « tout passe par le proxy LiteLLM du réseau ») ; moteur et emplacement à choisir avant J12 (P1). La sélection multiple de pages dans l'arborescence est ajoutée à J10, avec la corbeille. Le dossier des notes d'Eloi est vidé à sa demande, remplacé par les pages de test des exports (« Tests export »). |
+| 2026-10-04 | Version 0.9.1, J9 écrit, choix faits sans Eloi (questions de la recette J9) : la page est rendue hors écran avec les vues de l'éditeur puis sérialisée, pour un HTML et un PDF identiques à l'écran ; le PDF est imprimé par Chromium dans une fenêtre cachée, sans script ni réseau, et le HTML porte une politique qui interdit tout chargement. Sur le papier, fond, texte, gris et bordures passent en clair, les blocs de code gardent le fond sombre du thème pour leurs couleurs Dark+. Le PDF n'a pas de sommaire, la page web oui. Markdown : front-matter retiré par défaut, image en `*Image : texte alternatif, légende*`. ZIP : `Titre/Titre.md`, images dans `assets/` ; une note `.md` posée seule entre dans l'archive, un dossier sans page n'y met que ses sous-pages. Options retenues d'un export à l'autre, dossier du dernier export proposé au suivant (Documents la première fois). La page ouverte est enregistrée avant l'export. ZIP par `fflate`. |
+| 2026-10-04 | Export (J9), suite des choix d'Eloi (P1, P2) : en Markdown, un callout s'écrit en paragraphes simples, son icône au début du premier ; une mention de site devient un lien Markdown normal, sans le titre « mention ». L'export se lance par « Exporter… » dans le menu de l'arborescence et par une icône en haut de la page, sans raccourci : une fenêtre choisit le format et ses options, puis la boîte « Enregistrer sous » du système. Le ZIP contient la page et ses sous-pages passées par l'export Markdown, mais avec leurs images, copiées dans l'archive et liées par chemin relatif. |
 | 2026-10-04 | Export (J9), choix d'Eloi : pas de citation dans l'export, un callout n'est pas converti en citation ; une mention de page s'exporte en texte simple (son titre) en Markdown ; PDF aux couleurs du thème sur fond blanc ; pas d'auteur dans le pied de page. |
 | 2026-10-04 | Mention de site (choix d'Eloi, comme « Mention » au collage dans Notion) : toute adresse collée seule devient une puce avec la favicon et le titre du site, contacté à chaque collage (sans cookies, délai court) ; l'infobulle la ramène à un simple lien. Dans le fichier, un lien Markdown standard au titre « mention » : `[Titre du site](https://exemple.fr "mention")`. La favicon est gardée dans `.notes/favicons/`, synchronisée, jamais rechargée d'Internet à l'affichage. |
 | 2026-10-04 | J8, choix faits sans Eloi (questions de la recette J8) : une mention est un nœud à part, pour tout lien `notes://uuid` au texte simple ; un lien interne mis en forme reste un lien. La page ouverte n'est pas réécrite par le main au renommage : son éditeur change ses mentions, enregistrées comme une frappe (pas de faux conflit). Icône : emoji tel quel, nom Lucide en kebab-case, ou `assets/…` de la page ; image en WebP 128 × 128. Détourage par `onnxruntime-web` en WebAssembly dans un worker du main, avec le modèle silueta (Apache 2.0) téléchargé au build et vérifié par empreinte : `@imgly/background-removal-node` écarté (AGPL, `sharp` et `onnxruntime-node` natifs). AppImage de 128 à 159 Mo. Les adresses `mailto:` s'ouvrent aussi depuis la fenêtre. Une image collée depuis une autre page est copiée dans la sienne. |
@@ -944,6 +978,9 @@ Desktop uniquement. La liste complète, contexte par contexte (arborescence, rec
 | `Ctrl+Shift+N` | Nouvelle page à la racine |
 | `Échap` (nom d'une page « Sans titre ») | Supprimer la page si elle est vide, sinon annuler le renommage |
 | `Échap` (réglages) | Revenir aux réglages depuis le thème, puis à la page |
+| `Échap` (corbeille) | Revenir à la page |
+| `Maj+↑/↓`, `Maj+clic` (arborescence) | Sélectionner plusieurs pages |
+| `Suppr` (arborescence) | Mettre à la corbeille les pages sélectionnées, ou la page du focus |
 | `Ctrl+T` / `Ctrl+W` | Nouvel onglet / fermer |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Onglet suivant / précédent |
 | `Ctrl+clic`, clic du milieu | Ouvrir la page dans un nouvel onglet (arborescence) ; le clic du milieu ferme un onglet |
@@ -1059,3 +1096,14 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-04 | 0.8.3 | Haut de page, boutons d'icône |
 | 2026-10-04 | 0.8.4 | « Ajouter une icône » centré |
 | 2026-10-04 | 0.9.0 | J8 : liens et icônes validés |
+| 2026-10-04 | 0.9.1 | J9 : export, en recette |
+| 2026-10-04 | 0.9.2 | Export : papier, ZIP en HTML |
+| 2026-10-04 | 0.9.3 | Exporter retiré du menu |
+| 2026-10-04 | 0.9.4 | Fenêtre d'export simplifiée |
+| 2026-10-04 | 0.9.5 | Listes de l'export restylées |
+| 2026-10-04 | 0.9.6 | PDF : fond, sommaire, ouverture |
+| 2026-10-04 | 0.9.7 | PDF : cases des tâches |
+| 2026-10-04 | 0.10.0 | J9 : export validé |
+| 2026-10-04 | 0.10.1 | J10 : corbeille, en recette |
+| 2026-10-04 | 0.10.2 | Corbeille : confirmation, place d'origine |
+| 2026-10-04 | 0.11.0 | J10 : corbeille validée |

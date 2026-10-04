@@ -79,7 +79,18 @@ export function useVault() {
       async (chemin: string, parent: string, index: number) => appliquer(await api.deplacerPage({ chemin, parent, index })),
       [appliquer],
     ),
+    deplacerPages: useCallback(
+      async (chemins: string[], parent: string, index: number) => appliquer(await api.deplacerPages({ chemins, parent, index })),
+      [appliquer],
+    ),
     dupliquerPage: useCallback(async (chemin: string) => appliquer(await api.dupliquerPage({ chemin })), [appliquer]),
+    /** Met des pages à la corbeille. Vrai si c'est fait, sinon l'erreur s'affiche sous l'arborescence. */
+    mettreALaCorbeille: useCallback(
+      async (chemins: string[]) => appliquer(await api.mettreALaCorbeille({ chemins })) !== null,
+      [appliquer],
+    ),
+    /** Arbre reçu d'une action faite ailleurs (restauration depuis la corbeille). */
+    definirArbre,
     /** Change l'icône d'une page (null la retire), ou en fait une de cette image recadrée. Rend le message d'erreur, null sinon. */
     changerIcone: useCallback(
       async (chemin: string, choix: { icone: string | null } | { octets: Uint8Array }) => {

@@ -15,3 +15,5 @@ export { assemblerTexte, assemblerVersions, comparerVersions } from './merge/con
 export type { ConflictRow } from './merge/conflict';
 export { extraireSommaire } from './outline';
 export type { OutlineEntry } from './outline';
+export { exporterMarkdown, mentionDImage } from './export/markdown';
+export type { MarkdownExportOptions } from './export/markdown';

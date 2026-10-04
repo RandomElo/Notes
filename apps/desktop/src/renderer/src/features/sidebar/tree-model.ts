@@ -49,16 +49,18 @@ function peutAccueillir(arbre: readonly TreeNode[], parent: string): boolean {
 }
 
 /**
- * Traduit un dépôt en déplacement. null si le dépôt n'a pas de sens : page
- * déposée sur elle-même ou dans sa descendance, parent non importé.
+ * Traduit un dépôt en déplacement, d'une page ou de plusieurs pages
+ * sélectionnées. null si le dépôt n'a pas de sens : page déposée sur
+ * elle-même ou dans sa descendance, parent non importé.
  */
 export function cibleDeDepot(
   arbre: readonly TreeNode[],
-  deplace: string,
+  deplace: string | readonly string[],
   survole: string,
   zone: DropZone,
 ): MoveTarget | null {
-  if (trouverNoeud(arbre, deplace)?.importe !== true || estDansDossier(survole, deplace)) {
+  const deplaces: readonly string[] = typeof deplace === 'string' ? [deplace] : deplace;
+  if (deplaces.length === 0 || deplaces.some((chemin) => trouverNoeud(arbre, chemin)?.importe !== true || estDansDossier(survole, chemin))) {
     return null;
   }
   const cible = trouverNoeud(arbre, survole);
@@ -69,8 +71,8 @@ export function cibleDeDepot(
   if (!peutAccueillir(arbre, parent)) {
     return null;
   }
-  // La position se compte parmi les pages importées du parent, la page déplacée mise à part.
-  const pages = (enfantsDe(arbre, parent) ?? []).filter((enfant) => enfant.importe && enfant.chemin !== deplace);
+  // La position se compte parmi les pages importées du parent, les pages déplacées mises à part.
+  const pages = (enfantsDe(arbre, parent) ?? []).filter((enfant) => enfant.importe && !deplaces.includes(enfant.chemin));
   if (zone === 'dedans') {
     return { parent, index: pages.length };
   }
@@ -121,4 +123,44 @@ export function trouverParCle(arbre: readonly TreeNode[], cle: string | null): T
     }
   }
   return null;
+}
+
+/**
+ * Pages sélectionnées par `Maj+clic` ou `Maj+↑/↓` : toutes les pages
+ * importées affichées entre l'ancre et la ligne visée, les deux comprises,
+ * dans l'ordre d'affichage. Les éléments non importés n'en font pas partie.
+ */
+export function plageDeSelection(lignes: readonly VisibleRow[], ancre: string, cible: string): string[] {
+  const cles = lignes.map((ligne) => cleDeNoeud(ligne.noeud));
+  const debut = cles.indexOf(ancre);
+  const fin = cles.indexOf(cible);
+  if (debut === -1 || fin === -1) {
+    return [];
+  }
+  return lignes
+    .slice(Math.min(debut, fin), Math.max(debut, fin) + 1)
+    .filter((ligne) => ligne.noeud.importe)
+    .map((ligne) => cleDeNoeud(ligne.noeud));
+}
+
+/**
+ * Pages à traiter pour une sélection : dans l'ordre d'affichage, sans celles
+ * dont un ancêtre est aussi sélectionné (elles partent avec lui).
+ */
+export function racinesDeSelection(lignes: readonly VisibleRow[], cles: ReadonlySet<string>): TreeNode[] {
+  const choisis = lignes.filter((ligne) => ligne.noeud.importe && cles.has(cleDeNoeud(ligne.noeud))).map((ligne) => ligne.noeud);
+  return choisis.filter((noeud) => !choisis.some((autre) => autre !== noeud && estDansDossier(noeud.chemin, autre.chemin)));
+}
+
+/**
+ * Ligne qui prend le focus après la suppression de ces pages : la première
+ * ligne restante après elles, sinon la dernière avant. null s'il n'en reste aucune.
+ */
+export function ligneApresSuppression(lignes: readonly VisibleRow[], supprimees: readonly TreeNode[]): string | null {
+  const reste = (ligne: VisibleRow) => !supprimees.some((noeud) => estDansDossier(ligne.noeud.chemin, noeud.chemin));
+  const derniere = Math.max(...lignes.map((ligne, rang) => (reste(ligne) ? -1 : rang)));
+  const apres = lignes.slice(derniere + 1).find(reste);
+  const avant = lignes.slice(0, Math.max(0, derniere)).reverse().find(reste);
+  const choisie = apres ?? avant;
+  return choisie === undefined ? null : cleDeNoeud(choisie.noeud);
 }

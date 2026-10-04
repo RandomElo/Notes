@@ -143,7 +143,10 @@ describe('variablesDuTheme', () => {
     const utilisees = new Set([...feuille('base.css').matchAll(/var\((--[a-z0-9-]+)/g)].map((trouve) => trouve[1] as string));
     // Variables que base.css définit elle-même, à partir de celles du thème.
     const locales = new Set([...feuille('base.css').matchAll(/^\s*(--[a-z0-9-]+):/gm)].map((trouve) => trouve[1] as string));
-    const manquantes = [...utilisees].filter((nom) => !locales.has(nom) && variables[nom] === undefined);
+    // Variables posées sur l'élément par une vue de nœud, pas par le thème.
+    const poseesParLesVues = new Set(['--largeur-image']);
+    expect(utilisees.size).toBeGreaterThan(20);
+    const manquantes = [...utilisees].filter((nom) => !locales.has(nom) && !poseesParLesVues.has(nom) && variables[nom] === undefined);
     expect(manquantes).toEqual([]);
   });
 

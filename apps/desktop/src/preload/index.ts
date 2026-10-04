@@ -38,6 +38,7 @@ const api: NotesApi = {
   changerIcone: (demande) => ipcRenderer.invoke(canaux.changerIcone, demande),
   ajouterIconeImage: (demande) => ipcRenderer.invoke(canaux.ajouterIconeImage, demande),
   deplacerPage: (demande) => ipcRenderer.invoke(canaux.deplacerPage, demande),
+  deplacerPages: (demande) => ipcRenderer.invoke(canaux.deplacerPages, demande),
   dupliquerPage: (demande) => ipcRenderer.invoke(canaux.dupliquerPage, demande),
   supprimerPageVide: (demande) => ipcRenderer.invoke(canaux.supprimerPageVide, demande),
   importer: (demande) => ipcRenderer.invoke(canaux.importer, demande),
@@ -110,6 +111,17 @@ const api: NotesApi = {
   apercuDuSite: (demande) => ipcRenderer.invoke(canaux.apercuDuSite, demande),
   enregistrerFavicon: (demande) => ipcRenderer.invoke(canaux.enregistrerFavicon, demande),
   montrerFichier: (demande) => ipcRenderer.invoke(canaux.montrerFichier, demande),
+  exporter: (demande) => ipcRenderer.invoke(canaux.exporter, demande),
+  montrerExport: (demande) => ipcRenderer.invoke(canaux.montrerExport, demande),
+  lireImageDExport: (demande) => ipcRenderer.invoke(canaux.lireImageDExport, demande),
+
+  mettreALaCorbeille: (demande) => ipcRenderer.invoke(canaux.mettreALaCorbeille, demande),
+  mettreImageALaCorbeille: (demande) => ipcRenderer.invoke(canaux.mettreImageALaCorbeille, demande),
+  listerCorbeille: () => ipcRenderer.invoke(canaux.listerCorbeille),
+  apercuCorbeille: (demande) => ipcRenderer.invoke(canaux.apercuCorbeille, demande),
+  restaurerDeLaCorbeille: (demande) => ipcRenderer.invoke(canaux.restaurerDeLaCorbeille, demande),
+  supprimerDeLaCorbeille: (demande) => ipcRenderer.invoke(canaux.supprimerDeLaCorbeille, demande),
+  viderCorbeille: () => ipcRenderer.invoke(canaux.viderCorbeille),
 };
 
 contextBridge.exposeInMainWorld('notes', api);

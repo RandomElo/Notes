@@ -8,3 +8,6 @@ export { cheminDeLImage } from './page-view/node-views/image-path';
 export type { ImageViewOptions } from './page-view/node-views/image-view';
 export type { MentionViewOptions, MentionedPage, PagesDirectory } from './page-view/node-views/mention-view';
 export * from './theme';
+export { documentHtmlAutonome, echapperHtml, feuilleCommune, feuilleDExport, navigationDArchive, sommaireUtile } from './export/standalone-html';
+export { contraste, couleurLisible, variablesDuPapier } from './export/paper-colors';
+export type { ArchiveNavigationEntry, ExportOutlineEntry, StandaloneHtmlInput } from './export/standalone-html';

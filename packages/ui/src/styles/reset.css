@@ -1,0 +1,98 @@
+/*
+ * Remise à zéro d'une page exportée (README §9). Dans l'application, Tailwind
+ * retire les marges et les styles par défaut du navigateur (son « preflight »),
+ * et base.css compte dessus : sans elle, un paragraphe garde sa marge d'un
+ * texte, ce qui décale le texte d'une tâche sous sa case et écarte les puces.
+ *
+ * Reprise des règles du preflight de Tailwind 4 (licence MIT) dont le contenu
+ * d'une page dépend, écrites en CSS ordinaire : le preflight d'origine utilise
+ * `--theme()`, que seul Tailwind comprend. Placée avant base.css, qui l'emporte.
+ */
+*,
+::after,
+::before,
+::backdrop {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  border: 0 solid;
+}
+
+html {
+  line-height: 1.5;
+  -webkit-text-size-adjust: 100%;
+  tab-size: 4;
+}
+
+hr {
+  height: 0;
+  color: inherit;
+  border-top-width: 1px;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  font-size: inherit;
+  font-weight: inherit;
+}
+
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+b,
+strong {
+  font-weight: bolder;
+}
+
+code,
+kbd,
+samp,
+pre {
+  font-family: var(--font-mono);
+  font-size: 1em;
+}
+
+table {
+  text-indent: 0;
+  border-color: inherit;
+  border-collapse: collapse;
+}
+
+ol,
+ul,
+menu {
+  list-style: none;
+}
+
+img,
+svg,
+video,
+canvas {
+  display: block;
+  vertical-align: middle;
+}
+
+img,
+video {
+  max-width: 100%;
+  height: auto;
+}
+
+input,
+button,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+  background-color: transparent;
+}
+
+summary {
+  display: list-item;
+}

@@ -3,7 +3,7 @@ import type { ColorName, Theme } from './defaults';
 import { estCouleur } from './fields';
 
 /** Nom de la variable CSS de chaque couleur de la palette (jetons Tailwind de `styles/theme.css`). */
-const variableDeCouleur: Record<ColorName, string> = {
+export const variableDeCouleur: Record<ColorName, string> = {
   background: '--color-fond',
   surface: '--color-surface',
   border: '--color-bordure',

@@ -16,7 +16,10 @@ export type Releve = Map<string, ScanEntry>;
 /** Nom du verrou d'une page sur le NAS (voir lock.ts). */
 export const nomDuVerrou = '.lock';
 
-/** Corbeille du NAS (J10) : elle n'existe que là-bas et ne descend jamais sur le poste. */
+/**
+ * Corbeille (J10, `trash/trash.ts`) : celle du poste n'est qu'un passage, celle du NAS ne descend
+ * jamais sur le poste. Elle passe de l'une à l'autre par `transfererCorbeille`, pas par la sync.
+ */
 const corbeille = '.trash';
 
 /**

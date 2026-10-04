@@ -29,6 +29,7 @@ C'est Notes qui capte ces touches. Si un raccourci personnalisé de Cinnamon les
 | `Ctrl+,` | Ouvrir ou fermer les réglages |
 | `Ctrl+Q` | Quitter Notes pour de bon (fermer la fenêtre la garde en fond, pour la recherche globale) |
 | `Échap` (réglages) | Revenir aux réglages depuis l'écran du thème, puis à la page |
+| `Échap` (corbeille) | Revenir à la page. Pendant une confirmation (« Effacer pour de bon »), l'annule d'abord |
 
 ## Recherche (`Ctrl+K`)
 
@@ -50,6 +51,10 @@ Le sommaire complet de la page (icône à côté de « Enregistré ») se pilote
 | `Début` / `Fin` | Première / dernière page |
 | `Entrée` ou `Espace` | Ouvrir la page |
 | `Ctrl+Entrée`, `Ctrl+clic`, clic du milieu | Ouvrir la page dans un nouvel onglet |
+| `Maj+↑` / `Maj+↓` | Étendre la sélection depuis la page du focus |
+| `Maj+clic` | Sélectionner toutes les pages entre la page ouverte (ou le début de la sélection) et la page cliquée, sans l'ouvrir |
+| `Échap` | Défaire la sélection |
+| `Suppr` | Mettre à la corbeille les pages sélectionnées, ou la page du focus. Si l'une a des sous-pages, une confirmation : `Entrée` confirme, `Échap` abandonne |
 | `F2` | Renommer |
 | `Alt+↑` / `Alt+↓` | Déplacer la page parmi ses sœurs |
 | Touche Menu | Menu contextuel |

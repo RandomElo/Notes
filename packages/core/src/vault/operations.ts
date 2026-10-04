@@ -168,9 +168,37 @@ export async function deplacerPage(
 }
 
 /**
+ * Déplace plusieurs pages ensemble sous « parent », à la suite et dans
+ * l'ordre donné, à partir de la position « index ». L'index se compte parmi
+ * les pages du parent, les pages déplacées non comprises. Une page dont un
+ * ancêtre est aussi déplacé suit celui-ci : elle n'est pas traitée à part.
+ */
+export async function deplacerPages(
+  contexte: VaultContext,
+  chemins: readonly string[],
+  cible: { parent: string; index?: number },
+): Promise<PageLocation[]> {
+  const { fs } = contexte;
+  const racines = chemins.filter((chemin, rang) => chemins.indexOf(chemin) === rang && !chemins.some((autre) => autre !== chemin && estDansDossier(chemin, autre)));
+  if (racines.some((chemin) => estDansDossier(cible.parent, chemin))) {
+    throw new VaultError('deplacement_invalide', 'Une page ne peut pas être déplacée dans elle-même.');
+  }
+  await verifierParent(fs, cible.parent);
+  const deplacees: PageLocation[] = [];
+  for (const chemin of racines) {
+    deplacees.push(await deplacerPage(contexte, chemin, { parent: cible.parent }));
+  }
+  const ids = deplacees.map((page) => page.id);
+  const autres = (await idsDesEnfants(fs, cible.parent)).filter((id) => !ids.includes(id));
+  const position = cible.index === undefined ? autres.length : Math.max(0, Math.min(Math.floor(cible.index), autres.length));
+  await ecrireOrdre(fs, cible.parent, [...autres.slice(0, position), ...ids, ...autres.slice(position)]);
+  return deplacees;
+}
+
+/**
  * Supprime une page qui vient d'être créée et n'a servi à rien : ni contenu, ni sous-page, ni
- * autre fichier dans son dossier. Sans corbeille (J10), c'est la seule suppression permise :
- * toute page qui contient quelque chose est refusée, rien n'est écrit.
+ * autre fichier dans son dossier, sans passer par la corbeille : il n'y a rien à garder.
+ * Toute page qui contient quelque chose est refusée, rien n'est écrit.
  */
 export async function supprimerPageVide(contexte: VaultContext, chemin: string): Promise<PageLocation> {
   const { fs } = contexte;

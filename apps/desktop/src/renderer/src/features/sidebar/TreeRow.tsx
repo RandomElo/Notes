@@ -15,8 +15,8 @@ export interface TreeRowProps {
   enRenommage: boolean;
   /** Zone survolée pendant un glisser-déposer, null hors survol. */
   zoneDeDepot: DropZone | null;
-  /** Clic sur la ligne. « nouvelOnglet » : Ctrl+clic ou clic du milieu. */
-  surSelection: (nouvelOnglet: boolean) => void;
+  /** Clic sur la ligne. « nouvelOnglet » : Ctrl+clic ou clic du milieu. « etendre » : Maj+clic, sélection multiple. */
+  surSelection: (nouvelOnglet: boolean, etendre: boolean) => void;
   surBascule: () => void;
   surValidationDuTitre: (titre: string) => void;
   surAbandonDuRenommage: () => void;
@@ -57,11 +57,11 @@ export function TreeRow(props: TreeRowProps) {
       aria-expanded={aDesEnfants ? deplie : undefined}
       tabIndex={props.focalisable ? 0 : -1}
       draggable={noeud.importe && !enRenommage}
-      onClick={(evenement) => props.surSelection(evenement.ctrlKey)}
+      onClick={(evenement) => props.surSelection(evenement.ctrlKey, evenement.shiftKey && !evenement.ctrlKey)}
       onAuxClick={(evenement) => {
         if (evenement.button === 1) {
           evenement.preventDefault();
-          props.surSelection(true);
+          props.surSelection(true, false);
         }
       }}
       onContextMenu={ouvrirMenu}
@@ -73,7 +73,7 @@ export function TreeRow(props: TreeRowProps) {
       onDragEnd={props.surFinDeGlisser}
       style={{ paddingLeft: 8 + profondeur * 16 }}
       // Les états se distinguent par le fond seul, jamais par un contour : survol (gris léger),
-      // focus clavier (gris plus marqué), page ouverte (bleu), page ouverte au focus (bleu plus marqué).
+      // focus clavier (gris plus marqué), page ouverte ou sélectionnée (bleu), au focus (bleu plus marqué).
       className={`group relative flex h-7 cursor-pointer items-center gap-1 rounded-md pr-1 text-sm outline-0 select-none ${
         zoneDeDepot === 'dedans'
           ? 'bg-accent/20'

@@ -1,6 +1,6 @@
 import type { TreeNode } from '@notes/core';
 import { describe, expect, it } from 'vitest';
-import { cibleDeDecalage, cibleDeDepot, cleDeNoeud, clesDesAncetres, lignesVisibles, zoneDeDepot } from './tree-model';
+import { cibleDeDecalage, cibleDeDepot, cleDeNoeud, clesDesAncetres, ligneApresSuppression, lignesVisibles, plageDeSelection, racinesDeSelection, zoneDeDepot } from './tree-model';
 
 const page = (chemin: string, enfants: TreeNode[] = [], importe = true): TreeNode => ({
   chemin,
@@ -76,5 +76,34 @@ describe('cibleDeDecalage', () => {
     expect(cibleDeDecalage(arbre, 'A', -1)).toBeNull();
     expect(cibleDeDecalage(arbre, 'C', 1)).toBeNull();
     expect(cibleDeDecalage(arbre, 'A/2', -1)).toEqual({ parent: 'A', index: 0 });
+  });
+});
+
+describe('sélection multiple', () => {
+  const lignes = lignesVisibles(arbre, new Set(['id-A']));
+
+  it('prend les pages importées entre l’ancre et la ligne visée, dans les deux sens', () => {
+    expect(plageDeSelection(lignes, 'id-A/1', 'id-B')).toEqual(['id-A/1', 'id-A/2', 'id-B']);
+    expect(plageDeSelection(lignes, 'id-B', 'id-A/1')).toEqual(['id-A/1', 'id-A/2', 'id-B']);
+    expect(plageDeSelection(lignes, 'id-C', 'id-C')).toEqual(['id-C']);
+    expect(plageDeSelection(lignes, 'id-C', 'absente')).toEqual([]);
+  });
+
+  it('laisse de côté une sous-page dont le parent est aussi sélectionné', () => {
+    expect(racinesDeSelection(lignes, new Set(['id-A', 'id-A/2', 'id-C'])).map((noeud) => noeud.chemin)).toEqual(['A', 'C']);
+  });
+
+  it('déplace plusieurs pages en comptant la position sans elles', () => {
+    expect(cibleDeDepot(arbre, ['A', 'B'], 'C', 'apres')).toEqual({ parent: '', index: 1 });
+    expect(cibleDeDepot(arbre, ['B', 'C'], 'A/1', 'avant')).toEqual({ parent: 'A', index: 0 });
+    expect(cibleDeDepot(arbre, ['B', 'A'], 'A/1', 'avant')).toBeNull();
+    expect(cibleDeDepot(arbre, ['B', 'brut.md'], 'C', 'avant')).toBeNull();
+  });
+
+  it('donne le focus à la ligne qui suit les pages supprimées, sinon à celle d’avant', () => {
+    const noeud = (chemin: string) => lignes.find((ligne) => ligne.noeud.chemin === chemin)!.noeud;
+    expect(ligneApresSuppression(lignes, [noeud('A/2'), noeud('A/1')])).toBe('chemin:A/brut.md');
+    expect(ligneApresSuppression(lignes, [noeud('A')])).toBe('id-B');
+    expect(ligneApresSuppression(lignes, [noeud('C'), noeud('brut.md')])).toBe('id-B');
   });
 });

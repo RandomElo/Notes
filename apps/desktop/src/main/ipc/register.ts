@@ -1,11 +1,13 @@
 import { app, ipcMain } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { canaux } from '../../shared/ipc-contract';
+import type { creerHandlersExport } from './export';
 import type { creerHandlersImages } from './images';
 import type { creerHandlersLiens } from './links';
 import type { creerHandlersNas } from './nas';
 import type { creerHandlersSync } from './sync';
 import type { creerHandlersTheme } from './theme';
+import type { creerHandlersCorbeille } from './trash';
 import type { creerHandlersVault } from './vault';
 import type { creerHandlersFenetre } from './window';
 
@@ -17,6 +19,8 @@ export interface IpcDependencies {
   sync: ReturnType<typeof creerHandlersSync>;
   images: ReturnType<typeof creerHandlersImages>;
   liens: ReturnType<typeof creerHandlersLiens>;
+  exports: ReturnType<typeof creerHandlersExport>;
+  corbeille: ReturnType<typeof creerHandlersCorbeille>;
   recherche: {
     etatDuFond: () => unknown;
     definirDemarrageAuto: (actif: unknown) => unknown;
@@ -33,7 +37,7 @@ export interface IpcDependencies {
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, recherche, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, recherche, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -66,6 +70,7 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.changerIcone, (demande) => vault.changerIcone(demande));
   brancher(canaux.ajouterIconeImage, (demande) => vault.ajouterIconeImage(demande));
   brancher(canaux.deplacerPage, (demande) => vault.deplacerPage(demande));
+  brancher(canaux.deplacerPages, (demande) => vault.deplacerPages(demande));
   brancher(canaux.dupliquerPage, (demande) => vault.dupliquerPage(demande));
   brancher(canaux.supprimerPageVide, (demande) => vault.supprimerPageVide(demande));
   brancher(canaux.importer, (demande) => vault.importer(demande));
@@ -109,4 +114,16 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.copierImage, (demande) => images.copier(demande));
   brancher(canaux.apercuDuSite, (demande) => liens.apercuDuSite(demande));
   brancher(canaux.enregistrerFavicon, (demande) => liens.enregistrerFavicon(demande));
+
+  brancher(canaux.exporter, (demande) => exports.exporter(demande));
+  brancher(canaux.montrerExport, (demande) => exports.montrer(demande));
+  brancher(canaux.lireImageDExport, (demande) => exports.lireImage(demande));
+
+  brancher(canaux.mettreALaCorbeille, (demande) => corbeille.mettre(demande));
+  brancher(canaux.mettreImageALaCorbeille, (demande) => corbeille.mettreImage(demande));
+  brancher(canaux.listerCorbeille, () => corbeille.lister());
+  brancher(canaux.apercuCorbeille, (demande) => corbeille.apercu(demande));
+  brancher(canaux.restaurerDeLaCorbeille, (demande) => corbeille.restaurer(demande));
+  brancher(canaux.supprimerDeLaCorbeille, (demande) => corbeille.supprimer(demande));
+  brancher(canaux.viderCorbeille, () => corbeille.vider());
 }

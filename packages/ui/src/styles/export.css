@@ -1,0 +1,235 @@
+/*
+ * Mise en page d'une page exportée (README §9) : HTML autonome, PDF, pages
+ * d'une archive. S'ajoute à base.css, qui donne le contenu. Aucun script.
+ */
+html {
+  background-color: var(--color-fond);
+  color-scheme: dark light;
+}
+
+body {
+  margin: 0;
+  background-color: var(--color-fond);
+  color: var(--color-texte);
+  font-family: var(--font-sans);
+}
+
+.export {
+  box-sizing: border-box;
+  max-width: calc(var(--ui-largeur-contenu) + 4rem);
+  margin: 0 auto;
+  padding: 3rem 2rem 4rem;
+}
+
+.export-entete {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 0 0 1.5rem;
+}
+
+/* L'icône de la page à gauche du titre, à sa hauteur : elle ne prend pas une ligne à elle seule. */
+.export-icone {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  font-size: 2.1rem;
+  line-height: 1;
+}
+
+.export-icone > img,
+.export-icone > svg {
+  width: 2.25rem;
+  height: 2.25rem;
+}
+
+.export-icone > img {
+  border-radius: 0.3rem;
+  object-fit: cover;
+}
+
+.export-titre {
+  margin: 0;
+  min-width: 0;
+  color: var(--color-texte);
+  font-size: 2.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+/* Icône d'une mention : à la taille du texte. */
+.notes-page .mention > svg,
+.notes-page .mention > img {
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+}
+
+.notes-page .mention > img {
+  border-radius: 0.15em;
+  object-fit: cover;
+}
+
+.notes-page .mention > .mention-emoji {
+  font-size: 1em;
+}
+
+/* Une mention d'une page de l'archive est un lien : même allure qu'une mention. */
+.notes-page a.mention {
+  color: inherit;
+  text-decoration: none;
+}
+
+.notes-page ul[data-type='taskList'] input {
+  pointer-events: none;
+}
+
+/* Sommaire en tête de page, avec ses ancres. */
+.export-sommaire {
+  margin: 0 0 2rem;
+  border-left: 3px solid var(--color-bordure);
+  padding: 0.25rem 0 0.25rem 1rem;
+  font-size: 0.95rem;
+}
+
+.export-sommaire summary,
+.export-sommaire-titre {
+  margin: 0;
+  color: var(--color-discret);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.export-sommaire ol {
+  margin: 0.5rem 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.export-sommaire li {
+  margin: 0.15rem 0;
+}
+
+.export-sommaire a {
+  color: var(--color-texte);
+  text-decoration: none;
+}
+
+.export-sommaire a:hover {
+  color: var(--color-accent);
+}
+
+.export-sommaire [data-niveau='2'] {
+  padding-left: 1rem;
+}
+
+.export-sommaire [data-niveau='3'] {
+  padding-left: 2rem;
+}
+
+.export-sommaire [data-niveau='4'] {
+  padding-left: 3rem;
+}
+
+.export-sommaire [data-niveau='5'] {
+  padding-left: 4rem;
+}
+
+/* Navigation entre les pages d'une archive. */
+.export-navigation {
+  box-sizing: border-box;
+  max-width: calc(var(--ui-largeur-contenu) + 4rem);
+  margin: 0 auto;
+  border-bottom: 1px solid var(--color-bordure);
+  padding: 1rem 2rem;
+  font-size: 0.9rem;
+}
+
+.export-navigation ul {
+  margin: 0;
+  padding-left: 1.1rem;
+}
+
+.export-navigation > ul {
+  padding-left: 0;
+  list-style: none;
+}
+
+.export-navigation a {
+  color: var(--color-discret);
+  text-decoration: none;
+}
+
+.export-navigation a:hover {
+  color: var(--color-accent);
+}
+
+.export-navigation-absente {
+  color: var(--color-discret);
+  font-style: italic;
+}
+
+.export-navigation [aria-current='page'] {
+  color: var(--color-texte);
+  font-weight: 600;
+}
+
+/*
+ * PDF (README §9) : titres jamais seuls en bas d'une page ; code, images,
+ * tableaux et callouts non coupés quand ils tiennent sur une page ; en-tête
+ * d'un tableau répété ; orphelines et veuves.
+ */
+@media print {
+  .export {
+    max-width: none;
+    padding: 0;
+  }
+
+  .notes-page pre {
+    overflow: visible;
+  }
+
+  .notes-page .tableWrapper {
+    overflow: visible;
+  }
+
+  .export-entete,
+  .notes-page h1,
+  .notes-page h2,
+  .notes-page h3,
+  .notes-page h4,
+  .notes-page h5 {
+    break-after: avoid;
+    break-inside: avoid;
+  }
+
+  .notes-page pre,
+  .notes-page figure[data-image],
+  .notes-page div[data-callout],
+  .notes-page table,
+  .notes-page tr,
+  .notes-page li {
+    break-inside: avoid;
+  }
+
+  .notes-page thead {
+    display: table-header-group;
+  }
+
+  .notes-page p,
+  .notes-page li,
+  .notes-page pre {
+    orphans: 3;
+    widows: 3;
+  }
+
+  .notes-page img {
+    break-inside: avoid;
+  }
+
+  /* Sur le papier, les titres du sommaire sont des liens : de la couleur des liens, pour qu'on voie qu'ils se cliquent. */
+  .export-sommaire a {
+    color: var(--color-accent);
+  }
+}

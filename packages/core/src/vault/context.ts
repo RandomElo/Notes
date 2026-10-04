@@ -20,7 +20,8 @@ export type VaultErrorCode =
   | 'non_importee'
   | 'deja_importee'
   | 'chemin_invalide'
-  | 'page_non_vide';
+  | 'page_non_vide'
+  | 'deja_presente';
 
 export class VaultError extends Error {
   readonly code: VaultErrorCode;

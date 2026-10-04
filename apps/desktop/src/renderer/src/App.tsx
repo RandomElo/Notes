@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConflictScreen } from './features/conflicts/ConflictScreen';
 import { PageEditor } from './features/editor/PageEditor';
 import { BrokenMentions } from './features/mentions/BrokenMentions';
+import { ExportDialog } from './features/export/ExportDialog';
 import { IconPicker } from './features/page-icon/IconPicker';
 import { annuaireDesPages } from './features/mentions/pages-directory';
 import { renommerEnSuivantLesMentions } from './features/mentions/rename-follow';
@@ -18,6 +19,7 @@ import { ThemePanel } from './features/theme/ThemePanel';
 import { ThemeSummary } from './features/theme/ThemeSummary';
 import { useTheme } from './features/theme/useTheme';
 import { TitleBar } from './features/title-bar/TitleBar';
+import { TrashScreen } from './features/trash/TrashScreen';
 import { cleDeNoeud, clesDesAncetres, trouverParCle } from './features/sidebar/tree-model';
 import { StatusBar } from './features/status-bar/StatusBar';
 import { GlobalShortcutPanel } from './features/search/GlobalShortcutPanel';
@@ -54,6 +56,8 @@ export function App() {
   const [reglagesOuverts, definirReglagesOuverts] = useState(false);
   // L'éditeur de thème est un écran à part, auquel on arrive depuis les réglages.
   const [themeOuvert, definirThemeOuvert] = useState(false);
+  // La corbeille remplace la page au centre, comme les réglages (README §10).
+  const [corbeilleOuverte, definirCorbeilleOuverte] = useState(false);
   const [onglets, definirOnglets] = useStoredState<TabsState>('notes.onglets', ongletsDeDepart(), estEtatDOnglets);
   const selection = ongletActif(onglets).cle;
   // Page de l'onglet affiché, changée sans chercher dans les autres onglets (abandon d'une page neuve).
@@ -65,6 +69,9 @@ export function App() {
   const [listeDeplies, definirListeDeplies] = useStoredState<string[]>('notes.deplies', [], estListeDeTextes);
   const [renommage, definirRenommage] = useState<string | null>(null);
   // Choix de l'icône d'une page ouvert, depuis le haut de la page ou le menu de l'arborescence.
+  // Page dont la fenêtre d'export est ouverte, par son chemin : le nœud est relu dans l'arbre à jour.
+  const [exportDe, definirExportDe] = useState<string | null>(null);
+  const noeudAExporter = exportDe === null ? null : trouverNoeud(vault.arbre, exportDe);
   const [choixDIcone, definirChoixDIcone] = useState<{ chemin: string; icone: string | null; x: number; y: number } | null>(null);
   // Version en conflit ouverte dans l'écran de résolution, à la place de la page.
   const [conflit, definirConflit] = useState<string | null>(null);
@@ -102,6 +109,7 @@ export function App() {
       definirOnglets((etat) => ouvrir(etat, cle, nouvelOnglet));
       definirReglagesOuverts(false);
       definirThemeOuvert(false);
+      definirCorbeilleOuverte(false);
       definirConflit(null);
     },
     [definirOnglets],
@@ -113,6 +121,7 @@ export function App() {
       definirOnglets(changement);
       definirReglagesOuverts(false);
       definirThemeOuvert(false);
+      definirCorbeilleOuverte(false);
       definirConflit(null);
     },
     [definirOnglets],
@@ -175,6 +184,18 @@ export function App() {
     [vault, selection, definirSelection],
   );
 
+  /**
+   * Met des pages à la corbeille. La page ouverte est d'abord enregistrée : sa dernière frappe part
+   * avec elle. Son onglet se vide de lui-même, sa page n'étant plus dans l'arbre.
+   */
+  const mettreALaCorbeille = useCallback(
+    async (noeuds: TreeNode[]): Promise<boolean> => {
+      await toutEnregistrer();
+      return vault.mettreALaCorbeille(noeuds.map((noeud) => noeud.chemin));
+    },
+    [vault],
+  );
+
   // Les mentions lisent titres et icônes dans l'annuaire des pages, tenu à jour depuis l'arborescence.
   useEffect(() => {
     annuaireDesPages.definirArbre(vault.arbre);
@@ -187,7 +208,7 @@ export function App() {
 
   // Ctrl+N : page sœur de la page ouverte, juste après elle, ou page à la racine si aucune n'est ouverte.
   // Ctrl+Maj+N : toujours à la racine.
-  const pageDeReference = !reglagesOuverts && noeudSelectionne?.importe === true ? noeudSelectionne : null;
+  const pageDeReference = !reglagesOuverts && !corbeilleOuverte && noeudSelectionne?.importe === true ? noeudSelectionne : null;
   useEffect(() => {
     const creerSoeur = (page: TreeNode) => {
       const parent = trouverNoeud(vault.arbre, dossierParent(page.chemin));
@@ -244,6 +265,7 @@ export function App() {
         action = () => {
           definirReglagesOuverts((ouverts) => !ouverts);
           definirThemeOuvert(false);
+          definirCorbeilleOuverte(false);
         };
       }
       if (action !== null) {
@@ -299,6 +321,21 @@ export function App() {
     return () => window.removeEventListener('keydown', surTouche);
   }, [reglagesOuverts, themeOuvert]);
 
+  // Échap dans la corbeille : la page revient. Une fenêtre de confirmation ouverte le traite avant.
+  useEffect(() => {
+    if (!corbeilleOuverte) {
+      return;
+    }
+    const surTouche = (evenement: KeyboardEvent) => {
+      if (evenement.key === 'Escape' && !evenement.defaultPrevented) {
+        evenement.preventDefault();
+        definirCorbeilleOuverte(false);
+      }
+    };
+    window.addEventListener('keydown', surTouche);
+    return () => window.removeEventListener('keydown', surTouche);
+  }, [corbeilleOuverte]);
+
   // La page ouverte doit rester visible dans l'arborescence, même après un déplacement.
   const cheminSelectionne = noeudSelectionne?.chemin;
   useEffect(() => {
@@ -348,7 +385,7 @@ export function App() {
         {vault.etat?.dossier != null && barreVisible && (
           <Sidebar
             vault={vault}
-            selection={reglagesOuverts ? null : selection}
+            selection={reglagesOuverts || corbeilleOuverte ? null : selection}
             surSelection={selectionner}
             deplies={deplies}
             surDepliage={(cle, deplie) => deplier([cle], deplie)}
@@ -365,9 +402,17 @@ export function App() {
             surCreation={(parent) => void creer(parent)}
             surAbandon={abandonnerPage}
             surIcone={(noeud, x, y) => definirChoixDIcone({ chemin: noeud.chemin, icone: noeud.icone, x, y })}
+            surCorbeille={mettreALaCorbeille}
             reglagesOuverts={reglagesOuverts}
             surReglages={() => {
               definirReglagesOuverts((ouverts) => !ouverts);
+              definirThemeOuvert(false);
+              definirCorbeilleOuverte(false);
+            }}
+            corbeilleOuverte={corbeilleOuverte}
+            surCorbeilleOuverte={() => {
+              definirCorbeilleOuverte((ouverte) => !ouverte);
+              definirReglagesOuverts(false);
               definirThemeOuvert(false);
             }}
           />
@@ -377,6 +422,16 @@ export function App() {
         <main className="min-w-0 flex-1 overflow-y-auto pr-6 pb-4 pl-12">
           {vault.etat === null ? null : sansVault ? (
             <VaultChooser vault={vault} dossierPropose={vault.etat.dossierPropose} />
+          ) : corbeilleOuverte ? (
+            <TrashScreen
+              surRestauration={(arbre) => vault.definirArbre(arbre)}
+              surOuverture={(id) => {
+                const page = trouverParCle(vault.arbre, id);
+                if (page !== null) {
+                  selectionner(cleDeNoeud(page));
+                }
+              }}
+            />
           ) : reglagesOuverts ? (
             themeOuvert ? (
               <div className="mx-auto max-w-5xl py-4">
@@ -430,6 +485,7 @@ export function App() {
               sommaireVisible={sommaireVisible}
               surOuvrirPage={selectionner}
               surIcone={(x, y) => definirChoixDIcone({ chemin: noeudSelectionne.chemin, icone: noeudSelectionne.icone, x, y })}
+              surExport={() => definirExportDe(noeudSelectionne.chemin)}
             />
           ) : (
             <PageSummary
@@ -443,6 +499,7 @@ export function App() {
         </main>
       </div>
       <StatusBar surResolution={ouvrirConflit} />
+      {noeudAExporter !== null && <ExportDialog noeud={noeudAExporter} theme={theme.theme} surFermeture={() => definirExportDe(null)} />}
       {choixDIcone !== null && (
         <IconPicker
           icone={choixDIcone.icone}

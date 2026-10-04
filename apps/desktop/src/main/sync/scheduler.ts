@@ -1,4 +1,4 @@
-import { LockManager, RemoteFsError, etatApresCycle, etatApresEchec, etatDesactive, etatEnCours, etatLocalDePage, sousDossierDistant, synchroniser } from '@notes/core';
+import { LockManager, RemoteFsError, etatApresCycle, etatApresEchec, etatDesactive, etatEnCours, etatLocalDePage, purgerCorbeille, sousDossierDistant, stockageDistant, synchroniser, transfererCorbeille } from '@notes/core';
 import type { IndexStore, LocalFs, LockOwner, NasSettings, RemoteFs, SyncStatus, TakeResult } from '@notes/core';
 import type { LockView } from '../../shared/ipc-contract';
 import type { SettingsStore } from '../settings/settings-store';
@@ -68,6 +68,8 @@ export class SyncScheduler {
   private arrete = false;
   /** Le poste n'a plus de réseau : aucun cycle avant son retour. */
   private horsLigne = false;
+  /** La corbeille du NAS est purgée une fois par lancement, au premier cycle réussi (README §10). */
+  private corbeillePurgee = false;
   private readonly maintenant: () => number;
 
   constructor(private readonly dependances: SyncSchedulerDependencies) {
@@ -212,6 +214,19 @@ export class SyncScheduler {
     return enAttente;
   }
 
+  /**
+   * Exécute une action sur le dossier des notes du NAS, par la connexion de
+   * la sync (corbeille). null si le NAS n'est pas réglé ou si le poste est
+   * hors ligne ; une erreur du NAS remonte telle quelle.
+   */
+  async avecNas<T>(action: (distant: RemoteFs) => Promise<T>): Promise<T | null> {
+    if (this.horsLigne || this.identifiantsRefuses) {
+      return null;
+    }
+    const session = await this.ouvrirSession();
+    return session === null ? null : action(session.distant);
+  }
+
   /** À la fermeture : dernier cycle (borné dans le temps), verrous rendus, connexion fermée. */
   async arreter(): Promise<void> {
     this.arreterMinuteurs();
@@ -261,6 +276,14 @@ export class SyncScheduler {
         appareil: (await this.dependances.appareil()).appareil,
         ...(this.dependances.enSerie === undefined ? {} : { exclusion: this.dependances.enSerie }),
       });
+      // Les pages mises à la corbeille depuis le dernier cycle partent dans celle du NAS. Sous la file
+      // d'attente du vault : une restauration ou une suppression ne tombe pas au milieu.
+      const exclusion = this.dependances.enSerie ?? (<T>(tache: () => Promise<T>) => tache());
+      await exclusion(() => transfererCorbeille(local, session.distant));
+      if (!this.corbeillePurgee) {
+        await purgerCorbeille(stockageDistant(session.distant), this.maintenant());
+        this.corbeillePurgee = true;
+      }
       // L'entretien des verrous ne doit pas changer l'état affiché : un verrou non rafraîchi périme tout seul.
       await session.verrous.entretenir((page) => etatLocalDePage(local, this.dependances.index, session.cle, page)).catch(() => undefined);
       (this.dependances.journal ?? console.info)(`Sync : relevé du NAS ${rapport.durees.releveDistant} ms, cycle ${rapport.durees.total} ms`);

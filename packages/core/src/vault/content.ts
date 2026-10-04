@@ -24,6 +24,8 @@ export interface PageContent {
   corps: string;
   /** Surcharges de thème du front-matter (`theme_overrides`), non vérifiées. */
   surcharges: Record<string, string>;
+  /** Le front-matter tel qu'il est écrit, sans ses délimiteurs, ou null : l'export Markdown peut le garder (README §9). */
+  enTete: string | null;
 }
 
 /** Le corps d'un élément de l'arborescence et ses surcharges de thème, lus en une fois. Ne modifie rien. */
@@ -34,7 +36,7 @@ export async function lireContenu(fs: LocalFs, chemin: string): Promise<PageCont
     throw new VaultError('introuvable', 'Cette page est introuvable.');
   }
   const morceaux = decouperPage(await fs.lireTexte(fichier));
-  return { corps: morceaux.corps, surcharges: lireSurcharges(morceaux.enTete) };
+  return { corps: morceaux.corps, surcharges: lireSurcharges(morceaux.enTete), enTete: morceaux.enTete };
 }
 
 export interface SaveRequest {

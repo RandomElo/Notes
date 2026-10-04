@@ -38,31 +38,41 @@ export async function repondreImage(adresse: string, fs: LocalFs | null): Promis
   } catch {
     return introuvable;
   }
-  if (fs === null || verifierCheminRelatif(chemin) !== null || !aUneExtensionDImage(chemin)) {
+  const image = await lireImageDuVault(chemin, fs);
+  if (image === null) {
     return introuvable;
+  }
+  return new Response(image.octets, {
+    headers: {
+      'Content-Type': image.type,
+      // Un SVG ouvert seul n'exécute rien et ne charge rien.
+      'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
+      'X-Content-Type-Options': 'nosniff',
+      // L'image peut changer sur le disque (sync) : pas de cache.
+      'Cache-Control': 'no-store',
+    },
+  });
+}
+
+/**
+ * Une image du dossier des notes (chemin relatif à lui) avec sa nature, vérifiée
+ * par ses premiers octets, ou null pour tout ce qui n'en est pas une. Sert le
+ * protocole des images et l'export (images mises dans le fichier exporté).
+ */
+export async function lireImageDuVault(chemin: string, fs: LocalFs | null): Promise<{ octets: Uint8Array; type: string } | null> {
+  if (fs === null || verifierCheminRelatif(chemin) !== null || !aUneExtensionDImage(chemin)) {
+    return null;
   }
   try {
     const infos = await fs.infos(chemin);
     if (infos === null || infos.estDossier || infos.taille > tailleMaxDImage) {
-      return introuvable;
+      return null;
     }
     const octets = await fs.lireOctets(chemin);
     const nature = natureDImage(octets);
-    if (nature === null) {
-      return introuvable;
-    }
-    return new Response(octets, {
-      headers: {
-        'Content-Type': typesMime[nature],
-        // Un SVG ouvert seul n'exécute rien et ne charge rien.
-        'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
-        'X-Content-Type-Options': 'nosniff',
-        // L'image peut changer sur le disque (sync) : pas de cache.
-        'Cache-Control': 'no-store',
-      },
-    });
+    return nature === null ? null : { octets, type: typesMime[nature] };
   } catch {
-    return introuvable;
+    return null;
   }
 }
 

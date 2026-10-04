@@ -1,19 +1,23 @@
 import { homedir } from 'node:os';
-import { join } from 'node:path';
+import { writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { estId, extensionsDImage } from '@notes/core';
 import { BrowserWindow, app, dialog, globalShortcut, net, session, shell } from 'electron';
 import { evenements } from '../shared/ipc-contract';
 import type { BackgroundState, PageRequest } from '../shared/ipc-contract';
-import { declarerSchemaDesImages, servirLesImages } from './images/asset-protocol';
+import { imprimerEnPdf } from './export/pdf';
+import { declarerSchemaDesImages, lireImageDuVault, servirLesImages } from './images/asset-protocol';
 import { telechargerImage } from './images/download';
 import { BackgroundRemoval } from './images/background-removal';
+import { creerHandlersExport } from './ipc/export';
 import { creerHandlersImages } from './ipc/images';
 import { creerHandlersLiens } from './ipc/links';
 import { apercuDuSite } from './links/site-preview';
 import { cleMotDePasse, creerHandlersNas } from './ipc/nas';
 import { enregistrerCanaux } from './ipc/register';
 import { creerHandlersTheme } from './ipc/theme';
+import { creerHandlersCorbeille } from './ipc/trash';
 import { creerHandlersVault } from './ipc/vault';
 import { creerHandlersSync } from './ipc/sync';
 import { creerHandlersFenetre } from './ipc/window';
@@ -147,6 +151,28 @@ async function choisirImages(): Promise<string[]> {
     filters: [{ name: 'Images', extensions: extensionsDImage }],
   });
   return choix.canceled ? [] : choix.filePaths;
+}
+
+/** Dossier du dernier export, proposé au suivant. Au premier, le dossier Documents. */
+let dossierDExport: string | null = null;
+
+/** Boîte « Enregistrer sous » du système pour un export. null si l'utilisateur annule. */
+async function choisirDestinationDExport(nomPropose: string, format: { extension: string; libelle: string }): Promise<string | null> {
+  if (fenetre === null) {
+    return null;
+  }
+  const choix = await dialog.showSaveDialog(fenetre, {
+    title: 'Exporter',
+    defaultPath: join(dossierDExport ?? app.getPath('documents'), nomPropose),
+    buttonLabel: 'Exporter',
+    filters: [{ name: format.libelle, extensions: [format.extension] }],
+    properties: ['showOverwriteConfirmation', 'createDirectory'],
+  });
+  if (choix.canceled || choix.filePath === undefined || choix.filePath === '') {
+    return null;
+  }
+  dossierDExport = dirname(choix.filePath);
+  return choix.filePath;
 }
 
 /**
@@ -283,6 +309,10 @@ function demarrer(): void {
       app.on('will-quit', () => detourage.arreter());
       const handlersVault = creerHandlersVault({ vault, file: fileDuVault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
       const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
+      const handlersCorbeille = creerHandlersCorbeille({ vault, file: fileDuVault, avecNas: (action) => sync.avecNas(action) });
+      // Purge de la corbeille au démarrage (README §10) : celle du poste ici, celle du NAS au premier cycle.
+      void handlersCorbeille.purgerAuDemarrage();
+      vault.surChangementDeDossier(() => void handlersCorbeille.purgerAuDemarrage());
       enregistrerCanaux({
         fenetre: handlersFenetre,
         vault: handlersVault,
@@ -316,6 +346,15 @@ function demarrer(): void {
           // Une session à part, sans cookies ni cache partagés avec la fenêtre.
           telecharger: (adresse) => telechargerImage(adresse, (url, options) => session.fromPartition('telechargements-images').fetch(url, options)),
         }),
+        exports: creerHandlersExport({
+          choisirDestination: choisirDestinationDExport,
+          imprimer: imprimerEnPdf,
+          ecrire: (chemin, octets) => writeFile(chemin, octets),
+          montrer: (chemin) => shell.showItemInFolder(chemin),
+          ouvrir: (chemin) => void shell.openPath(chemin),
+          lireImage: (chemin) => lireImageDuVault(chemin, vault.fsOuNull()),
+        }),
+        corbeille: handlersCorbeille,
         recherche: {
           etatDuFond: () => etatDuFond(),
           definirDemarrageAuto: async (actif) => {

@@ -26,7 +26,7 @@ export type { PageContent, SaveRequest, SaveResult } from './vault/content';
 export { estFichierDeConflitDePage, lireConflit, listerConflits, resoudreConflit } from './vault/conflicts';
 export type { ConflictVersions } from './vault/conflicts';
 export { importer } from './vault/import';
-export { chargerPage, creerPage, deplacerPage, dupliquerPage, renommerPage, supprimerPageVide } from './vault/operations';
+export { chargerPage, creerPage, deplacerPage, deplacerPages, dupliquerPage, renommerPage, supprimerPageVide } from './vault/operations';
 export type { PageLocation } from './vault/operations';
 export { mentionsCassees, mentionsDuCorps, pagesQuiMentionnent, reecrireCorps } from './vault/links';
 export type { BrokenMention, MentionFound } from './vault/links';
@@ -47,5 +47,24 @@ export { LockManager, dureeDeVieDuVerrouMs, inactiviteAvantRelacheMs } from './s
 export type { LocalPageState, LockOwner, LockState, TakeResult } from './sync/lock';
 export { etatApresCycle, etatApresEchec, etatDesactive, etatEnCours, messageInjoignable } from './sync/status';
 export type { SyncStatus, SyncStatusKind } from './sync/status';
+export {
+  dossierCorbeille,
+  estNomDEntree,
+  listerCorbeille,
+  lireApercu,
+  mettreALaCorbeille,
+  mettreImageALaCorbeille,
+  placeDOrigine,
+  purgerCorbeille,
+  rapatrierEntree,
+  restaurerEntree,
+  retentionCorbeilleMs,
+  stockageDistant,
+  stockageLocal,
+  supprimerEntree,
+  transfererCorbeille,
+  viderCorbeille,
+} from './trash/trash';
+export type { TrashEntry, TrashKind, TrashPreview, TrashStorage } from './trash/trash';
 export { classerParTitre, correspondanceFloue, normaliserPourRecherche } from './search/fuzzy';
 export type { FuzzyMatch, RankedResult } from './search/fuzzy';

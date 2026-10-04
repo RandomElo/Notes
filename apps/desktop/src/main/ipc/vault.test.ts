@@ -114,14 +114,14 @@ describe('handlers vault', () => {
     }
     const fichier = join(dossier, 'Journal', 'page.md');
     const avant = await readFile(fichier, 'utf8');
-    expect(await handlers.lirePage({ chemin: 'Journal' })).toEqual({ ok: true, corps: '', surcharges: {} });
+    expect(await handlers.lirePage({ chemin: 'Journal' })).toMatchObject({ ok: true, corps: '', surcharges: {} });
 
     // Sans changement, rien n'est écrit : le fichier reste identique à l'octet près.
     expect(await handlers.enregistrerPage({ chemin: 'Journal', corps: '', corpsDeBase: '' })).toEqual({ ok: true, ecrit: false, conflit: null });
     expect(await readFile(fichier, 'utf8')).toBe(avant);
 
     expect(await handlers.enregistrerPage({ chemin: 'Journal', corps: '# Lundi\n', corpsDeBase: '' })).toEqual({ ok: true, ecrit: true, conflit: null });
-    expect(await handlers.lirePage({ chemin: 'Journal' })).toEqual({ ok: true, corps: '# Lundi\n', surcharges: {} });
+    expect(await handlers.lirePage({ chemin: 'Journal' })).toMatchObject({ ok: true, corps: '# Lundi\n', surcharges: {} });
     const apres = await readFile(fichier, 'utf8');
     expect(apres.endsWith('---\n# Lundi\n')).toBe(true);
     expect(apres).toContain('title: Journal');
@@ -141,7 +141,7 @@ describe('handlers vault', () => {
     const conflit = resultat.ok ? resultat.conflit : null;
     expect(conflit).toMatch(/^page\.conflit-/);
     expect(await readFile(join(dossier, 'Journal', conflit ?? ''), 'utf8')).toBe(modifieAilleurs);
-    expect(await handlers.lirePage({ chemin: 'Journal' })).toEqual({ ok: true, corps: 'écrit ici\n', surcharges: {} });
+    expect(await handlers.lirePage({ chemin: 'Journal' })).toMatchObject({ ok: true, corps: 'écrit ici\n', surcharges: {} });
     vault.arreter();
   });
 
