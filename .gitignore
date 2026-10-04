@@ -20,6 +20,7 @@ npm-debug.log*
 out/
 release/
 apps/desktop/resources/bin/
+apps/desktop/resources/background-removal/
 
 # Playwright
 test-results/
@@ -62,3 +63,6 @@ env/
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+
+# Recettes des jalons : gardées en local, pas sur GitHub (demande d’Eloi)
+docs/recettes/
