@@ -4,12 +4,34 @@ import { annotation, lectureDUnExclu, lireReponse, verifierDemande } from './cli
 describe('client LanguageTool', () => {
   it('revérifie la demande du renderer', () => {
     expect(verifierDemande({ texte: 'Il fesait beau', exclus: [] })).toEqual({ texte: 'Il fesait beau', exclus: [] });
-    expect(verifierDemande({ texte: 'abc def', exclus: [[0, 3], [4, 7]] })).toEqual({ texte: 'abc def', exclus: [[0, 3], [4, 7]] });
+    expect(
+      verifierDemande({
+        texte: 'abc def',
+        exclus: [
+          [0, 3],
+          [4, 7],
+        ],
+      }),
+    ).toEqual({
+      texte: 'abc def',
+      exclus: [
+        [0, 3],
+        [4, 7],
+      ],
+    });
     expect(verifierDemande(null)).toBeNull();
     expect(verifierDemande({ texte: 'x'.repeat(20_001), exclus: [] })).toBeNull();
     expect(verifierDemande({ texte: 'abc', exclus: [[2, 1]] })).toBeNull();
     expect(verifierDemande({ texte: 'abc', exclus: [[0, 4]] })).toBeNull();
-    expect(verifierDemande({ texte: 'abcdef', exclus: [[2, 4], [3, 5]] })).toBeNull();
+    expect(
+      verifierDemande({
+        texte: 'abcdef',
+        exclus: [
+          [2, 4],
+          [3, 5],
+        ],
+      }),
+    ).toBeNull();
     expect(verifierDemande({ texte: 'abc', exclus: [[0.5, 2]] })).toBeNull();
   });
 
@@ -24,7 +46,13 @@ describe('client LanguageTool', () => {
     const texte = 'Il fesait beau.';
     const reponse = {
       matches: [
-        { offset: 3, length: 6, message: 'Faute de frappe.', replacements: [{ value: 'faisait' }, { value: 'fêtait' }], rule: { id: 'FR_SPELLING_RULE', issueType: 'misspelling' } },
+        {
+          offset: 3,
+          length: 6,
+          message: 'Faute de frappe.',
+          replacements: [{ value: 'faisait' }, { value: 'fêtait' }],
+          rule: { id: 'FR_SPELLING_RULE', issueType: 'misspelling' },
+        },
         { offset: 0, length: 2, shortMessage: 'Accord', replacements: [], rule: { id: 'ACCORD', issueType: 'grammar' } },
         { offset: 14, length: 5, message: 'hors du texte', rule: {} },
         { offset: -1, length: 2, rule: {} },

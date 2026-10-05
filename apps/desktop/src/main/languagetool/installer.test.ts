@@ -6,7 +6,6 @@ import { zipSync } from 'fflate';
 import { c as creerTar } from 'tar';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { cheminDeDestination } from './archive';
-import { versionInstallee } from './downloads';
 import type { ArchiveATelecharger } from './downloads';
 import { LanguageToolInstaller, estInstalle } from './installer';
 
@@ -72,10 +71,10 @@ describe('installation de LanguageTool', () => {
     expect(await installateur.installer()).toBeNull();
     expect(await readFile(join(dossier, 'java', 'bin', 'java'), 'utf8')).toBe('#!/bin/sh\n');
     expect(await readFile(join(dossier, 'languagetool', 'languagetool-server.jar'), 'utf8')).toBe('jar');
-    expect(await readFile(join(dossier, 'version.txt'), 'utf8')).toBe(`${versionInstallee}\n`);
+    expect(JSON.parse(await readFile(join(dossier, 'versions.json'), 'utf8'))).toEqual({ java: 'jdk-17.0.20.1+1', languagetool: '6.6', ngrammes: '20150913' });
     expect(await estInstalle(dossier)).toBe(true);
     // Les archives ne restent pas, ni le dossier de préparation.
-    expect((await readdir(dossier)).sort()).toEqual(['java', 'languagetool', 'version.txt']);
+    expect((await readdir(dossier)).sort()).toEqual(['java', 'languagetool', 'versions.json']);
     expect(await readdir(join(dossierDEssai, 'Applications'))).toEqual(['LanguageTool']);
     expect(etats.at(-1)).toBe('java:fait,languagetool:fait');
   });

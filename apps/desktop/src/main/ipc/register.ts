@@ -1,6 +1,7 @@
 import { app, ipcMain } from 'electron';
 import type { IpcMainInvokeEvent } from 'electron';
 import { canaux } from '../../shared/ipc-contract';
+import type { AiService } from '../ai/ai-service';
 import type { creerHandlersExport } from './export';
 import type { creerHandlersImages } from './images';
 import type { creerHandlersLiens } from './links';
@@ -23,6 +24,7 @@ export interface IpcDependencies {
   exports: ReturnType<typeof creerHandlersExport>;
   corbeille: ReturnType<typeof creerHandlersCorbeille>;
   correction: ReturnType<typeof creerHandlersCorrection>;
+  ia: AiService;
   recherche: {
     etatDuFond: () => unknown;
     definirDemarrageAuto: (actif: unknown) => unknown;
@@ -39,7 +41,7 @@ export interface IpcDependencies {
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, recherche, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, recherche, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -134,7 +136,19 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.annulerInstallationCorrection, () => correction.annuler());
   brancher(canaux.desinstallerCorrection, () => correction.desinstaller());
   brancher(canaux.relancerCorrection, () => correction.relancer());
+  brancher(canaux.chercherMiseAJourCorrection, () => correction.chercherMiseAJour());
   brancher(canaux.verifierOrthographe, (demande) => correction.verifier(demande));
   brancher(canaux.lireDictionnaire, () => correction.lireDictionnaire());
   brancher(canaux.ajouterAuDictionnaire, (demande) => correction.ajouterAuDictionnaire(demande));
+  brancher(canaux.lireIgnores, () => correction.lireIgnores());
+  brancher(canaux.ignorerRemarque, (demande) => correction.ignorer(demande));
+
+  brancher(canaux.etatIa, () => ia.etat());
+  brancher(canaux.enregistrerReglagesIa, (reglages) => ia.enregistrerReglages(reglages));
+  brancher(canaux.enregistrerCleLitellm, (demande) => ia.enregistrerCle(typeof demande === 'object' && demande !== null ? (demande as { cle?: unknown }).cle : undefined));
+  brancher(canaux.oublierCleLitellm, () => ia.oublierCle());
+  brancher(canaux.estimerIa, (demande) => ia.estimer(demande));
+  brancher(canaux.lancerIa, (demande) => ia.lancer(demande));
+  brancher(canaux.annulerIa, () => ia.annuler());
+  brancher(canaux.historiqueIa, () => ia.lireHistorique());
 }

@@ -1,4 +1,6 @@
 import { verifierCheminRelatif } from '../fs/paths';
+import { lireReglagesIa, reglagesIaParDefaut } from './ai-settings';
+import type { AiSettings } from './ai-settings';
 
 /**
  * Réglages locaux de l'application (un fichier par appareil, jamais
@@ -11,6 +13,8 @@ export interface Settings {
   vaultLocal: string | null;
   /** Identifiant de cette installation, tiré au hasard au premier besoin. Signe les verrous de page sur le NAS. */
   appareil: string | null;
+  /** Fonctions IA de ce poste (J12). */
+  ia: AiSettings;
 }
 
 export interface NasSettings {
@@ -29,7 +33,7 @@ export type NasSettingsValidation =
   | { ok: true; valeur: NasSettings }
   | { ok: false; erreurs: Partial<Record<NasSettingsField, string>> };
 
-export const reglagesParDefaut: Settings = { nas: null, vaultLocal: null, appareil: null };
+export const reglagesParDefaut: Settings = { nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut };
 
 const hoteValide = /^[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$/;
 // eslint-disable-next-line no-control-regex
@@ -86,7 +90,7 @@ export function estCheminAbsolu(valeur: unknown): valeur is string {
  */
 export function lireReglages(valeur: unknown): Settings {
   if (typeof valeur !== 'object' || valeur === null) {
-    return { ...reglagesParDefaut };
+    return { ...reglagesParDefaut, ia: lireReglagesIa(null) };
   }
   const brut = valeur as Record<string, unknown>;
   const nas = validerReglagesNas(brut['nas']);
@@ -94,6 +98,7 @@ export function lireReglages(valeur: unknown): Settings {
     nas: nas.ok ? nas.valeur : null,
     vaultLocal: estCheminAbsolu(brut['vaultLocal']) ? brut['vaultLocal'] : null,
     appareil: estIdentifiantDAppareil(brut['appareil']) ? brut['appareil'] : null,
+    ia: lireReglagesIa(brut['ia']),
   };
 }
 

@@ -1,5 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { canaux, evenements } from '../shared/ipc-contract';
+import type { AiProgress } from '../shared/ai-contract';
 import type { NotesApi, SpellcheckState, SyncStatus } from '../shared/ipc-contract';
 
 // Seule surface offerte au renderer : des fonctions nommées, jamais ipcRenderer lui-même.
@@ -133,9 +134,31 @@ const api: NotesApi = {
   annulerInstallationCorrection: () => ipcRenderer.invoke(canaux.annulerInstallationCorrection),
   desinstallerCorrection: () => ipcRenderer.invoke(canaux.desinstallerCorrection),
   relancerCorrection: () => ipcRenderer.invoke(canaux.relancerCorrection),
+  chercherMiseAJourCorrection: () => ipcRenderer.invoke(canaux.chercherMiseAJourCorrection),
   verifierOrthographe: (demande) => ipcRenderer.invoke(canaux.verifierOrthographe, demande),
   lireDictionnaire: () => ipcRenderer.invoke(canaux.lireDictionnaire),
   ajouterAuDictionnaire: (demande) => ipcRenderer.invoke(canaux.ajouterAuDictionnaire, demande),
+  lireIgnores: () => ipcRenderer.invoke(canaux.lireIgnores),
+  ignorerRemarque: (demande) => ipcRenderer.invoke(canaux.ignorerRemarque, demande),
+
+  etatIa: () => ipcRenderer.invoke(canaux.etatIa),
+  enregistrerReglagesIa: (reglages) => ipcRenderer.invoke(canaux.enregistrerReglagesIa, reglages),
+  enregistrerCleLitellm: (demande) => ipcRenderer.invoke(canaux.enregistrerCleLitellm, demande),
+  oublierCleLitellm: () => ipcRenderer.invoke(canaux.oublierCleLitellm),
+  estimerIa: (demande) => ipcRenderer.invoke(canaux.estimerIa, demande),
+  lancerIa: (demande) => ipcRenderer.invoke(canaux.lancerIa, demande),
+  annulerIa: () => ipcRenderer.invoke(canaux.annulerIa),
+  surAvancementIa: (ecouteur) => {
+    const relais = (_evenement: unknown, avancement: AiProgress): void => ecouteur(avancement);
+    ipcRenderer.on(evenements.avancementIa, relais);
+    return () => ipcRenderer.removeListener(evenements.avancementIa, relais);
+  },
+  historiqueIa: () => ipcRenderer.invoke(canaux.historiqueIa),
+  surHistoriqueIa: (ecouteur) => {
+    const relais = (): void => ecouteur();
+    ipcRenderer.on(evenements.historiqueIaModifie, relais);
+    return () => ipcRenderer.removeListener(evenements.historiqueIaModifie, relais);
+  },
 };
 
 contextBridge.exposeInMainWorld('notes', api);

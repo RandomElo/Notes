@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
-import { ajouterAuDictionnaire, lireDictionnaire, motValide, motsDuDictionnaire } from './dictionary';
+import { ajouterAuDictionnaire, ajouterAuxIgnores, ligneDIgnore, lireDictionnaire, lireIgnores, motValide, motsDuDictionnaire } from './dictionary';
 
 describe('dictionnaire personnel', () => {
   it('lit un mot par ligne, sans commentaires, lignes vides ni doublons', () => {
@@ -40,5 +40,26 @@ describe('dictionnaire personnel', () => {
       '.notes/theme.toml': '',
     });
     expect(await lireDictionnaire(contexteDeTest(fs))).toEqual(['Sequelize', 'Vitest']);
+  });
+});
+
+describe('remarques ignorées', () => {
+  it('les garde une par ligne, règle puis passage, synchronisées comme le dictionnaire', async () => {
+    const fs = MemoryLocalFs.depuis({ '.notes/spelling-ignored.conflit-2026-10-05-101500.txt': 'ACCORD Les enfant\n' });
+    const contexte = contexteDeTest(fs);
+    expect(await ajouterAuxIgnores(contexte, { regle: 'A_ACCENT', mot: 'a' })).toEqual(
+      expect.arrayContaining([
+        { regle: 'A_ACCENT', mot: 'a' },
+        { regle: 'ACCORD', mot: 'Les enfant' },
+      ]),
+    );
+    expect(await fs.lireTexte('.notes/spelling-ignored.txt')).toBe('A_ACCENT a\n');
+    expect(await lireIgnores(contexte)).toHaveLength(2);
+  });
+
+  it('refuse une règle ou un passage inattendus', () => {
+    expect(ligneDIgnore({ regle: 'A_ACCENT', mot: ' a ' })).toBe('A_ACCENT a');
+    expect(ligneDIgnore({ regle: 'a b', mot: 'x' })).toBeNull();
+    expect(ligneDIgnore({ regle: 'R', mot: 'a\nb' })).toBeNull();
   });
 });

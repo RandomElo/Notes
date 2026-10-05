@@ -22,6 +22,8 @@ import { TitleBar } from './features/title-bar/TitleBar';
 import { TrashScreen } from './features/trash/TrashScreen';
 import { cleDeNoeud, clesDesAncetres, trouverParCle } from './features/sidebar/tree-model';
 import { StatusBar } from './features/status-bar/StatusBar';
+import { AiPanel } from './features/ai/AiPanel';
+import { AiUsageScreen } from './features/ai/AiUsageScreen';
 import { GlobalShortcutPanel } from './features/search/GlobalShortcutPanel';
 import { SpellcheckPanel } from './features/spellcheck/SpellcheckPanel';
 import { useSpellcheck } from './features/spellcheck/useSpellcheck';
@@ -61,6 +63,13 @@ export function App() {
   const [themeOuvert, definirThemeOuvert] = useState(false);
   // La corbeille remplace la page au centre, comme les réglages (README §10).
   const [corbeilleOuverte, definirCorbeilleOuverte] = useState(false);
+  // L'historique des fonctions IA remplace aussi la page au centre (README §12).
+  const [historiqueIaOuvert, definirHistoriqueIaOuvert] = useState(false);
+  const ouvrirHistoriqueIa = useCallback(() => {
+    definirHistoriqueIaOuvert(true);
+    definirReglagesOuverts(false);
+    definirCorbeilleOuverte(false);
+  }, []);
   const [onglets, definirOnglets] = useStoredState<TabsState>('notes.onglets', ongletsDeDepart(), estEtatDOnglets);
   const selection = ongletActif(onglets).cle;
   // Page de l'onglet affiché, changée sans chercher dans les autres onglets (abandon d'une page neuve).
@@ -113,6 +122,7 @@ export function App() {
       definirReglagesOuverts(false);
       definirThemeOuvert(false);
       definirCorbeilleOuverte(false);
+      definirHistoriqueIaOuvert(false);
       definirConflit(null);
     },
     [definirOnglets],
@@ -125,6 +135,7 @@ export function App() {
       definirReglagesOuverts(false);
       definirThemeOuvert(false);
       definirCorbeilleOuverte(false);
+      definirHistoriqueIaOuvert(false);
       definirConflit(null);
     },
     [definirOnglets],
@@ -211,7 +222,7 @@ export function App() {
 
   // Ctrl+N : page sœur de la page ouverte, juste après elle, ou page à la racine si aucune n'est ouverte.
   // Ctrl+Maj+N : toujours à la racine.
-  const pageDeReference = !reglagesOuverts && !corbeilleOuverte && noeudSelectionne?.importe === true ? noeudSelectionne : null;
+  const pageDeReference = !reglagesOuverts && !corbeilleOuverte && !historiqueIaOuvert && noeudSelectionne?.importe === true ? noeudSelectionne : null;
   useEffect(() => {
     const creerSoeur = (page: TreeNode) => {
       const parent = trouverNoeud(vault.arbre, dossierParent(page.chemin));
@@ -269,6 +280,7 @@ export function App() {
           definirReglagesOuverts((ouverts) => !ouverts);
           definirThemeOuvert(false);
           definirCorbeilleOuverte(false);
+          definirHistoriqueIaOuvert(false);
         };
       }
       if (action !== null) {
@@ -323,6 +335,21 @@ export function App() {
     window.addEventListener('keydown', surTouche);
     return () => window.removeEventListener('keydown', surTouche);
   }, [reglagesOuverts, themeOuvert]);
+
+  // Échap dans l'historique des fonctions IA : la page revient.
+  useEffect(() => {
+    if (!historiqueIaOuvert) {
+      return;
+    }
+    const surTouche = (evenement: KeyboardEvent) => {
+      if (evenement.key === 'Escape' && !evenement.defaultPrevented) {
+        evenement.preventDefault();
+        definirHistoriqueIaOuvert(false);
+      }
+    };
+    window.addEventListener('keydown', surTouche);
+    return () => window.removeEventListener('keydown', surTouche);
+  }, [historiqueIaOuvert]);
 
   // Échap dans la corbeille : la page revient. Une fenêtre de confirmation ouverte le traite avant.
   useEffect(() => {
@@ -388,7 +415,7 @@ export function App() {
         {vault.etat?.dossier != null && barreVisible && (
           <Sidebar
             vault={vault}
-            selection={reglagesOuverts || corbeilleOuverte ? null : selection}
+            selection={reglagesOuverts || corbeilleOuverte || historiqueIaOuvert ? null : selection}
             surSelection={selectionner}
             deplies={deplies}
             surDepliage={(cle, deplie) => deplier([cle], deplie)}
@@ -411,12 +438,14 @@ export function App() {
               definirReglagesOuverts((ouverts) => !ouverts);
               definirThemeOuvert(false);
               definirCorbeilleOuverte(false);
+              definirHistoriqueIaOuvert(false);
             }}
             corbeilleOuverte={corbeilleOuverte}
             surCorbeilleOuverte={() => {
               definirCorbeilleOuverte((ouverte) => !ouverte);
               definirReglagesOuverts(false);
               definirThemeOuvert(false);
+              definirHistoriqueIaOuvert(false);
             }}
           />
         )}
@@ -425,6 +454,8 @@ export function App() {
         <main className="min-w-0 flex-1 overflow-y-auto pr-6 pb-4 pl-12">
           {vault.etat === null ? null : sansVault ? (
             <VaultChooser vault={vault} dossierPropose={vault.etat.dossierPropose} />
+          ) : historiqueIaOuvert ? (
+            <AiUsageScreen />
           ) : corbeilleOuverte ? (
             <TrashScreen
               surRestauration={(arbre) => vault.definirArbre(arbre)}
@@ -446,6 +477,7 @@ export function App() {
                 <NasConnectionPanel />
                 <GlobalShortcutPanel />
                 <SpellcheckPanel />
+                <AiPanel surHistorique={ouvrirHistoriqueIa} />
                 <WebpConversion />
                 <UnusedImages />
                 <BrokenMentions
@@ -502,7 +534,7 @@ export function App() {
           )}
         </main>
       </div>
-      <StatusBar surResolution={ouvrirConflit} />
+      <StatusBar surResolution={ouvrirConflit} surHistoriqueIa={ouvrirHistoriqueIa} />
       {noeudAExporter !== null && <ExportDialog noeud={noeudAExporter} theme={theme.theme} surFermeture={() => definirExportDe(null)} />}
       {choixDIcone !== null && (
         <IconPicker

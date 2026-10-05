@@ -2,7 +2,8 @@
  * Ce que l'installation de la correction orthographique télécharge (README §11).
  * Chaque fichier est à une version fixée et vérifié par son empreinte SHA-256
  * avant d'être décompressé : une archive modifiée en route n'est jamais ouverte.
- * Changer une version, c'est changer l'adresse, la taille et l'empreinte ensemble.
+ * Changer une version, c'est changer l'adresse, la taille et l'empreinte ensemble,
+ * et `versionsInitiales` (`versions.ts`). Les mises à jour suivantes passent par `updater.ts`.
  */
 export interface ArchiveATelecharger {
   /** Nom du dossier où elle est décompressée, dans le dossier de LanguageTool. */
@@ -47,6 +48,3 @@ export const archives: readonly ArchiveATelecharger[] = [
     niveauxRetires: 0,
   },
 ];
-
-/** Version installée, écrite à la fin de l'installation : un dossier sans ce fichier n'est pas une installation finie. */
-export const versionInstallee = 'languagetool-6.6+temurin-17.0.20.1+ngrams-fr-20150913';

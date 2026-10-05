@@ -176,9 +176,9 @@ body {
   background-size: 16px 16px;
 }
 
-/* Correction orthographique : trait ondulé fin sous le mot, rouge pour l'orthographe, bleu pour la grammaire et le style. */
-.notes-page .faute-orthographe,
-.notes-page .faute-grammaire {
+/* Correction orthographique, dans la page et la liste des fautes : trait ondulé fin sous le mot, rouge pour l'orthographe, bleu pour la grammaire et le style. */
+.faute-orthographe,
+.faute-grammaire {
   text-decoration-line: underline;
   text-decoration-style: wavy;
   text-decoration-thickness: 1px;
@@ -187,10 +187,10 @@ body {
   cursor: pointer;
 }
 
-.notes-page .faute-orthographe {
+.faute-orthographe {
   text-decoration-color: var(--color-erreur);
 }
 
-.notes-page .faute-grammaire {
+.faute-grammaire {
   text-decoration-color: var(--color-accent);
 }

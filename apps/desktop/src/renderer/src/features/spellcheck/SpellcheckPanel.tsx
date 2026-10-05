@@ -1,12 +1,15 @@
-import { Check, CircleDashed, Download, LoaderCircle, RotateCcw, Trash2, X } from 'lucide-react';
+import { Check, CircleDashed, Download, LoaderCircle, RefreshCw, RotateCcw, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 import type { SpellcheckState, SpellcheckStep } from '../../../../shared/ipc-contract';
 import { api } from '../../lib/ipc';
+import { momentDeSync } from '../status-bar/sync-labels';
 import { avancement, libelleDEtape, taille } from './spellcheck-labels';
 import { magasinDeCorrection, useMagasinDeCorrection } from './spellcheck-store';
 
-const boutonSecondaire = 'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-3 leading-none font-medium outline-0';
-const boutonPrincipal = 'bg-accent text-fond hover:brightness-110 focus-visible:brightness-125 inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-3 leading-none font-medium outline-0';
+const boutonSecondaire =
+  'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-3 leading-none font-medium outline-0';
+const boutonPrincipal =
+  'bg-accent text-fond hover:brightness-110 focus-visible:brightness-125 inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-3 leading-none font-medium outline-0';
 
 type EtatDUneLigne = SpellcheckStep['etat'];
 
@@ -33,7 +36,14 @@ function Ligne({ etat, libelle, detail, part }: { etat: EtatDUneLigne; libelle: 
         <span className="text-discret ml-auto text-xs">{detail}</span>
       </div>
       {part !== null && (
-        <div className="bg-texte/10 ml-6 h-1.5 overflow-hidden rounded-full" role="progressbar" aria-label={libelle} aria-valuenow={Math.round(part * 100)} aria-valuemin={0} aria-valuemax={100}>
+        <div
+          className="bg-texte/10 ml-6 h-1.5 overflow-hidden rounded-full"
+          role="progressbar"
+          aria-label={libelle}
+          aria-valuenow={Math.round(part * 100)}
+          aria-valuemin={0}
+          aria-valuemax={100}
+        >
           <div className="bg-accent h-full rounded-full transition-[width]" style={{ width: `${part * 100}%` }} />
         </div>
       )}
@@ -43,8 +53,7 @@ function Ligne({ etat, libelle, detail, part }: { etat: EtatDUneLigne; libelle: 
 
 /** Les étapes de l'installation, et le démarrage du serveur qui la termine. */
 function Etapes({ etat }: { etat: SpellcheckState }) {
-  const demarrage: EtatDUneLigne =
-    etat.installation !== 'installee' ? 'a_faire' : etat.serveur === 'erreur' ? 'echec' : etat.serveur === 'pret' ? 'fait' : 'en_cours';
+  const demarrage: EtatDUneLigne = etat.installation !== 'installee' ? 'a_faire' : etat.serveur === 'erreur' ? 'echec' : etat.serveur === 'pret' ? 'fait' : 'en_cours';
   return (
     <ol className="space-y-3">
       {etat.etapes.map((etape) => (
@@ -79,7 +88,8 @@ export function SpellcheckPanel() {
         </h2>
         <p className="text-discret mt-1 text-sm">
           Les fautes sont soulignées pendant qu'on écrit : en rouge l'orthographe, en bleu la grammaire et le style. Un clic sur un mot souligné propose la correction.
-          Tout se passe sur ce poste, avec LanguageTool, que Notes installe et lance elle-même.
+          Tout se passe sur ce poste, avec LanguageTool, que Notes installe. Il démarre avec la session et reste lancé quand Notes quitte : l'extension LanguageTool du
+          navigateur peut s'en servir aussi.
         </p>
       </div>
 
@@ -129,11 +139,41 @@ export function SpellcheckPanel() {
                     ? `La correction est en pause : ${etat.erreur ?? "LanguageTool s'est arrêté."}`
                     : 'LanguageTool est arrêté.'}
             </p>
+            <p className="text-discret text-xs">
+              Pour l'extension du navigateur, choisir « Serveur local » ou l'adresse <span className="font-mono">http://localhost:8081/v2</span>.
+            </p>
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <p className="text-discret text-xs">
-                Installé dans <span className="font-mono">{etat.dossier}</span>
-              </p>
-              <div className="flex gap-2">
+              <div className="text-discret space-y-0.5 text-xs">
+                {etat.versions !== null && (
+                  <p>
+                    LanguageTool {etat.versions.languagetool}, Java {etat.versions.java}, mis à jour automatiquement.
+                  </p>
+                )}
+                <p role="status">
+                  {etat.miseAJour.enCours
+                    ? "Recherche ou installation d'une mise à jour…"
+                    : etat.miseAJour.derniereVerification === null
+                      ? "Aucune recherche de mise à jour pour l'instant."
+                      : `Dernière recherche ${momentDeSync(etat.miseAJour.derniereVerification, Date.now())} : ${etat.miseAJour.message ?? ''}`}
+                </p>
+                <p>
+                  Installé dans <span className="font-mono">{etat.dossier}</span>
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  aria-disabled={etat.miseAJour.enCours}
+                  onClick={() => {
+                    if (!etat.miseAJour.enCours) {
+                      mettreAJour(api.chercherMiseAJourCorrection());
+                    }
+                  }}
+                  className={`${boutonSecondaire} ${etat.miseAJour.enCours ? 'opacity-50' : ''}`}
+                >
+                  <RefreshCw className={`size-4 ${etat.miseAJour.enCours ? 'animate-spin' : ''}`} aria-hidden="true" />
+                  Chercher une mise à jour
+                </button>
                 {etat.serveur === 'erreur' && (
                   <button type="button" onClick={() => mettreAJour(api.relancerCorrection())} className={boutonSecondaire}>
                     <RotateCcw className="size-4" aria-hidden="true" />

@@ -8,10 +8,10 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 
 | | |
 |---|---|
-| Dernière mise à jour | 2026-10-04 |
-| Version | 0.11.1 |
-| Avancement | J0 à J10 terminés. J11 livré en 0.11.1, recette `docs/recettes/J11.md` en attente du retour d'Eloi |
-| Jalon en cours | J11 (correction orthographique), en recette |
+| Dernière mise à jour | 2026-10-05 |
+| Version | 0.12.1 |
+| Avancement | J0 à J11 terminés : recette J11 validée par Eloi le 2026-10-05, retouches 0.11.1 à 0.11.4 comprises |
+| Jalon en cours | J12 (fonctions IA), en recette (`docs/recettes/J12.md`) : choix du modèle local à faire sur pièces |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -39,7 +39,9 @@ Ce qui fonctionne aujourd'hui :
 
 - l'export (J9) : par l'icône en haut de la page, en PDF (A4, fond blanc, couleurs du thème, marges, icônes, sauts de page soignés, pied de page avec titre et numéro), en Markdown (lisible partout : mentions en texte, callouts en paragraphes, images en mention), en HTML autonome (images et styles dedans, sommaire) ou en archive ZIP de la page et des sous-pages choisies, en pages web reliées entre elles.
 
-- la correction orthographique (J11, en recette) : LanguageTool s'installe d'un clic depuis les réglages, avec son Java et les n-grammes français, dans `~/Applications/LanguageTool/`, et Notes le lance elle-même ; les fautes de chaque bloc modifié sont soulignées une seconde après la frappe (rouge pour l'orthographe, bleu pour le reste), sans jamais ralentir l'écriture ; un clic ouvre la bulle (suggestions, « Ignorer », « Ajouter au dictionnaire ») ; le code et les adresses ne sont pas vérifiés ; le nombre de fautes est dans la barre de statut.
+- la correction orthographique (J11) : LanguageTool s'installe d'un clic depuis les réglages, avec son Java et les n-grammes français, dans `~/Applications/LanguageTool/`, il démarre avec la session (l'extension LanguageTool du navigateur s'en sert aussi) ; les fautes de chaque bloc modifié sont soulignées une seconde après la frappe (rouge pour l'orthographe, bleu pour le reste), sans jamais ralentir l'écriture ; un clic ouvre la bulle (suggestions, « Ignorer », « Ajouter au dictionnaire ») ; le code et les adresses ne sont pas vérifiés ; le nombre de fautes est dans la barre de statut, et un clic dessus ouvre la liste des fautes pour les corriger d'affilée.
+
+- les fonctions IA (J12, en recette) : par l'icône ✨ en haut de la page, relecture stylistique ou mise au propre de toute la page, par un modèle Ollama sur le poste ou par OpenAI en option ; estimation avant de lancer (taille, durée, coût), appel annulable, comparaison avant/après en deux colonnes ou en une, accepter ou rejeter, `Ctrl+Z` après acceptation ; code, callouts et images jamais montrés au modèle ; sortie nettoyée (préambule, conclusion, emojis, gras et séparateurs ajoutés, titres) ; historique avec graphiques et dépense du jour dans la barre de statut. Clé OpenAI chiffrée par le trousseau.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
@@ -48,9 +50,9 @@ Ce qui n'existe pas encore : la suppression de page, l'application Android.
 Reste à faire :
 
 - passer l'intervalle de sync de 10 à 5 s (décidé le 2026-10-04 sur les durées relevées par Eloi, environ 60 ms par cycle) : `intervalleParDefautMs` dans `main/sync/scheduler.ts`, pas encore fait ;
-- recette J11 à faire par Eloi (`docs/recettes/J11.md`), avec ses questions.
+- J12 (fonctions IA) en recette : installer Ollama, choisir le modèle local sur pièces (P2), puis suivre `docs/recettes/J12.md`.
 
-Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J12 se lancera avec `/jalon J12`, une fois J11 validé. Pour installer la version construite : `npm run installer`.
+Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J12 se lance avec `/jalon J12`. Pour installer la version construite : `npm run installer`.
 
 ## Sommaire
 
@@ -612,15 +614,17 @@ Desktop uniquement. LanguageTool, français seulement, sur le PC (choix d'Eloi, 
 
 Installation par l'application, en un clic : tant que LanguageTool n'est pas installé, les réglages proposent « Installer la correction orthographique » et montrent chaque étape avec sa progression (téléchargement, vérification, décompression, démarrage). Trois fichiers sont téléchargés, chacun à une version fixée et vérifié par son empreinte SHA-256 avant d'être décompressé : un Java autonome (Temurin 17, 47 Mo), LanguageTool 6.6 (252 Mo) et les n-grammes français (1,8 Go, voulus par Eloi). Environ 4 Go sur le disque une fois décompressés. Tout va dans le dossier de l'AppImage, sous `LanguageTool/` (`~/Applications/LanguageTool/`, ou `~/Applications` en développement), hors des fichiers de l'application : rien n'entre dans l'AppImage, et le Java du poste n'est jamais utilisé (règle de l'application autonome). Une installation interrompue ne laisse rien de bancal : elle se fait dans un dossier à part, renommé à la fin. Désinstaller supprime le dossier.
 
-Démarrage automatique : une fois installé, Notes lance le serveur à son ouverture et l'arrête en quittant. Il n'écoute que sur ce poste, sur un port choisi par Notes, avec le cache de règles activé (`pipelineCaching`) : sans lui, chaque vérification prend environ 760 ms ; avec, 45 à 50 ms pour une phrase comme pour un bloc de 230 mots (mesures du 2026-10-04 sur le PC d'Eloi). Compter 3 à 4 s avant la première vérification et environ 900 Mo de mémoire. En français, les n-grammes ne servent qu'à une trentaine de paires de mots (« moi » et « mois », « prix » et « pris », « vin » et « vain ») ; « ces » et « ses » n'en font pas partie.
+Démarrage avec la session (choix d'Eloi, 2026-10-05) : LanguageTool sert aussi à l'extension LanguageTool du navigateur. Il démarre donc à l'ouverture de session (`~/.config/autostart/notes-languagetool.desktop`, qui lance `lancer.sh` du dossier de LanguageTool) et Notes ne l'arrête jamais en quittant. Il écoute sur le port 8081, celui qu'attend l'extension pour un serveur local (`http://localhost:8081/v2`), sur ce poste seulement (sans `--public`). Notes le lance elle-même si elle ne le trouve pas, et le relance s'il s'est arrêté (une vérification restée sans réponse). Le script ferme les descripteurs hérités, pour ne pas garder le montage de l'AppImage, et ne passe aucune variable du poste à Java. Le cache de règles est activé (`pipelineCaching`) : sans lui, chaque vérification prend environ 760 ms ; avec, 45 à 50 ms pour une phrase comme pour un bloc de 230 mots (mesures du 2026-10-04 sur le PC d'Eloi). Compter 3 à 5 s de démarrage et environ 900 Mo de mémoire, pour toute la session. Désinstaller arrête le serveur et retire le démarrage avec la session. En français, les n-grammes ne servent qu'à une trentaine de paires de mots (« moi » et « mois », « prix » et « pris », « vin » et « vain ») ; « ces » et « ses » n'en font pas partie.
 
-Le téléphone n'a pas de correction. Vérification par bloc modifié (debounce 800 ms), pas sur la page entière. Soulignement rouge (orthographe) ou bleu (grammaire, style). Popover : suggestion, règle, « Ignorer », « Ajouter au dictionnaire » (`.notes/dictionary.txt`, synchronisé). Code et URL exclus. Compteur dans la barre de statut. Désactivation silencieuse si le serveur est absent ou injoignable : l'édition n'est jamais bloquée.
+Mises à jour automatiques (choix d'Eloi, 2026-10-05) : LanguageTool et son Java se mettent à jour seuls, les n-grammes n'ayant qu'une version. Au démarrage de Notes puis toutes les 6 heures, au plus une fois par jour (ou tout de suite par « Chercher une mise à jour » dans les réglages), Notes lit la dernière version de LanguageTool sur sa page de téléchargement et la dernière version de Java de la LTS la plus récente chez Adoptium. Ce qui a changé est téléchargé à côté (`LanguageTool.mise-a-jour/`), puis essayé : le nouveau Java lance le nouveau LanguageTool sur un port à part, qui doit trouver la faute d'une phrase. L'essai passé, le serveur est arrêté, les dossiers échangés, `versions.json` réécrit, le serveur relancé (quelques secondes de coupure) ; s'il ne redémarre pas, l'ancienne version revient. Essai raté : rien ne change, et les réglages le disent. Java est vérifié par l'empreinte SHA-256 que publie l'API d'Adoptium, et ne vient que de `github.com/adoptium`. LanguageTool ne publie ni empreinte ni signature : une mise à jour n'est garantie que par https, par une taille bornée et par l'essai. Seule la première installation a des versions fixées. Le 2026-10-05, un essai réel a fait passer Java de 17 à 25 avec LanguageTool 6.6.
+
+Le téléphone n'a pas de correction. Vérification par bloc modifié (debounce 800 ms), pas sur la page entière. Soulignement rouge (orthographe) ou bleu (grammaire, style). Popover : suggestion, règle, « Ignorer », « Ajouter au dictionnaire » (`.notes/dictionary.txt`, synchronisé). « Ignorer » écarte la remarque pour toujours et sur tous les appareils : elle est gardée dans `.notes/spelling-ignored.txt` (une ligne par remarque, la règle puis le passage), synchronisé lui aussi (choix d'Eloi, 2026-10-05). Pas de raccourci clavier pour la bulle (choix d'Eloi). Code et URL exclus. Compteur dans la barre de statut ; un clic dessus ouvre la liste des fautes de la page (demande d'Eloi), chacune dans sa phrase avec le mot souligné, ce que dit la règle, les suggestions, « Ignorer » et « Ajouter au dictionnaire » : une faute corrigée sort de la liste et le focus passe à la suivante, `↑` et `↓` vont d'une faute à l'autre, un clic sur la phrase mène au mot dans la page. Désactivation silencieuse si le serveur est absent ou injoignable : l'édition n'est jamais bloquée.
 
 ---
 
 ## 12. Fonctions IA
 
-Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, servi sur le PC (choix d'Eloi, 2026-10-04), sans rien envoyer sur Internet. En option, on peut faire appel à une API externe (fournisseur en ligne), choisie dans les réglages, fonction par fonction. Ollama est lancé hors de l'application, qui l'appelle par son API à l'adresse des réglages (`http://localhost:11434` par défaut). Les modèles se choisissent selon la carte graphique (P2). Le même modèle sert à la mise en forme des mémos vocaux (§13). Comme les autres services, l'IA est facultative : sans modèle joignable, ses fonctions se désactivent, l'édition n'est jamais bloquée.
+Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, servi sur le PC (choix d'Eloi, 2026-10-04), sans rien envoyer sur Internet. En option, on peut faire appel à une API externe, OpenAI seulement (choix d'Eloi, 2026-10-05), choisie dans les réglages, fonction par fonction. Ollama est installé par Eloi avec le script officiel (service systemd, qui sert la carte par ROCm sur une Radeon et par CUDA sur une NVIDIA), hors de l'application, qui l'appelle par son API à l'adresse des réglages (`http://localhost:11434` par défaut). Adresse et modèles sont réglés par poste, car chaque machine a sa carte (Radeon RX 7600 de 8 Go sur le PC, NVIDIA sur un futur portable). Le modèle se choisit sur pièces (P2). Le même modèle sert à la mise en forme des mémos vocaux (§13). Comme les autres services, l'IA est facultative : sans modèle joignable, ses fonctions se désactivent, l'édition n'est jamais bloquée.
 
 ### Deux fonctions, appliquées à la page entière
 
@@ -629,11 +633,11 @@ Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, ser
 
 ### Flux
 
-Jamais de remplacement direct. Sélection de la fonction, modale d'estimation (modèle, tokens d'entrée et de sortie, coût, dépense du jour), exécution annulable, vue de comparaison avant/après (diff en deux colonnes ou unifié), puis accepter ou rejeter. Une acceptation s'annule par `Ctrl+Z`.
+La fonction se lance par l'icône ✨ en haut de la page, sans raccourci. Les blocs de code, les callouts et les images ne sont jamais montrés au modèle : ils partent sous un repère `[[BLOC-n]]` et reviennent tels quels, un bloc oublié par le modèle étant remis à la fin de la page avec un avertissement. Une mention de page disparue est signalée. Jamais de remplacement direct. Sélection de la fonction, modale d'estimation (modèle, tokens d'entrée et de sortie, coût, dépense du jour), exécution annulable, vue de comparaison avant/après (diff en deux colonnes ou unifié), puis accepter ou rejeter. Une acceptation s'annule par `Ctrl+Z`.
 
 ### Coût
 
-Avec un modèle local, rien n'est facturé : l'estimation affiche la taille de la demande et la durée attendue, sans coût. Avec une API externe : tokens d'entrée calculés localement, sortie estimée par ratio calibré, tarifs du fournisseur. Historique dans `.notes/ai-usage.json` (synchronisé), agrégé par jour, semaine, mois et année avec graphiques. Dépense du jour (API externe seulement) affichée en permanence.
+Avec un modèle local, rien n'est facturé : l'estimation affiche la taille de la demande et la durée attendue, sans coût. Avec une API externe : tokens d'entrée calculés localement (découpage `o200k_base` d'OpenAI), sortie estimée par ratio calibré, tarifs du fournisseur. Le calage se fait sur les dix derniers appels du même modèle et de la même fonction : écart entre le compte de Notes et celui du fournisseur pour l'entrée, rapport sortie sur entrée, durée par token. Les tarifs connus de Notes sont datés (relevé du 2026-10-05) et se corrigent dans les réglages ; un modèle sans tarif connu n'a pas d'estimation de coût. Les modèles d'OpenAI qui raisonnent sont appelés avec l'effort de raisonnement le plus bas qu'ils acceptent : la réflexion est facturée comme de la sortie. Montants en dollars. Historique dans `.notes/ai-usage.json` (synchronisé), agrégé par jour, semaine, mois et année avec graphiques. Dépense du jour (API externe seulement) affichée en permanence.
 
 ### Nettoyage des sorties LLM
 
@@ -641,7 +645,7 @@ Systématique avant insertion : suppression des fences englobantes, des préambu
 
 ### Configuration
 
-Adresse du modèle local, et sur option fournisseur d'API et clé chiffrée ; modèle (local ou API) par fonction, prompts système éditables, seuil d'alerte de dépense mensuelle.
+Adresse du modèle local, et sur option clé OpenAI chiffrée ; modèle (local ou API) par fonction, consignes éditables (retour à celles de Notes), tarifs corrigeables, seuil d'alerte de dépense mensuelle. Tout est dans les réglages du poste (`settings.json`, la clé dans le coffre à secrets), pas synchronisé.
 
 ---
 
@@ -653,7 +657,7 @@ Pas de dictée en direct dans l'application (choix d'Eloi, 2026-10-04). On enreg
 - Le dossier `.notes/memos/` fait partie du dossier des notes : la sync l'amène sur le PC comme le reste. Il n'apparaît pas dans l'arborescence.
 - PC (J13) : les mémos en attente sont listés dans une page « Mémos vocaux ». « Transcrire » envoie l'audio au serveur Whisper, puis le texte au modèle local (§12) pour la mise en forme, avec la vue de comparaison avant acceptation, jamais d'insertion directe. Chaque mémo accepté devient une sous-page de « Mémos vocaux », titrée par sa date (ou un titre proposé par le modèle), qu'on déplace ensuite où on veut. L'audio part alors à la corbeille (§10), récupérable 30 jours.
 - La page « Mémos vocaux » peut être masquée de l'arborescence (menu de la page, réglage propre à ce poste). Elle réapparaît d'elle-même quand un nouveau mémo arrive, et un clic droit dans une zone vide des pages de la barre latérale propose de la réafficher.
-- Whisper : serveur `faster-whisper` lancé hors de l'application, sur le PC (ou une autre machine du réseau), adresse dans les réglages. Il n'est pas embarqué dans l'AppImage. Config de départ : modèle `large-v3-turbo`, quantification `int8_float16`, environ 2 Go de mémoire vidéo, langue FR forcée. Un mémo de 30 s se transcrit en 1 à 3 s. Les modèles exacts dépendent de la carte graphique (P2).
+- Whisper : serveur whisper.cpp lancé hors de l'application, sur le PC (ou une autre machine du réseau), adresse dans les réglages. Il n'est pas embarqué dans l'AppImage. Il tourne sur la carte graphique : Vulkan ou ROCm sur la Radeon du PC, CUDA sur une NVIDIA (choix d'Eloi, 2026-10-05 : `faster-whisper` n'utilise que le processeur avec une carte AMD). Modèle `large-v3-turbo`, environ 1,6 Go de mémoire vidéo, langue FR forcée. Ollama libère la carte entre deux usages, les deux ne se gênent pas.
 - Repli : serveur ou modèle injoignable, « Transcrire » est désactivé avec un message explicite ; les mémos attendent, rien n'est perdu.
 - Détail de l'écran à préciser avec Eloi au début de J13.
 
@@ -741,6 +745,8 @@ L'app se connecte en SMB avec le compte personnel d'Eloi, pas avec un compte dé
 | Index de sync | `userData/cache/sync-index.json` | Non |
 | Thème | `vault/.notes/theme.toml` | Oui |
 | Dictionnaire | `vault/.notes/dictionary.txt` | Oui |
+| Remarques ignorées | `vault/.notes/spelling-ignored.txt` | Oui |
+| Démarrage de LanguageTool avec la session | `~/.config/autostart/notes-languagetool.desktop` | Non |
 | Historique IA | `vault/.notes/ai-usage.json` | Oui |
 | LanguageTool, son Java et ses n-grammes | `~/Applications/LanguageTool/` | Non |
 
@@ -785,8 +791,8 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J8 | Liens et icônes | Renommage sans mention cassée | Fait |
 | J9 | Export | 20 pages en PDF sans coupure incorrecte | Fait |
 | J10 | Corbeille, sélection multiple | Page supprimée restaurée intégralement ; plusieurs pages sélectionnées dans l'arborescence, déplacées ou supprimées ensemble | Fait |
-| J11 | Correction orthographique | Aucune latence perceptible à la frappe | En cours |
-| J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | À faire |
+| J11 | Correction orthographique | Aucune latence perceptible à la frappe | Fait |
+| J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | En cours |
 | J13 | Mémos vocaux, côté PC | Un mémo déposé dans `.notes/memos/` devient une page transcrite et mise en forme ; 30 s transcrites en moins de 5 s | À faire |
 | J14 | Mode liste de tâches, finition desktop | L'outil remplace AppFlowy au quotidien | À faire |
 | J15 | Android, consultation | APK installé, toutes les pages lisibles hors ligne, cache à jour après passage sur le wifi | À faire |
@@ -801,7 +807,7 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Réf | Question | Échéance |
 |---|---|---|
-| P2 | Carte graphique et mémoire vidéo du PC : quels modèles Ollama pour la relecture, la mise au propre et la mise en forme des mémos, et quel modèle Whisper à côté (ils partagent la mémoire vidéo) ? | J12 |
+| P2 | Quel modèle Ollama pour la relecture, la mise au propre et la mise en forme des mémos, sur la Radeon RX 7600 (8 Go) ? Comparaison sur pièces de Ministral 8B, Qwen3 8B et Gemma 3 12B une fois Ollama installé ; et la carte du futur portable NVIDIA, pour son propre modèle. | J12 |
 
 ---
 
@@ -809,6 +815,11 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Date | Décision |
 |---|---|
+| 2026-10-05 | P2 en partie tranché, au début de J12. Le PC d'Eloi a une Radeon RX 7600 (8 Go de mémoire vidéo), un Ryzen 7 5800X et 31 Go de mémoire ; un futur portable aura une carte NVIDIA. Ollama est installé par Eloi avec le script officiel (service systemd, ROCm sur la Radeon, CUDA sur une NVIDIA), pas par Notes. Le modèle local se choisit sur pièces : Ministral 8B, Qwen3 8B et Gemma 3 12B comparés sur des pages en français. Adresse et modèles sont des réglages du poste, non synchronisés, puisque chaque machine a sa carte. Whisper (J13) passe par un serveur whisper.cpp sur la carte (Vulkan ou ROCm sur AMD, CUDA sur NVIDIA), modèle `large-v3-turbo`, au lieu de `faster-whisper` qui n'utilise que le processeur avec une carte AMD. Ollama libère la carte entre deux usages, les deux ne se gênent pas. Seule API externe proposée : OpenAI. |
+| 2026-10-05 | Recette J11 validée par Eloi, retouches 0.11.1 à 0.11.4 comprises (liste des fautes, LanguageTool avec la session, « Ignorer » enregistré, mises à jour automatiques). J11 passe à « Fait », version 0.12.0. |
+| 2026-10-05 | Version 0.11.4, réponses d'Eloi aux dernières questions de la recette J11 : LanguageTool et son Java se mettent à jour automatiquement (au plus une fois par jour, essai sur un port à part avant de remplacer, retour à l'ancienne version si le serveur ne redémarre pas) ; LanguageTool ne publiant pas d'empreinte, ses mises à jour ne sont vérifiées que par https et par l'essai. Les suggestions restent dans l'ordre de LanguageTool. La phrase d'une faute coupée à 90 caractères de part et d'autre lui convient. |
+| 2026-10-05 | Version 0.11.3, réponses d'Eloi aux questions de la recette J11 : LanguageTool démarre avec la session, sur le port 8081, et reste lancé quand Notes quitte, car Eloi se sert aussi de l'extension LanguageTool du navigateur (Notes le lance s'il ne tourne pas, et le relance s'il s'est arrêté) ; la recherche globale reste en fond fenêtre fermée, comme avant ; « Ignorer » est enregistré pour toujours dans `.notes/spelling-ignored.txt`, synchronisé comme le dictionnaire ; pas de raccourci clavier pour la bulle ; le bleu garde grammaire, style et typographie ; un mot du dictionnaire en minuscules vaut aussi avec une majuscule ; rien à arrêter si Notes plante, LanguageTool doit rester lancé. |
+| 2026-10-05 | Version 0.11.2, demande d'Eloi pendant la recette J11 : un clic sur le nombre de fautes de la barre de statut ouvre la liste des fautes de la page, chacune dans sa phrase, pour les corriger d'affilée (suggestions, « Ignorer », dictionnaire, aller au mot). |
 | 2026-10-04 | J11, choix d'Eloi après mesure de LanguageTool en local : c'est Notes qui installe LanguageTool, par un bouton des réglages qui montre les étapes, dans `~/Applications/LanguageTool/` hors des fichiers de l'application, avec son propre Java et les n-grammes français ; Notes le lance elle-même à son ouverture. Remplace « lancé hors de l'application, à l'adresse des réglages ». Le cache de règles du serveur est indispensable (760 ms par vérification sans lui, 45 ms avec). |
 | 2026-10-04 | Recette J10 validée par Eloi, retouches 0.10.1 et 0.10.2 comprises. Dernière question tranchée : les images inutilisées ont aussi un bouton « Tout mettre à la corbeille », avec confirmation. J10 passe à « Fait », version 0.11.0. |
 | 2026-10-04 | Choix d'Eloi pour les services : pas de dictée en direct ; les mémos vocaux s'enregistrent sur le téléphone, vont sur le NAS (`.notes/memos/`, gardés sur le téléphone sans réseau, seule exception à « pas de file d'attente ») et se transcrivent sur le PC (Whisper, puis mise en forme par le modèle local), chacun en sous-page d'une page « Mémos vocaux » masquable qui réapparaît à l'arrivée d'un mémo ou par clic droit dans la zone vide des pages ; l'audio part ensuite à la corbeille. J13 devient « Mémos vocaux, côté PC », J17 « Android, mémos vocaux » est ajouté. LanguageTool tourne en local sur le PC, hors de l'application. P1 tranché : Ollama sur le PC, API externe toujours en option ; les modèles dépendent de la carte graphique (P2). |
@@ -1118,3 +1129,8 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-04 | 0.10.2 | Corbeille : confirmation, place d'origine |
 | 2026-10-04 | 0.11.0 | J10 : corbeille validée |
 | 2026-10-04 | 0.11.1 | J11 : correction, en recette |
+| 2026-10-05 | 0.11.2 | Liste des fautes de la page |
+| 2026-10-05 | 0.11.3 | LanguageTool avec la session |
+| 2026-10-05 | 0.11.4 | Mises à jour de LanguageTool |
+| 2026-10-05 | 0.12.0 | J11 : correction validée |
+| 2026-10-05 | 0.12.1 | J12 : IA, en recette |

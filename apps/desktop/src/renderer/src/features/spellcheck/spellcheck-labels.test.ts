@@ -2,7 +2,15 @@ import { describe, expect, it } from 'vitest';
 import type { SpellcheckStep } from '../../../../shared/ipc-contract';
 import { avancement, libelleDEtape, taille } from './spellcheck-labels';
 
-const etape = (modification: Partial<SpellcheckStep>): SpellcheckStep => ({ id: 'languagetool', libelle: 'LanguageTool 6.6', etat: 'a_faire', phase: null, fait: 0, total: 251_998_221, ...modification });
+const etape = (modification: Partial<SpellcheckStep>): SpellcheckStep => ({
+  id: 'languagetool',
+  libelle: 'LanguageTool 6.6',
+  etat: 'a_faire',
+  phase: null,
+  fait: 0,
+  total: 251_998_221,
+  ...modification,
+});
 
 describe('libellés de la correction', () => {
   it('écrit les tailles en Mo et Go', () => {

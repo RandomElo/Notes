@@ -67,7 +67,13 @@ export function lireReponse(json: unknown, texte: string): SpellIssue[] {
       continue;
     }
     const { offset, length, message, shortMessage, replacements, rule } = match as Record<string, unknown>;
-    if (!Number.isInteger(offset) || !Number.isInteger(length) || (offset as number) < 0 || (length as number) <= 0 || (offset as number) + (length as number) > texte.length) {
+    if (
+      !Number.isInteger(offset) ||
+      !Number.isInteger(length) ||
+      (offset as number) < 0 ||
+      (length as number) <= 0 ||
+      (offset as number) + (length as number) > texte.length
+    ) {
       continue;
     }
     const regle = typeof rule === 'object' && rule !== null ? (rule as Record<string, unknown>) : {};

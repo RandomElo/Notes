@@ -57,7 +57,10 @@ describe('soulignement des fautes', () => {
     let apres = repondre(etat, envois[0]!.id, [faute(3, 9, 'fesait'), faute(16, 17, 'a', 'grammaire')]);
     const debut = envois[0]!.debut + 1;
     apres = apres.apply(apres.tr.insertText('i', debut + 4, debut + 5));
-    const restantes = cleDeCorrection.getState(apres)!.decorations.find().map((decoration) => apres.doc.textBetween(decoration.from, decoration.to));
+    const restantes = cleDeCorrection
+      .getState(apres)!
+      .decorations.find()
+      .map((decoration) => apres.doc.textBetween(decoration.from, decoration.to));
     expect(restantes).toEqual(['a']);
   });
 

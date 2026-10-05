@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { homedir } from 'node:os';
 import { writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
@@ -26,6 +27,9 @@ import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
 import { SecretStore } from './secrets/secret-store';
 import { durcirContenu, durcirSession } from './security/window-security';
 import { SettingsStore } from './settings/settings-store';
+import { AiService } from './ai/ai-service';
+import { detecterCartes, sourcesDuPoste } from './ai/hardware';
+import type { GpuInfo } from './ai/hardware';
 import { CompanionProcess, lanceurDeBinaire } from './smb/companion-process';
 import { CompanionRemoteFs } from './smb/companion-remote-fs';
 import { identiteDuPoste } from './sync/device';
@@ -36,6 +40,7 @@ import { PendingRequest, demandeLaRecherche } from './search/search-request';
 import { SearchWindow } from './search/search-window';
 import { attendreLaFinDeLAncienne, relancerApresLaFin } from './update/relaunch';
 import { UpdateWatcher } from './update/update-watcher';
+import { cheminDuDemarrage } from './languagetool/launcher';
 import { dossierDeLanguageTool } from './languagetool/location';
 import { SpellcheckService } from './languagetool/spellcheck-service';
 import { creerFileDAttente } from './vault/serial-queue';
@@ -310,18 +315,27 @@ function demarrer(): void {
 
       const detourage = new BackgroundRemoval(join(dossierRessources(), 'background-removal'));
       app.on('will-quit', () => detourage.arreter());
-      // Correction orthographique (README §11) : LanguageTool installé par Notes à côté de l'AppImage, lancé par elle.
+      // Correction orthographique (README §11) : LanguageTool installé par Notes à côté de l'AppImage, démarré avec la session.
       // Hors AppImage, NOTES_LANGUAGETOOL_ADRESSE désigne un serveur déjà lancé (essais de bout en bout).
       const adresseExterne = app.isPackaged ? undefined : process.env['NOTES_LANGUAGETOOL_ADRESSE'];
       const correction = new SpellcheckService({
         dossier: dossierDeLanguageTool(process.env, homedir()),
+        demarrageDeSession: cheminDuDemarrage(process.env['XDG_CONFIG_HOME'] || join(homedir(), '.config')),
         // Une session à part, sans cookies ni cache partagés avec la fenêtre.
         telecharger: (adresse, signal) => session.fromPartition('telechargements-languagetool').fetch(adresse, { signal }),
         surEtat: (etat) => fenetre?.webContents.send(evenements.etatCorrectionModifie, etat),
         ...(adresseExterne === undefined || adresseExterne === '' ? {} : { adresseExterne }),
       });
       void correction.demarrer();
+      // Notes quitte : seule une installation en cours s'arrête, LanguageTool continue pour l'extension du navigateur.
       app.on('will-quit', () => correction.arreter());
+      let cartesDuPoste: Promise<GpuInfo[]> | null = null;
+      // Le nom des cartes vu par Chromium (« AMD Radeon RX 7600 (radeonsi, navi33…) ») : /sys ne le donne pas.
+      const nomsDesCartes = async (): Promise<string[]> => {
+        const infos = (await app.getGPUInfo('complete')) as { auxAttributes?: { glRenderer?: unknown }; gpuDevice?: Array<{ deviceString?: unknown }> };
+        const noms = [infos.auxAttributes?.glRenderer, ...(infos.gpuDevice ?? []).map((carte) => carte.deviceString)];
+        return noms.filter((nom): nom is string => typeof nom === 'string' && nom !== '');
+      };
       const handlersVault = creerHandlersVault({ vault, file: fileDuVault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
       const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
       const handlersCorbeille = creerHandlersCorbeille({ vault, file: fileDuVault, avecNas: (action) => sync.avecNas(action) });
@@ -371,6 +385,18 @@ function demarrer(): void {
         }),
         corbeille: handlersCorbeille,
         correction: creerHandlersCorrection({ correction, vault, enSerie: handlersVault.enSerie }),
+        // Fonctions IA (README §12) : Ollama sur le poste, choisi selon la carte graphique, LiteLLM sur option. La clé reste dans le coffre, jamais envoyée au renderer.
+        ia: new AiService({
+          // La carte ne change pas pendant une session : lue une fois, à la première demande.
+          cartes: () => (cartesDuPoste ??= detecterCartes(sourcesDuPoste(nomsDesCartes))),
+          reglages,
+          secrets,
+          contexte: () => vault.contexte(),
+          enSerie: handlersVault.enSerie,
+          surAvancement: (avancement) => fenetre?.webContents.send(evenements.avancementIa, avancement),
+          surHistorique: () => fenetre?.webContents.send(evenements.historiqueIaModifie),
+          octetsAleatoires: (taille) => randomBytes(taille),
+        }),
         recherche: {
           etatDuFond: () => etatDuFond(),
           definirDemarrageAuto: async (actif) => {

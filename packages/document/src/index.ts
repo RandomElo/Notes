@@ -17,3 +17,7 @@ export { extraireSommaire } from './outline';
 export type { OutlineEntry } from './outline';
 export { exporterMarkdown, mentionDImage } from './export/markdown';
 export type { MarkdownExportOptions } from './export/markdown';
+export { nettoyerSortie } from './ai/llm-cleanup';
+export type { CleanupInput, CleanupResult } from './ai/llm-cleanup';
+export { mettreDeCote, remettreEnPlace } from './ai/reserved-blocks';
+export type { PreparedText, RestoredText } from './ai/reserved-blocks';

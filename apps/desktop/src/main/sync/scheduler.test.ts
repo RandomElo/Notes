@@ -1,7 +1,7 @@
 import { mkdtemp, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { RemoteFsError } from '@notes/core';
+import { RemoteFsError, reglagesIaParDefaut } from '@notes/core';
 import type { SyncStatus } from '@notes/core';
 import { MemoryIndexStore, MemoryLocalFs, MemoryRemoteFs } from '@notes/core/testing';
 import { describe, expect, it, vi } from 'vitest';
@@ -29,7 +29,7 @@ class FausseConnexion extends MemoryRemoteFs {
 async function monter(options: { reglagesNas?: boolean; motDePasse?: string | null } = {}) {
   const dossier = await mkdtemp(join(tmpdir(), 'notes-sync-'));
   const reglages = new SettingsStore(join(dossier, 'settings.json'));
-  await reglages.ecrire({ nas: options.reglagesNas === false ? null : nas, vaultLocal: '/srv/notes', appareil: null });
+  await reglages.ecrire({ nas: options.reglagesNas === false ? null : nas, vaultLocal: '/srv/notes', appareil: null, ia: reglagesIaParDefaut });
   const local = MemoryLocalFs.depuis({ 'Alpha/page.md': 'alpha\n' });
   const partage = new FausseConnexion();
   const connexions: CompanionCredentials[] = [];

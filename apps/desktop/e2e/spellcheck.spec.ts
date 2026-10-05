@@ -117,11 +117,12 @@ test('fautes soulignées bloc par bloc, corrigées, ignorées ou ajoutées au di
   await expect(orthographe).toHaveCount(0);
   await expect(barreDeStatut(page)).toContainText('1 faute');
 
-  // « Ignorer » : la remarque disparaît sans nouvelle vérification.
+  // « Ignorer » : la remarque disparaît sans nouvelle vérification, et reste écartée pour toujours (fichier synchronisé).
   await grammaire.click();
   await page.getByRole('dialog', { name: 'Remarque de grammaire' }).getByRole('button', { name: 'Ignorer' }).click();
   await expect(grammaire).toHaveCount(0);
   await expect(barreDeStatut(page)).toContainText('Aucune faute');
+  await expect.poll(() => readFile(join(vault, '.notes', 'spelling-ignored.txt'), 'utf8').catch(() => '')).toBe('A_ACCENT a\n');
 
   // « Ajouter au dictionnaire » : le mot n'est plus souligné, et le fichier du dossier des notes le garde.
   await page.keyboard.press('End');
@@ -165,6 +166,59 @@ test('fautes soulignées bloc par bloc, corrigées, ignorées ou ajoutées au di
   await attendreEnregistrement(page);
   expect(await lireCorps(vault, 'Courses')).toContain('Toujours fesait sans serveur.');
 
+  await fermer(session);
+});
+
+test('liste des fautes depuis la barre de statut : chaque faute dans sa phrase, corrigée sans quitter la liste', async () => {
+  const faux = await fauxLanguageTool();
+  const session = await lancer(await preparer(), [], { NOTES_LANGUAGETOOL_ADRESSE: faux.adresse });
+  const { page, vault } = session;
+
+  await ouvrirPage(page, 'Courses');
+  await finDePage(page);
+  await taper(page, 'Bonjour. Il fesait beau hier. Je vais au marché a vélo.');
+  await page.keyboard.press('Enter');
+  await taper(page, 'On utilise Sequelize ici.');
+  await expect(barreDeStatut(page)).toContainText('3 fautes');
+
+  await barreDeStatut(page).getByRole('button', { name: /3 fautes/ }).click();
+  const liste = page.getByRole('dialog', { name: 'Fautes de la page' });
+  await expect(liste.getByRole('heading')).toHaveText('3 fautes dans la page');
+  const lignes = liste.locator('li[data-faute]');
+  // Chaque faute dans sa phrase seulement, dans l'ordre de la page.
+  await expect(lignes.locator('button[title="Aller au mot dans la page"]')).toHaveText(['… Il fesait beau hier. …', '… Je vais au marché a vélo.', 'On utilise Sequelize ici.']);
+  // Le focus est sur la première suggestion de la première faute.
+  await expect(lignes.nth(0).getByRole('button', { name: 'faisait', exact: true })).toBeFocused();
+
+  // Corriger : la faute sort de la liste, le focus passe à la suivante.
+  await page.keyboard.press('Enter');
+  await expect(liste.getByRole('heading')).toHaveText('2 fautes dans la page');
+  await expect(lignes.nth(0).getByRole('button', { name: 'à', exact: true })).toBeFocused();
+  await expect(editeur(page)).toContainText('Il faisait beau hier.');
+
+  // Flèche bas : la faute suivante ; « Ajouter au dictionnaire » la retire.
+  await page.keyboard.press('ArrowDown');
+  await expect(lignes.nth(1).getByRole('button', { name: 'Séquelle', exact: true })).toBeFocused();
+  await lignes.nth(1).getByRole('button', { name: 'Ajouter au dictionnaire' }).click();
+  await expect(liste.getByRole('heading')).toHaveText('1 faute dans la page');
+
+  // Un clic sur la phrase mène au mot dans la page, liste fermée.
+  await lignes.nth(0).locator('button[title="Aller au mot dans la page"]').click();
+  await expect(liste).toHaveCount(0);
+  expect(await page.evaluate(() => (globalThis as unknown as { getSelection(): { toString(): string } }).getSelection().toString())).toBe('a');
+
+  // Rouverte : « Ignorer » vide la liste ; Échap la ferme.
+  await barreDeStatut(page).getByRole('button', { name: /1 faute/ }).click();
+  await liste.getByRole('button', { name: 'Ignorer' }).click();
+  await expect(liste).toContainText('Plus aucune faute dans la page.');
+  await page.keyboard.press('Escape');
+  await expect(liste).toHaveCount(0);
+  await expect(barreDeStatut(page)).toContainText('Aucune faute');
+
+  await attendreEnregistrement(page);
+  expect(await lireCorps(vault, 'Courses')).toContain('Bonjour. Il faisait beau hier. Je vais au marché a vélo.');
+  faux.serveur.close();
+  faux.serveur.closeAllConnections();
   await fermer(session);
 });
 

@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { reglagesIaParDefaut } from './ai-settings';
 import { lireReglages, validerReglagesNas } from './settings';
 
 const valide = { hote: '192.0.2.10', partage: 'partage', utilisateur: 'utilisateur', dossierVault: 'Notes' };
@@ -39,11 +40,11 @@ describe('validerReglagesNas', () => {
 
 describe('lireReglages', () => {
   it('revient au défaut sur un contenu abîmé', () => {
-    expect(lireReglages(undefined)).toEqual({ nas: null, vaultLocal: null, appareil: null });
-    expect(lireReglages({ nas: { hote: '' }, vaultLocal: 'relatif/chemin', appareil: '../x' })).toEqual({ nas: null, vaultLocal: null, appareil: null });
+    expect(lireReglages(undefined)).toEqual({ nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut });
+    expect(lireReglages({ nas: { hote: '' }, vaultLocal: 'relatif/chemin', appareil: '../x' })).toEqual({ nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut });
   });
 
   it('garde des réglages valides', () => {
-    expect(lireReglages({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000' })).toEqual({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000' });
+    expect(lireReglages({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000' })).toEqual({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000', ia: reglagesIaParDefaut });
   });
 });

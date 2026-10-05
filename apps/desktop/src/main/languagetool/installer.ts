@@ -1,14 +1,12 @@
-import { createHash } from 'node:crypto';
-import { createWriteStream } from 'node:fs';
-import { mkdir, readFile, rename, rm, statfs, writeFile } from 'node:fs/promises';
+import { mkdir, rename, rm, statfs } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
-import { Readable, Transform } from 'node:stream';
-import { pipeline } from 'node:stream/promises';
-import type { ReadableStream as FluxWeb } from 'node:stream/web';
 import type { SpellcheckStep } from '../../shared/ipc-contract';
 import { extraireTarGz, extraireZip } from './archive';
-import { archives as archivesParDefaut, versionInstallee } from './downloads';
+import { telechargerVers } from './download';
+import type { Telecharger } from './download';
+import { archives as archivesParDefaut } from './downloads';
 import type { ArchiveATelecharger } from './downloads';
+import { ecrireVersions, lireVersions, versionsInitiales } from './versions';
 
 /** Place libre demandée avant de commencer : archives et dossiers décompressés coexistent un moment (n-grammes : 1,8 + 3,2 Go). */
 export const placeNecessaire = 6_000_000_000;
@@ -20,7 +18,7 @@ export interface InstallerDependencies {
   /** Dossier de LanguageTool (`~/Applications/LanguageTool`). L'installation se prépare à côté, puis prend sa place. */
   dossier: string;
   /** Téléchargement d'une adresse https, dans une session à part. */
-  telecharger: (adresse: string, signal: AbortSignal) => Promise<Response>;
+  telecharger: Telecharger;
   /** Appelé à chaque étape et pendant la progression. */
   surEtapes: (etapes: SpellcheckStep[]) => void;
   archives?: readonly ArchiveATelecharger[];
@@ -32,13 +30,9 @@ export function etapesInitiales(archives: readonly ArchiveATelecharger[] = archi
   return archives.map((archive) => ({ id: archive.dossier, libelle: archive.libelle, etat: 'a_faire', phase: null, fait: 0, total: archive.taille }));
 }
 
-/** Vrai si une installation finie est là, à la bonne version. */
+/** Vrai si une installation finie est là (ses versions sont écrites). */
 export async function estInstalle(dossier: string): Promise<boolean> {
-  try {
-    return (await readFile(join(dossier, 'version.txt'), 'utf8')).trim() === versionInstallee;
-  } catch {
-    return false;
-  }
+  return (await lireVersions(dossier)) !== null;
 }
 
 /** Message lisible pour l'écran d'installation. Jamais de détail du système qui n'aide pas. */
@@ -101,7 +95,7 @@ export class LanguageToolInstaller {
       for (const archive of this.archives) {
         await this.installerArchive(archive, preparation, controle.signal);
       }
-      await writeFile(join(preparation, 'version.txt'), `${versionInstallee}\n`);
+      await ecrireVersions(preparation, versionsInitiales);
       await rm(dossier, { recursive: true, force: true });
       await rename(preparation, dossier);
       return null;
@@ -128,7 +122,7 @@ export class LanguageToolInstaller {
     this.annoncer();
 
     const fichier = join(preparation, `${archive.dossier}.${archive.format}`);
-    const empreinte = await this.telecharger(archive, fichier, etape, signal);
+    const empreinte = await telechargerVers(fichier, archive, this.dependances.telecharger, signal, (recus) => this.progresser(etape, recus));
     etape.phase = 'verification';
     this.annoncer();
     if (empreinte !== archive.empreinte) {
@@ -151,34 +145,6 @@ export class LanguageToolInstaller {
     etape.phase = null;
     etape.fait = etape.total;
     this.annoncer();
-  }
-
-  /** Télécharge dans un fichier en calculant l'empreinte au passage. Rend l'empreinte. */
-  private async telecharger(archive: ArchiveATelecharger, fichier: string, etape: SpellcheckStep, signal: AbortSignal): Promise<string> {
-    const reponse = await this.dependances.telecharger(archive.adresse, signal);
-    if (!reponse.ok || reponse.body === null) {
-      throw new Error(`${archive.libelle} : le téléchargement a échoué (réponse ${reponse.status}).`);
-    }
-    const hachage = createHash('sha256');
-    let recus = 0;
-    const suivi = new Transform({
-      transform: (morceau: Buffer, _encodage, suite) => {
-        recus += morceau.length;
-        // Un serveur qui envoie plus que prévu n'est pas celui qu'on attend : inutile de remplir le disque.
-        if (recus > archive.taille) {
-          suite(new Error(`${archive.libelle} : le fichier reçu est plus gros que prévu. Rien n'a été installé.`));
-          return;
-        }
-        hachage.update(morceau);
-        this.progresser(etape, recus);
-        suite(null, morceau);
-      },
-    });
-    await pipeline(Readable.fromWeb(reponse.body as FluxWeb<Uint8Array>), suivi, createWriteStream(fichier), { signal });
-    if (recus !== archive.taille) {
-      throw new Error(`${archive.libelle} : le téléchargement s'est arrêté avant la fin.`);
-    }
-    return hachage.digest('hex');
   }
 
   private derniereAnnonce = 0;

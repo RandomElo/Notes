@@ -4,6 +4,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { api } from '../../lib/ipc';
 import { fauteA } from './spellcheck-extension';
 import type { FauteSoulignee } from './spellcheck-extension';
+import { ignorerLaRemarque } from './useSpellcheck';
 import { magasinDeCorrection } from './spellcheck-store';
 
 const selecteurDesFautes = '.faute-orthographe, .faute-grammaire';
@@ -115,7 +116,7 @@ export function SpellPopover({ editor }: { editor: Editor }) {
       <button
         type="button"
         onClick={() => {
-          magasinDeCorrection.ignorer(faute);
+          ignorerLaRemarque(faute);
           fermer();
         }}
         className={`${bouton} text-discret`}

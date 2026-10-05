@@ -9,11 +9,12 @@ import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import type { MentionedPage, Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { Download, FileText, List, Lock, X } from 'lucide-react';
+import { Download, FileText, List, Lock, Sparkles, X } from 'lucide-react';
 import { Selection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
 import { api } from '../../lib/ipc';
+import { AiDialog } from '../ai/AiDialog';
 import { BlockHandle } from '../blocks/BlockHandle';
 import { BlockKeys } from '../blocks/block-extension';
 import { CodeBlockView } from '../code-block/CodeBlockView';
@@ -153,6 +154,10 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   const [editeur, definirEditeur] = useState<Editor | null>(null);
   const sommaire = useOutline(editeur);
   const [sommaireOuvert, definirSommaireOuvert] = useState(false);
+  const [iaOuverte, definirIaOuverte] = useState(false);
+  // Corps de la page tel qu'il est dans l'éditeur, en Markdown (fourni par la surface d'édition).
+  const lireCorps = useRef<(() => string) | null>(null);
+  const lireLeCorps = useMemo(() => () => lireCorps.current?.() ?? '', []);
   const allerA = (entree: OutlineEntry): void => {
     definirSommaireOuvert(false);
     if (editeur !== null && !editeur.isDestroyed) {
@@ -203,6 +208,17 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
             </button>
             <button
               type="button"
+              onClick={() => definirIaOuverte(true)}
+              aria-disabled={lectureSeule || chargement.etat !== 'pret'}
+              disabled={lectureSeule || chargement.etat !== 'pret'}
+              aria-label="Fonctions IA"
+              title={lectureSeule ? 'Fonctions IA : la page est en lecture seule' : 'Fonctions IA : relecture, mise au propre'}
+              className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0 disabled:opacity-40"
+            >
+              <Sparkles className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
               onClick={surExport}
               aria-label="Exporter la page"
               title="Exporter la page"
@@ -241,10 +257,30 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
             lectureSeule={lectureSeule}
             surFrappe={verrou.signalerFrappe}
             surEditeur={definirEditeur}
+            surLecteurDeCorps={(lecteur) => {
+              lireCorps.current = lecteur;
+            }}
           />
         )}
       </article>
       {sommaireVisible && <OutlineRail entrees={sommaire.entrees} courant={sommaire.courant} surChoix={allerA} />}
+      {iaOuverte && editeur !== null && (
+        <AiDialog
+          titre={noeud.titre}
+          lireCorps={lireLeCorps}
+          surAcceptation={(markdown) => {
+            if (editeur.isDestroyed) {
+              return;
+            }
+            // Une seule transaction, gardée dans l'historique : Ctrl+Z rend la page d'avant. L'enregistrement suit comme pour une frappe.
+            editeur.commands.setContent(lireMarkdown(markdown).document.toJSON() as object, { emitUpdate: true });
+          }}
+          surFermeture={() => {
+            definirIaOuverte(false);
+            editeur.view.focus();
+          }}
+        />
+      )}
       {sommaireOuvert && (
         <OutlineDialog
           titre={noeud.titre}
@@ -282,9 +318,11 @@ interface EditorSurfaceProps {
   surFrappe: () => void;
   /** Donne l'éditeur à la page, pour son sommaire. */
   surEditeur: (editeur: Editor | null) => void;
+  /** Donne à la page de quoi lire son corps en Markdown, pour les fonctions IA. */
+  surLecteurDeCorps: (lecteur: (() => string) | null) => void;
 }
 
-function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur }: EditorSurfaceProps) {
+function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur, surLecteurDeCorps }: EditorSurfaceProps) {
   const [erreurDImage, definirErreurDImage] = useState<string | null>(null);
   // Position où ouvrir la grille de taille d'un tableau (`/tableau`), null quand elle est fermée.
   const [grille, definirGrille] = useState<number | null>(null);
@@ -397,6 +435,11 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
     surEditeur(editeur);
     return () => surEditeur(null);
   }, [editeur, surEditeur]);
+  useEffect(() => {
+    // Mêmes octets que l'enregistrement : les blocs inchangés gardent leur texte d'origine.
+    surLecteurDeCorps(() => ecrireMarkdown(editeur.state.doc, source.current));
+    return () => surLecteurDeCorps(null);
+  }, [editeur, surLecteurDeCorps]);
 
   // Une page mentionnée ici est renommée : ses mentions prennent le nouveau titre dans l'éditeur, puis dans le
   // fichier à l'enregistrement suivant. Le main ne touche pas au fichier de la page ouverte.

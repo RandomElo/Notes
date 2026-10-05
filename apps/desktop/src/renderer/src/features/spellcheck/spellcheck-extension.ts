@@ -135,6 +135,21 @@ function compter(etat: EditorState): number {
   return cleDeCorrection.getState(etat)?.decorations.find().length ?? 0;
 }
 
+/** Toutes les fautes soulignées, dans l'ordre de la page. */
+export function fautesDeLaPage(etat: EditorState): FauteSoulignee[] {
+  const decorations = cleDeCorrection.getState(etat)?.decorations.find() ?? [];
+  return decorations
+    .map((decoration) => ({ de: decoration.from, a: decoration.to, faute: (decoration.spec as { faute: SpellIssue }).faute }))
+    .sort((x, y) => x.de - y.de);
+}
+
+/** L'éditeur de la page ouverte, pour la liste des fautes ouverte depuis la barre de statut. */
+let vueOuverte: EditorView | null = null;
+
+export function vueDeLaPageOuverte(): EditorView | null {
+  return vueOuverte !== null && !vueOuverte.isDestroyed ? vueOuverte : null;
+}
+
 /** Envoie au main les blocs à vérifier, quelques-uns à la fois, et pose les réponses. */
 function verifier(vue: EditorView, prochainId: () => number): void {
   const etat = cleDeCorrection.getState(vue.state);
@@ -206,16 +221,25 @@ export function creerPluginDeCorrection(): Plugin<EtatDeCorrection> {
         window.clearTimeout(minuteur);
         minuteur = window.setTimeout(() => verifier(vue, prochainId), delaiDeVerificationMs);
       };
+      vueOuverte = vue;
       let snapshot = magasinDeCorrection.lire();
-      const publier = (): void => magasinDeCorrection.definirFautes(correctionPrete(magasinDeCorrection.lire()) ? compter(vue.state) : null);
+      let dernieres: DecorationSet | undefined;
+      const publier = (): void => {
+        const decorations = cleDeCorrection.getState(vue.state)?.decorations;
+        const modifiees = decorations !== dernieres;
+        dernieres = decorations;
+        magasinDeCorrection.definirFautes(correctionPrete(magasinDeCorrection.lire()) ? compter(vue.state) : null, modifiees);
+      };
       const desabonner = magasinDeCorrection.abonner(() => {
+        // L'état vu est noté avant d'agir : la transaction publie les fautes, ce qui rappelle cet abonné.
+        const ancien = snapshot;
         const nouveau = magasinDeCorrection.lire();
-        if (correctionPrete(nouveau) && !correctionPrete(snapshot)) {
+        snapshot = nouveau;
+        if (correctionPrete(nouveau) && !correctionPrete(ancien)) {
           vue.dispatch(vue.state.tr.setMeta(cleDeCorrection, { genre: 'tout-revoir' } satisfies Action).setMeta('addToHistory', false));
-        } else if (nouveau.dictionnaire !== snapshot.dictionnaire || nouveau.ignores !== snapshot.ignores) {
+        } else if (nouveau.dictionnaire !== ancien.dictionnaire || nouveau.ignores !== ancien.ignores) {
           vue.dispatch(vue.state.tr.setMeta(cleDeCorrection, { genre: 'filtrer' } satisfies Action).setMeta('addToHistory', false));
         }
-        snapshot = nouveau;
         publier();
       });
       planifier();
@@ -232,7 +256,10 @@ export function creerPluginDeCorrection(): Plugin<EtatDeCorrection> {
         destroy: () => {
           window.clearTimeout(minuteur);
           desabonner();
-          magasinDeCorrection.definirFautes(null);
+          if (vueOuverte === vue) {
+            vueOuverte = null;
+          }
+          magasinDeCorrection.definirFautes(null, true);
         },
       };
     },

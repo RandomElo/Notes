@@ -1,4 +1,5 @@
-import type { BrokenMention, ConflictVersions, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, VaultErrorCode } from '@notes/core';
+import type { AiProgress, AiRequest, AiEstimateResult, AiRunResult, AiState, AiUsageView } from './ai-contract';
+import type { AiSettings, BrokenMention, ConflictVersions, IgnoredRemark, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, VaultErrorCode } from '@notes/core';
 
 /**
  * Contrat IPC entre le main, le preload et le renderer. Tout canal ajouté ici
@@ -80,9 +81,20 @@ export const canaux = {
   annulerInstallationCorrection: 'correction:annuler-installation',
   desinstallerCorrection: 'correction:desinstaller',
   relancerCorrection: 'correction:relancer',
+  chercherMiseAJourCorrection: 'correction:chercher-mise-a-jour',
   verifierOrthographe: 'correction:verifier',
   lireDictionnaire: 'correction:lire-dictionnaire',
   ajouterAuDictionnaire: 'correction:ajouter-au-dictionnaire',
+  lireIgnores: 'correction:lire-ignores',
+  ignorerRemarque: 'correction:ignorer',
+  etatIa: 'ia:etat',
+  enregistrerReglagesIa: 'ia:enregistrer-reglages',
+  enregistrerCleLitellm: 'ia:enregistrer-cle',
+  oublierCleLitellm: 'ia:oublier-cle',
+  estimerIa: 'ia:estimer',
+  lancerIa: 'ia:lancer',
+  annulerIa: 'ia:annuler',
+  historiqueIa: 'ia:historique',
 } as const;
 
 /**
@@ -112,6 +124,10 @@ export const evenements = {
   miseAJourInstallee: 'maj:installee',
   /** L'installation ou le serveur de la correction orthographique a changé d'état. Porte le nouvel état. */
   etatCorrectionModifie: 'correction:etat-modifie',
+  /** Un appel IA en cours a reçu un morceau de réponse. Porte l'avancement. */
+  avancementIa: 'ia:avancement',
+  /** Un appel IA vient d'entrer dans l'historique : la dépense affichée est à relire. */
+  historiqueIaModifie: 'ia:historique-modifie',
 } as const;
 
 /** Une étape de l'installation de la correction orthographique : un fichier à télécharger, vérifier, décompresser. */
@@ -137,6 +153,18 @@ export interface SpellcheckState {
   etapes: SpellcheckStep[];
   /** Ce qui n'a pas marché (installation ou démarrage). */
   erreur: string | null;
+  /** Versions installées, lisibles (`6.6`, `17.0.20.1`). null sans installation. */
+  versions: { languagetool: string; java: string } | null;
+  miseAJour: SpellcheckUpdate;
+}
+
+/** Mises à jour automatiques de LanguageTool et de son Java. */
+export interface SpellcheckUpdate {
+  enCours: boolean;
+  /** Date de la dernière recherche, en millisecondes. */
+  derniereVerification: number | null;
+  /** Ce qu'elle a donné : à jour, mis à jour, version refusée, recherche impossible. */
+  message: string | null;
 }
 
 /** Texte d'un bloc à vérifier. Les plages exclues (code, adresses, mentions) ne sont pas vérifiées. */
@@ -179,7 +207,7 @@ export interface PageRequest {
 /** Verrou d'une page vu du renderer : « inconnu » quand la sync est coupée ou le NAS injoignable. */
 export type LockView = LockState | { etat: 'inconnu' };
 
-export type { BrokenMention, SyncStatus, TakeResult };
+export type { BrokenMention, IgnoredRemark, SyncStatus, TakeResult };
 
 export interface VaultState {
   /** Dossier du vault sur ce poste, null tant qu'il n'est pas choisi. */
@@ -471,10 +499,33 @@ export interface NotesApi {
   desinstallerCorrection(): Promise<SpellcheckState>;
   /** Relance LanguageTool après un arrêt imprévu. */
   relancerCorrection(): Promise<SpellcheckState>;
+  /** Cherche tout de suite une nouvelle version de LanguageTool ou de Java. L'avancement arrive par surEtatCorrection. */
+  chercherMiseAJourCorrection(): Promise<SpellcheckState>;
   /** Fautes d'un bloc. null si la correction n'est pas prête ou ne répond pas : rien n'est alors souligné. */
   verifierOrthographe(demande: SpellcheckRequest): Promise<SpellIssue[] | null>;
   /** Mots du dictionnaire personnel (`.notes/dictionary.txt`). */
   lireDictionnaire(): Promise<string[]>;
   /** Ajoute un mot au dictionnaire personnel. Rend la liste à jour. */
   ajouterAuDictionnaire(demande: { mot: string }): Promise<string[]>;
+  /** Remarques écartées par « Ignorer » (`.notes/spelling-ignored.txt`, synchronisé). */
+  lireIgnores(): Promise<IgnoredRemark[]>;
+  /** Écarte une remarque pour toujours et partout. Rend la liste à jour. */
+  ignorerRemarque(demande: IgnoredRemark): Promise<IgnoredRemark[]>;
+
+  /** Fonctions IA de ce poste : carte graphique, Ollama et ses modèles, LiteLLM et les siens, clé, dépense. Contacte Ollama (et LiteLLM si une clé est enregistrée). */
+  etatIa(): Promise<AiState>;
+  /** Enregistre les réglages IA du poste (revérifiés par le main). */
+  enregistrerReglagesIa(reglages: AiSettings): Promise<AiState>;
+  /** Enregistre la clé de LiteLLM, chiffrée par le trousseau du système. Elle ne revient jamais au renderer. */
+  enregistrerCleLitellm(demande: { cle: string }): Promise<AiState>;
+  oublierCleLitellm(): Promise<AiState>;
+  /** Taille, durée et coût estimés d'un appel, avant de le lancer. Ne contacte aucun modèle. */
+  estimerIa(demande: AiRequest): Promise<AiEstimateResult>;
+  /** Lance un appel et rend la proposition nettoyée. Rien n'est écrit dans la page. L'avancement arrive par surAvancementIa. */
+  lancerIa(demande: AiRequest): Promise<AiRunResult>;
+  annulerIa(): Promise<void>;
+  surAvancementIa(ecouteur: (avancement: AiProgress) => void): () => void;
+  /** Appels passés et leurs totaux par période (`.notes/ai-usage.json`). */
+  historiqueIa(): Promise<AiUsageView>;
+  surHistoriqueIa(ecouteur: () => void): () => void;
 }
