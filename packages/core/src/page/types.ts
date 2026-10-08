@@ -9,10 +9,13 @@ export interface PageMeta {
   creeLe: string;
   modifieLe: string;
   mode: PageMode | null;
+  /** Rôle particulier de la page : `memos` pour la page « Mémos vocaux » (README §13). Absent pour une page ordinaire. */
+  role?: PageRole;
 }
 
 /** « todo » : la page se comporte comme une liste de tâches (README §14). */
 export type PageMode = 'todo';
+export type PageRole = 'memos';
 
 /** Une page telle qu'elle est sur le disque. */
 export interface PageFile {

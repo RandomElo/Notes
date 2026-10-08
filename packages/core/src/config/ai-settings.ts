@@ -6,9 +6,9 @@ import type { AiProvider } from '../ai/usage';
  * de LiteLLM vit dans le coffre à secrets.
  */
 
-/** Fonctions lancées depuis une page. La mise en forme des mémos viendra avec J13. */
-export type AiPageFunction = 'relecture' | 'mise-au-propre';
-export const fonctionsDePage: readonly AiPageFunction[] = ['relecture', 'mise-au-propre'];
+/** Fonctions réglables : les deux d'une page (J12), et la mise en forme des mémos vocaux (J13). */
+export type AiPageFunction = 'relecture' | 'mise-au-propre' | 'memo';
+export const fonctionsDePage: readonly AiPageFunction[] = ['relecture', 'mise-au-propre', 'memo'];
 
 export interface AiModelChoice {
   fournisseur: AiProvider;
@@ -45,8 +45,9 @@ export const reglagesIaParDefaut: AiSettings = {
   modeles: {
     relecture: { fournisseur: 'ollama', modele: '' },
     'mise-au-propre': { fournisseur: 'ollama', modele: '' },
+    memo: { fournisseur: 'ollama', modele: '' },
   },
-  consignes: { relecture: null, 'mise-au-propre': null },
+  consignes: { relecture: null, 'mise-au-propre': null, memo: null },
   seuilMensuelUsd: null,
   tarifs: {},
 };
@@ -110,8 +111,9 @@ export function lireReglagesIa(valeur: unknown): AiSettings {
     modeles: {
       relecture: lireChoix(modeles['relecture'], reglagesIaParDefaut.modeles.relecture),
       'mise-au-propre': lireChoix(modeles['mise-au-propre'], reglagesIaParDefaut.modeles['mise-au-propre']),
+      memo: lireChoix(modeles['memo'], reglagesIaParDefaut.modeles.memo),
     },
-    consignes: { relecture: consigne('relecture'), 'mise-au-propre': consigne('mise-au-propre') },
+    consignes: { relecture: consigne('relecture'), 'mise-au-propre': consigne('mise-au-propre'), memo: consigne('memo') },
     seuilMensuelUsd: montant(brut['seuilMensuelUsd']),
     tarifs,
   };

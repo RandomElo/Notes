@@ -8,10 +8,10 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 
 | | |
 |---|---|
-| Dernière mise à jour | 2026-10-05 |
-| Version | 0.12.1 |
+| Dernière mise à jour | 2026-10-08 |
+| Version | 0.12.5 |
 | Avancement | J0 à J11 terminés : recette J11 validée par Eloi le 2026-10-05, retouches 0.11.1 à 0.11.4 comprises |
-| Jalon en cours | J12 (fonctions IA), en recette (`docs/recettes/J12.md`) : choix du modèle local à faire sur pièces |
+| Jalon en cours | J12, J13 et J14 recettés le 2026-10-08 ; retouches 0.12.5 en vérification (`docs/recettes/retouches-0.12.5.md`) |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -31,7 +31,7 @@ Ce qui fonctionne aujourd'hui :
 - la création d'une page depuis le texte (`/page`) ou l'arborescence : on tape son nom, puis le curseur est dans son contenu.
 - le thème : il se règle dans les réglages, avec un aperçu en direct, et s'enregistre dans `.notes/theme.toml`, qu'on peut aussi modifier à la main. Couleurs, polices, titres, puces et largeurs. Le fichier est relu dès qu'il est enregistré, une valeur fausse est ignorée et signalée sans rien bloquer, et une page peut avoir ses propres couleurs.
 - les blocs riches : blocs de code colorés (langage choisi dans une liste avec recherche ou deviné au collage, bouton copier, numéros de ligne et retour à la ligne réglables dans le thème), tableaux (grille de taille au `/tableau`, poignées pour ajouter ou retirer colonnes et lignes, navigation au clavier, alignement des colonnes), images (insertion, collage ou dépôt, copie dans `assets/`, largeur, alignement, texte alternatif, légende, visionneuse, liste des images inutilisées), callouts (nature, icône, texte mis en forme) ;
-- la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 10 secondes, une seconde après chaque modification et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail ; NAS injoignable, elle dit depuis quand, et une coupure du réseau se voit dans la seconde.
+- la synchronisation avec le NAS (à valider sur le NAS réel) : au démarrage, toutes les 5 secondes, une seconde après chaque modification et à la fermeture, dans les deux sens. Quand une page a changé des deux côtés, la version du NAS est gardée à côté en `page.conflit-[date].md`. Une page en cours d'écriture sur un autre appareil s'affiche en lecture seule, avec « Forcer l'édition ». La barre de statut, en bas, montre l'état et ouvre le détail ; NAS injoignable, elle dit depuis quand, et une coupure du réseau se voit dans la seconde.
 - l'écran de résolution des conflits : la page et la version mise de côté face à face, bloc par bloc, avec garder A, B ou les deux, poignées pour placer une version ailleurs, aperçu et validation.
 - la corbeille : une page supprimée part avec ses sous-pages et ses images dans la corbeille, sur le NAS au cycle suivant ; l'écran de la corbeille la montre, la restaure à sa place ou l'efface. Plusieurs pages se sélectionnent (`Maj+↑/↓`, `Maj+clic`) pour être déplacées ou supprimées ensemble.
 - les liens et icônes (J8) : `@` ou `/lien` pour mentionner une page, affichée avec son icône et son titre du moment ; renommer une page fait suivre ses mentions, jusque dans les fichiers des autres pages ; un lien ou une mention s'ouvre d'un clic, et son infobulle permet de le modifier, le copier ou le retirer ; une adresse collée devient une mention de site (favicon et titre du site), ou un lien si le site ne répond pas ; mentions cassées barrées et listées dans les réglages ; icône de page (emoji cherché en français, icône Lucide cherchée par un mot français, image recadrée avec « Retirer le fond » par un modèle local), au-dessus du titre, dans l'arborescence, les onglets, la recherche et les mentions ; une image copiée d'une page et collée dans une autre y est copiée.
@@ -41,18 +41,22 @@ Ce qui fonctionne aujourd'hui :
 
 - la correction orthographique (J11) : LanguageTool s'installe d'un clic depuis les réglages, avec son Java et les n-grammes français, dans `~/Applications/LanguageTool/`, il démarre avec la session (l'extension LanguageTool du navigateur s'en sert aussi) ; les fautes de chaque bloc modifié sont soulignées une seconde après la frappe (rouge pour l'orthographe, bleu pour le reste), sans jamais ralentir l'écriture ; un clic ouvre la bulle (suggestions, « Ignorer », « Ajouter au dictionnaire ») ; le code et les adresses ne sont pas vérifiés ; le nombre de fautes est dans la barre de statut, et un clic dessus ouvre la liste des fautes pour les corriger d'affilée.
 
-- les fonctions IA (J12, en recette) : par l'icône ✨ en haut de la page, relecture stylistique ou mise au propre de toute la page, par un modèle Ollama sur le poste ou par OpenAI en option ; estimation avant de lancer (taille, durée, coût), appel annulable, comparaison avant/après en deux colonnes ou en une, accepter ou rejeter, `Ctrl+Z` après acceptation ; code, callouts et images jamais montrés au modèle ; sortie nettoyée (préambule, conclusion, emojis, gras et séparateurs ajoutés, titres) ; historique avec graphiques et dépense du jour dans la barre de statut. Clé OpenAI chiffrée par le trousseau.
+- les fonctions IA (J12, en recette) : par l'icône ✨ en haut de la page, relecture stylistique ou mise au propre de toute la page, par un modèle Ollama sur le poste, choisi par Notes selon la carte graphique (ou pas d'IA locale si la machine ne suit pas), ou par LiteLLM en option ; estimation avant de lancer (taille, durée, coût), appel annulable, comparaison avant/après en deux colonnes ou en une, accepter ou rejeter, `Ctrl+Z` après acceptation ; code, callouts et images jamais montrés au modèle ; sortie nettoyée (préambule, conclusion, emojis, gras et séparateurs ajoutés, titres) ; historique avec graphiques et dépense du jour dans la barre de statut. Clé de LiteLLM chiffrée par le trousseau.
+
+- le mode liste de tâches (J14, en recette) : l'icône en haut de la page ou `/liste` passe la page en liste façon Keep (`mode: todo`) : une seule liste, sans titres, où tout ce qu'on écrit devient une tâche, avec du code, un tableau ou une image possibles sous une tâche ; une tâche cochée descend dans la section « Terminé », repliable, en bas de la page et du fichier ; une tâche laissée vide disparaît.
+
+- les mémos vocaux (J13, en recette) : un mémo déposé dans `.notes/memos/` (par le téléphone, à partir de J17) apparaît dans la page « Mémos vocaux » ; il s'écoute, se transcrit sur la carte graphique par un Whisper livré avec Notes (30 s en moins de 1,5 s chez Eloi), quel que soit son format audio, se met en forme par le modèle local, puis devient une sous-page titrée par sa date ; l'audio part à la corbeille. « Tout transcrire » les enchaîne. La page se masque de l'arborescence et revient avec le mémo suivant.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
-Ce qui n'existe pas encore : la suppression de page, l'application Android.
+Ce qui n'existe pas encore : l'application Android.
 
 Reste à faire :
 
-- passer l'intervalle de sync de 10 à 5 s (décidé le 2026-10-04 sur les durées relevées par Eloi, environ 60 ms par cycle) : `intervalleParDefautMs` dans `main/sync/scheduler.ts`, pas encore fait ;
-- J12 (fonctions IA) en recette : installer Ollama, choisir le modèle local sur pièces (P2), puis suivre `docs/recettes/J12.md`.
+- retours d'Eloi notés pour plus tard dans `docs/retours.md` (bloc des sous-pages en haut de page), pas encore implémentés ;
+- recettes J12, J13 et J14 faites le 2026-10-08 : leurs retours sont dans la version 0.12.5, à vérifier avec `docs/recettes/retouches-0.12.5.md` (avec trois questions réexpliquées).
 
-Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). J12 se lance avec `/jalon J12`. Pour installer la version construite : `npm run installer`.
+Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). Un jalon se reprend avec `/jalon J<n>`. Pour installer la version construite : `npm run installer`.
 
 ## Sommaire
 
@@ -294,7 +298,7 @@ Le vault local est la source de travail. Client SMB intégré, pas de montage sy
 |---|---|---|
 | Copie locale | Vault complet | Cache des pages (texte complet, assets à la demande) |
 | Sens | Bidirectionnel | Descendant, plus écriture directe à chaque modification |
-| Déclenchement | Toutes les 10 s, une seconde après chaque modification du dossier des notes, au démarrage, à la fermeture | À l'ouverture, au retour au premier plan, au tirer pour rafraîchir, toutes les 30 s au premier plan |
+| Déclenchement | Toutes les 5 s, une seconde après chaque modification du dossier des notes, au démarrage, à la fermeture | À l'ouverture, au retour au premier plan, au tirer pour rafraîchir, toutes les 30 s au premier plan |
 | Édition hors ligne | Oui, poussée au cycle suivant | Non |
 
 ### Cycle
@@ -409,7 +413,7 @@ Une liste à puces dont certains items seulement ont une case à cocher reste un
 
 ### Menu `/`
 
-Titres, paragraphe, listes, tâche, code, tableau, image, callout, page enfant, lien, date. En français avec alias anglais, recherche insensible aux accents.
+Titres, paragraphe, listes, tâche, mode liste de tâches (§14), code, tableau, image, callout, page enfant, lien, date. En français avec alias anglais, recherche insensible aux accents.
 
 - Il s'ouvre quand on tape `/` en début de bloc ou après une espace, pas dans « et/ou », une date ou un bloc de code. Ce qu'on tape ensuite filtre la liste, y compris par le nom anglais (`quote`, `todo`) ou la syntaxe Markdown (`###`).
 - Flèches pour choisir, `Entrée` ou `Tab` pour valider, `Échap` pour fermer sans toucher au texte.
@@ -624,7 +628,11 @@ Le téléphone n'a pas de correction. Vérification par bloc modifié (debounce 
 
 ## 12. Fonctions IA
 
-Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, servi sur le PC (choix d'Eloi, 2026-10-04), sans rien envoyer sur Internet. En option, on peut faire appel à une API externe, OpenAI seulement (choix d'Eloi, 2026-10-05), choisie dans les réglages, fonction par fonction. Ollama est installé par Eloi avec le script officiel (service systemd, qui sert la carte par ROCm sur une Radeon et par CUDA sur une NVIDIA), hors de l'application, qui l'appelle par son API à l'adresse des réglages (`http://localhost:11434` par défaut). Adresse et modèles sont réglés par poste, car chaque machine a sa carte (Radeon RX 7600 de 8 Go sur le PC, NVIDIA sur un futur portable). Le modèle se choisit sur pièces (P2). Le même modèle sert à la mise en forme des mémos vocaux (§13). Comme les autres services, l'IA est facultative : sans modèle joignable, ses fonctions se désactivent, l'édition n'est jamais bloquée.
+Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, servi sur le PC (choix d'Eloi, 2026-10-04), sans rien envoyer sur Internet. En option, on passe par LiteLLM, le proxy par lequel Eloi parle aux modèles payants (choix d'Eloi, 2026-10-07 : à la place d'un appel direct à OpenAI), choisi dans les réglages, fonction par fonction. Ollama est installé par Eloi avec le script officiel (service systemd, qui sert la carte par ROCm sur une Radeon et par CUDA sur une NVIDIA), hors de l'application, qui l'appelle par son API à l'adresse des réglages (`http://localhost:11434` par défaut). Le même modèle sert à la mise en forme des mémos vocaux (§13). Comme les autres services, l'IA est facultative : sans modèle joignable, ses fonctions se désactivent, l'édition n'est jamais bloquée.
+
+### Choix du modèle local selon la machine
+
+Notes regarde la carte graphique et décide seule (choix d'Eloi, 2026-10-07) : quel modèle d'Ollama utiliser, ou pas d'IA locale du tout si la machine ne suit pas. La carte se lit sans rien installer : une Radeon dans `/sys/class/drm` (mémoire vidéo), une NVIDIA par son pilote (`/proc/driver/nvidia`, puis `nvidia-smi` livré avec lui, s'il est là), le nom par Chromium. Pour chaque modèle installé, Notes calcule la place qu'il prend chargé (poids, plus le contexte d'après son architecture lue par `/api/show`, plus une marge) et la compare à 92 % de la mémoire vidéo. L'IA locale est bloquée, avec la raison affichée, quand il n'y a pas de carte dédiée, ou qu'aucun modèle installé d'au moins 7 milliards de paramètres ne tient entièrement en mémoire vidéo : un modèle qui déborde sur le processeur est quatre fois plus lent (mesuré : 9 tokens par seconde contre 40). Parmi ceux qui tiennent, Notes prend la plus grande classe de taille, puis, à taille égale, Qwen3, puis Gemma 3, puis les autres, Ministral en dernier (comparaison du 2026-10-05 sur des pages en français : Qwen3 corrige sans rien changer d'autre, Gemma 3 écrit le mieux mais ne tient pas dans 8 Go, Ministral réécrit trop et invente à la mise au propre). Sur le PC d'Eloi (Radeon RX 7600, 8 Go), c'est qwen3:8b. Le contexte demandé à Ollama est plafonné à ce qui tient encore en mémoire vidéo ; une page plus longue est refusée avec un message. Après chaque appel, Notes demande à Ollama (`/api/ps`) quelle part du modèle était en mémoire vidéo : un modèle qui a débordé est écarté jusqu'au lancement suivant. Un modèle peut être choisi à la main dans les réglages, parmi ceux qui conviennent. Ollama sur une autre machine ou NVIDIA sans `nvidia-smi` : la mémoire est inconnue, seul le contrôle après l'appel s'applique.
 
 ### Deux fonctions, appliquées à la page entière
 
@@ -637,15 +645,15 @@ La fonction se lance par l'icône ✨ en haut de la page, sans raccourci. Les bl
 
 ### Coût
 
-Avec un modèle local, rien n'est facturé : l'estimation affiche la taille de la demande et la durée attendue, sans coût. Avec une API externe : tokens d'entrée calculés localement (découpage `o200k_base` d'OpenAI), sortie estimée par ratio calibré, tarifs du fournisseur. Le calage se fait sur les dix derniers appels du même modèle et de la même fonction : écart entre le compte de Notes et celui du fournisseur pour l'entrée, rapport sortie sur entrée, durée par token. Les tarifs connus de Notes sont datés (relevé du 2026-10-05) et se corrigent dans les réglages ; un modèle sans tarif connu n'a pas d'estimation de coût. Les modèles d'OpenAI qui raisonnent sont appelés avec l'effort de raisonnement le plus bas qu'ils acceptent : la réflexion est facturée comme de la sortie. Montants en dollars. Historique dans `.notes/ai-usage.json` (synchronisé), agrégé par jour, semaine, mois et année avec graphiques. Dépense du jour (API externe seulement) affichée en permanence.
+Avec un modèle local, rien n'est facturé : l'estimation affiche la taille de la demande et la durée attendue, sans coût. Par LiteLLM : tokens d'entrée calculés localement (découpage `o200k_base` des modèles d'OpenAI), sortie estimée par ratio calibré. Le tarif de chaque modèle est lu chez LiteLLM (`/model/info`), qui le connaît ; à défaut, Notes prend le sien, relevé chez OpenAI, et un tarif saisi dans les réglages passe avant les deux. Le calage se fait sur les dix derniers appels du même modèle et de la même fonction : écart entre le compte de Notes et celui du fournisseur pour l'entrée, rapport sortie sur entrée, durée par token. Un modèle sans tarif connu n'a pas d'estimation de coût. Chaque modèle est appelé avec l'effort de raisonnement le plus bas qu'il accepte : la réflexion est facturée comme de la sortie (accord d'Eloi, tant que les sorties restent bonnes). Montants en dollars. Historique dans `.notes/ai-usage.json` (synchronisé), agrégé par jour, semaine, mois et année avec graphiques. Dépense du jour dans la barre de statut, seulement quand une fonction passe par LiteLLM (choix d'Eloi, 2026-10-07).
 
 ### Nettoyage des sorties LLM
 
-Systématique avant insertion : suppression des fences englobantes, des préambules et conclusions, des séparateurs ajoutés, normalisation des puces, vérification de la cohérence des niveaux de titre, suppression des emojis et du gras parasites ajoutés par le modèle (ce qui était présent dans l'entrée est préservé). Les blocs de code ne sont jamais touchés.
+Systématique avant insertion : suppression des fences englobantes et de la réflexion affichée (`<think>`), des préambules et conclusions, des séparateurs ajoutés, normalisation des puces, vérification de la cohérence des niveaux de titre, suppression des emojis et du gras parasites ajoutés par le modèle (ce qui était présent dans l'entrée est préservé). Les blocs de code ne sont jamais touchés. Une relecture qui rend moins de 85 % des mots de la page est signalée : le modèle a sans doute retiré du texte (vu en essai sur des paragraphes proches).
 
 ### Configuration
 
-Adresse du modèle local, et sur option clé OpenAI chiffrée ; modèle (local ou API) par fonction, consignes éditables (retour à celles de Notes), tarifs corrigeables, seuil d'alerte de dépense mensuelle. Tout est dans les réglages du poste (`settings.json`, la clé dans le coffre à secrets), pas synchronisé.
+Adresse d'Ollama, et sur option adresse et clé chiffrée de LiteLLM ; modèle par fonction (« Automatique » par défaut pour Ollama), consignes éditables (retour à celles de Notes), tarifs corrigeables, seuil d'alerte de dépense mensuelle. Tout est dans les réglages du poste (`settings.json`, la clé dans le coffre à secrets), pas synchronisé : les consignes restent dans l'application (choix d'Eloi, 2026-10-07). Une adresse de LiteLLM en http vers une autre machine est signalée : la clé y passe en clair sur le réseau local.
 
 ---
 
@@ -655,11 +663,12 @@ Pas de dictée en direct dans l'application (choix d'Eloi, 2026-10-04). On enreg
 
 - Téléphone (J17) : un bouton enregistre un mémo (AAC en `.m4a`, mono, 16 kHz, assez pour la voix). Le fichier est écrit directement sur le NAS dans `.notes/memos/memo-<date>.m4a`. Sans NAS joignable, il reste sur le téléphone et part dès que le NAS répond : c'est la seule exception à la règle « pas de file d'attente » (§5), puisqu'un mémo n'est pas une page et ne peut pas créer de conflit. L'application montre les mémos pas encore envoyés.
 - Le dossier `.notes/memos/` fait partie du dossier des notes : la sync l'amène sur le PC comme le reste. Il n'apparaît pas dans l'arborescence.
-- PC (J13) : les mémos en attente sont listés dans une page « Mémos vocaux ». « Transcrire » envoie l'audio au serveur Whisper, puis le texte au modèle local (§12) pour la mise en forme, avec la vue de comparaison avant acceptation, jamais d'insertion directe. Chaque mémo accepté devient une sous-page de « Mémos vocaux », titrée par sa date (ou un titre proposé par le modèle), qu'on déplace ensuite où on veut. L'audio part alors à la corbeille (§10), récupérable 30 jours.
-- La page « Mémos vocaux » peut être masquée de l'arborescence (menu de la page, réglage propre à ce poste). Elle réapparaît d'elle-même quand un nouveau mémo arrive, et un clic droit dans une zone vide des pages de la barre latérale propose de la réafficher.
-- Whisper : serveur whisper.cpp lancé hors de l'application, sur le PC (ou une autre machine du réseau), adresse dans les réglages. Il n'est pas embarqué dans l'AppImage. Il tourne sur la carte graphique : Vulkan ou ROCm sur la Radeon du PC, CUDA sur une NVIDIA (choix d'Eloi, 2026-10-05 : `faster-whisper` n'utilise que le processeur avec une carte AMD). Modèle `large-v3-turbo`, environ 1,6 Go de mémoire vidéo, langue FR forcée. Ollama libère la carte entre deux usages, les deux ne se gênent pas.
-- Repli : serveur ou modèle injoignable, « Transcrire » est désactivé avec un message explicite ; les mémos attendent, rien n'est perdu.
-- Détail de l'écran à préciser avec Eloi au début de J13.
+- PC (J13) : les mémos en attente sont listés en tête d'une page « Mémos vocaux », créée à l'arrivée du premier mémo et reconnue par son en-tête (`role: memos`), même renommée. Chaque mémo s'écoute, se transcrit, ou part à la corbeille sans être transcrit ; « Tout transcrire » les enchaîne, chacun à valider (choix d'Eloi, 2026-10-07). « Transcrire » fait tout d'un coup : l'audio, quel que soit son format, est converti en WAV 16 kHz mono par le décodeur de la page (AAC d'un `.m4a`, MP3, Ogg, Opus, FLAC, WAV), ou à défaut par le ffmpeg livré avec Notes (AMR et 3GP des enregistreurs Android, WMA, AIFF, CAF, APE, et le son d'une vidéo), transcrit par Whisper, puis mis en forme par le modèle de la fonction « Mise en forme des mémos » (§12, réglable comme les deux autres, avec sa consigne). La comparaison montre la transcription brute face à la mise en forme, jamais d'insertion directe ; si la mise en forme est impossible (aucun modèle), la transcription brute peut être gardée. Chaque mémo accepté devient une sous-page de « Mémos vocaux », titrée par la date seule (« Mémo du 7 octobre 2026 à 16 h 24 », choix d'Eloi), qu'on déplace ensuite où on veut. L'audio part alors à la corbeille (§10), récupérable 30 jours, d'où il revient dans `.notes/memos/`. Un mémo rejeté reste en attente.
+- Tous les formats audio courants sont acceptés (choix d'Eloi, 2026-10-08). Ce que Chromium ne lit pas passe par ffmpeg 9.0.2, compilé à la construction de Notes (`scripts/build-ffmpeg.sh`, `npm run build:ffmpeg`) avec ses seuls décodeurs audio, sans réseau ni assembleur, et livré dans l'AppImage (8 Mo) : rien à installer. L'écoute se replie de même sur un WAV décodé par ffmpeg.
+- Une icône de dossier en tête de la page « Mémos vocaux » ouvre `.notes/memos/` dans le gestionnaire de fichiers (créé s'il manque) : un fichier audio déposé là devient un mémo en attente.
+- La page « Mémos vocaux » peut être masquée de l'arborescence (« Masquer de l'arborescence » dans son menu, réglage propre à ce poste qui retient les mémos présents à ce moment). Elle réapparaît d'elle-même quand un nouveau mémo arrive, et un clic droit dans une zone vide des pages de la barre latérale propose de la réafficher.
+- Whisper : Notes s'occupe de tout, rien n'est à installer à la main (choix d'Eloi, 2026-10-07). Le serveur whisper.cpp est compilé à la construction de Notes (`scripts/build-whisper.sh`, `npm run build:whisper`) et livré dans l'AppImage : version 1.9.5, calcul sur la carte graphique par Vulkan (Radeon comme NVIDIA), et une variante du calcul processeur par famille de processeur, choisie au lancement. Les binaires de l'image Docker officielle ne conviennent pas : compilés pour un processeur avec AVX-512, ils plantent sur le Ryzen 7 5800X. Le modèle se télécharge une fois, de lui-même à l'arrivée du premier mémo (choix d'Eloi, 2026-10-08 ; après un échec, un bouton le relance), dans `~/Applications/Whisper/` à côté de l'AppImage, vérifié par son empreinte : `large-v3-turbo` quantifié en 5 bits (574 Mo, environ 0,8 Go de mémoire vidéo, il tient à côté du modèle d'Ollama sur une carte de 8 Go), plus un modèle de détection de la voix (Silero, 885 Ko) qui ne laisse passer que les passages parlés : sans lui, Whisper invente du texte sur la musique ou le silence (« Sous-titrage Société Radio-Canada », vu en essai). Langue française imposée. Le serveur se lance à la première transcription, sur 127.0.0.1 et un port libre, sans les variables du poste, et s'arrête après 2 minutes sans demande pour rendre la carte à Ollama (3 minutes à l'origine, réduit à la demande d'Eloi). Sans carte dédiée, la transcription se fait sur le processeur, plus lentement. Mesuré le 2026-10-07 sur le PC d'Eloi : 30 s de parole française transcrites en 1,2 à 1,4 s.
+- Repli : modèle pas encore téléchargé ou serveur absent, « Transcrire » est désactivé avec un message explicite ; un mémo sans voix dit « Rien n'a été entendu » ; les mémos attendent, rien n'est perdu.
 
 ---
 
@@ -669,13 +678,16 @@ Un mode dédié par page, façon Google Keep, distinct des cases à cocher norma
 
 Les cases à cocher classiques (§6) restent un bloc parmi d'autres, inséré via `/tache` ou `[] `, mélangé librement avec du texte et des titres. Leur comportement ne change pas.
 
-Le mode liste s'active page par page, par un bouton dans l'en-tête, ce qui écrit `mode: todo` dans le front-matter. Une fois activé :
+Le mode liste s'active page par page, par un bouton dans l'en-tête ou le menu `/`, ce qui écrit `mode: todo` dans le front-matter. Une page en liste n'est qu'une liste, comme une note Keep (choix d'Eloi, 2026-10-08) :
 
-- Chaque nouvelle ligne devient automatiquement une case à cocher, sans retaper `/tache` ou `[]`.
-- `Entrée` en fin d'item crée directement l'item suivant, déjà sous forme de case.
-- Les items cochés passent en style barré et atténué, et se regroupent en bas de page dans une section « Terminé » repliable.
-- Un champ d'ajout rapide reste visible en haut de liste, comme dans Keep.
-- Le mode se désactive à tout moment : la page redevient un éditeur classique, les items existants restent des cases à cocher normales.
+- Une seule liste de tâches par page, sans titres. Activer le mode convertit la page : paragraphes, titres et items de puces ou numérotés (sous-items compris) deviennent des tâches ; un autre bloc (code, tableau, image, callout) passe sous la tâche qui le précède, ou sous une tâche vide s'il est en tête. Une étape d'annulation. Le curseur est aussitôt dans une tâche vide, prête à écrire.
+- Pas de champ d'ajout : tout ce qu'on écrit devient une tâche. `Entrée` en fin de tâche crée la suivante ; `Entrée` sur une tâche vide ne fait rien. Un clic sous la liste ouvre une tâche vide juste avant « Terminé ». Une tâche laissée vide disparaît quand on la quitte. La tâche vide du curseur montre l'invite « Nouvelle tâche ».
+- La règle est rétablie à chaque modification : un titre tapé (`#`, barre d'outils) redevient du texte, un paragraphe rejoint la liste, le curseur reste où il était.
+- Sous une tâche, des blocs plus riches sont possibles (choix d'Eloi) : dans le menu `/` d'une page en liste, code, tableau, image, callout et « Texte sous la tâche » se rangent sous la tâche du curseur (sous la tâche d'avant si on vient de faire `Entrée`). Le menu n'y propose ni titres ni listes. `Tab` fait toujours une sous-tâche.
+- Les tâches cochées passent en style barré et atténué, et descendent dans une section « Terminé » repliable en bas de la liste, dans le fichier aussi : la section est la suite de tâches cochées qui termine la liste. Cochée, une tâche y va en tête avec ses sous-tâches ; décochée, elle remonte après les tâches à faire. Une sous-tâche cochée ne bouge pas. Le titre « Terminé (n) » et son repli ne sont que de l'affichage ; le repli est retenu page par page sur le poste.
+- Une page modifiée ailleurs (autre éditeur, téléphone) s'affiche telle qu'elle est, et n'est remise en ordre qu'à la modification suivante.
+- Le mode se désactive à tout moment, par l'icône ou « Quitter le mode liste » du menu `/` : la page redevient un éditeur classique, les tâches restent des cases à cocher normales, dans leur état et leur ordre.
+- Les opérations (convertir, ranger, cocher, ajouter, retirer les tâches vides) sont dans `packages/document/src/operations/`, pour que le téléphone fasse pareil en J16.
 
 Le stockage reste du Markdown standard (`- [ ]` et `- [x]`). Le flag `mode: todo` ne change que le comportement d'édition, pas le format de fichier : une page en mode liste reste lisible et éditable telle quelle hors de l'application.
 
@@ -748,6 +760,9 @@ L'app se connecte en SMB avec le compte personnel d'Eloi, pas avec un compte dé
 | Remarques ignorées | `vault/.notes/spelling-ignored.txt` | Oui |
 | Démarrage de LanguageTool avec la session | `~/.config/autostart/notes-languagetool.desktop` | Non |
 | Historique IA | `vault/.notes/ai-usage.json` | Oui |
+| Mémos vocaux en attente | `vault/.notes/memos/` | Oui |
+| Serveur de transcription (whisper.cpp) | dans l'AppImage | Non |
+| Modèles de transcription | `~/Applications/Whisper/` | Non |
 | LanguageTool, son Java et ses n-grammes | `~/Applications/LanguageTool/` | Non |
 
 Sur Android, cache des pages, index et réglages vivent dans le stockage privé de l'application.
@@ -765,7 +780,7 @@ Sur Android, cache des pages, index et réglages vivent dans le stockage privé 
 
 ## 17. Packaging et distribution
 
-- Linux : AppImage via electron-builder (`Notes.AppImage`), aucune installation requise et aucune dépendance à un paquet du système : le client SMB est dans l'AppImage. Build x86_64 uniquement, pour le PC fixe et le portable (Linux Mint, Cinnamon, X11). `.deb` possible en complément.
+- Linux : AppImage via electron-builder (`Notes.AppImage`), aucune installation requise et aucune dépendance à un paquet du système : le client SMB, whisper.cpp et ffmpeg sont dans l'AppImage. Icône de Notes (un carnet blanc sur un carré bleu arrondi, fournie par Eloi le 2026-10-08) dans `apps/desktop/resources/icon/`, de 16 à 1024 px, détourée sur fond transparent : icône de l'AppImage, de la fenêtre et de la barre de titre. Build x86_64 uniquement, pour le PC fixe et le portable (Linux Mint, Cinnamon, X11). `.deb` possible en complément.
 - Android : APK construit avec Gradle, signé avec une clé locale, installé à la main (transfert du fichier ou `adb install`). Pas de Play Store.
 - AppImage au nom fixe `Notes.AppImage`. `npm run installer` la construit et la met dans `~/Applications` (ou le dossier `NOTES_DOSSIER_INSTALLATION` de `.env`), par renommage. Notes se met à jour d'elle-même : fenêtre fermée, elle se relance aussitôt sur la nouvelle version ; ouverte, la barre de titre propose « Relancer ». Pas de serveur de mises à jour : projet privé. Numéro de version dans la barre de titre.
 - La clé de signature Android reste hors du dépôt. La perdre oblige à désinstaller l'app avant de réinstaller une version signée autrement.
@@ -792,9 +807,9 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J9 | Export | 20 pages en PDF sans coupure incorrecte | Fait |
 | J10 | Corbeille, sélection multiple | Page supprimée restaurée intégralement ; plusieurs pages sélectionnées dans l'arborescence, déplacées ou supprimées ensemble | Fait |
 | J11 | Correction orthographique | Aucune latence perceptible à la frappe | Fait |
-| J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | En cours |
-| J13 | Mémos vocaux, côté PC | Un mémo déposé dans `.notes/memos/` devient une page transcrite et mise en forme ; 30 s transcrites en moins de 5 s | À faire |
-| J14 | Mode liste de tâches, finition desktop | L'outil remplace AppFlowy au quotidien | À faire |
+| J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | En cours (recette en attente) |
+| J13 | Mémos vocaux, côté PC | Un mémo déposé dans `.notes/memos/` devient une page transcrite et mise en forme ; 30 s transcrites en moins de 5 s | En cours (recette en attente) |
+| J14 | Mode liste de tâches, finition desktop | L'outil remplace AppFlowy au quotidien | En cours (recette en attente) |
 | J15 | Android, consultation | APK installé, toutes les pages lisibles hors ligne, cache à jour après passage sur le wifi | À faire |
 | J16 | Android, modification légère | Tâche cochée sur le téléphone visible sur le desktop au cycle suivant, modification refusée proprement sans NAS | À faire |
 | J17 | Android, mémos vocaux | Mémo enregistré sans réseau envoyé sur le NAS au retour du réseau, puis transcrit sur le PC | À faire |
@@ -805,9 +820,11 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 ## 19. Points à trancher
 
-| Réf | Question | Échéance |
+Une question ouverte s'ajoute ici avec sa référence (P3, P4…) et le jalon qui en dépend.
+
+| Réf. | Question | Jalon |
 |---|---|---|
-| P2 | Quel modèle Ollama pour la relecture, la mise au propre et la mise en forme des mémos, sur la Radeon RX 7600 (8 Go) ? Comparaison sur pièces de Ministral 8B, Qwen3 8B et Gemma 3 12B une fois Ollama installé ; et la carte du futur portable NVIDIA, pour son propre modèle. | J12 |
+| P3 | Sur le desktop, le champ d'ajout rapide du mode liste a été retiré (on écrit directement des tâches). Le téléphone garde-t-il un champ d'ajout (§15), ou fait-il pareil ? | J16 |
 
 ---
 
@@ -815,6 +832,13 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 | Date | Décision |
 |---|---|
+| 2026-10-08 | Réponses d'Eloi aux questions réexpliquées. J12, question 2 : un modèle qui déborde de la mémoire vidéo fait abandonner l'appel avec un message, plus de repli sur un modèle plus petit (à coder, `docs/retours.md`). J13, question 4 : la transcription brute peut être gardée quand la mise en forme est impossible, comme aujourd'hui. Il fournit une nouvelle icône, à reprendre. |
+| 2026-10-08 | Version 0.12.5, réponses d'Eloi aux recettes J12, J13 et J14 (le reste des recettes est OK ; LiteLLM non essayé mais noté OK par lui). J12 : modèle d'au moins 7 milliards de paramètres d'accord ; choix manuel du modèle gardé ; adresse http de LiteLLM signalée sans refus d'accord ; la question du modèle écarté après débordement est réexpliquée ; la question 5 (style de qwen3) reste sans réponse. J13 : whisper.cpp livré d'accord ; le modèle se télécharge de lui-même au premier mémo ; arrêt du serveur réduit de 3 à 2 minutes ; la transcription brute sans mise en forme est réexpliquée ; consigne propre et mémo rejeté en attente d'accord. Nouveau : tous les formats audio, par un ffmpeg réduit à l'audio livré dans l'AppImage ; icône de dossier sur la page « Mémos vocaux ». J14 : le champ d'ajout est retiré, on écrit directement des tâches comme dans Keep ; une seule liste par page, sans titres ; des blocs (code, tableau, image, callout, texte) possibles sous une tâche ; repli retenu sur le poste, rangement à la modification et tâches gardées en l'état en quittant le mode, d'accord. Icône du logiciel fournie par Eloi. |
+| 2026-10-08 | Version 0.12.4, J14 écrit, choix faits en codant, à confirmer dans la recette : le champ d'ajout rapide met la tâche en tête de la dernière liste ; en mode liste, une ligne tapée devient une tâche sauf si elle commence par `#`, `/`, `` ` `` ou `|` ; une seule section « Terminé », à la fin de la dernière liste de la page ; son repli est retenu sur le poste ; le rangement se fait à la modification, pas à l'ouverture d'une page changée ailleurs ; quitter le mode ne décoche ni ne déplace rien. Sync toutes les 5 s. |
+| 2026-10-08 | J14, choix d'Eloi au début du jalon. Il enchaîne sur J14 sans faire tout de suite les recettes J12 et J13 (même exception que pour J13). Passer une page en mode liste convertit ses paragraphes et ses items de puces ou numérotés en tâches non cochées ; titres, code, tableaux, images et callouts restent tels quels. Une tâche cochée descend en bas de la page dans le fichier aussi, en tête de la section « Terminé » ; décochée, elle remonte après les tâches à faire. Le mode s'active par une icône en haut de la page et par le menu `/`, sans raccourci. « Finition desktop » se limite au mode liste et à l'intervalle de sync de 5 s ; le reste viendra des retours de recette. |
+| 2026-10-08 | J13, choix faits en codant, à confirmer dans la recette : Whisper compilé à la construction de Notes et livré dans l'AppImage (l'image officielle plante sur le Ryzen 7 5800X) ; modèle `large-v3-turbo` en 5 bits (574 Mo) et détection de la voix (Silero), téléchargés d'un bouton dans `~/Applications/Whisper/` ; serveur lancé à la demande et arrêté après 3 minutes ; la mise en forme des mémos est une troisième fonction IA, réglable ; la page « Mémos vocaux » est reconnue par `role: memos` dans son en-tête ; sans mise en forme possible, la transcription brute peut être gardée. |
+| 2026-10-07 | J13, choix d'Eloi au début du jalon. Il enchaîne sur J13 sans faire tout de suite la recette J12 (exception à la règle « pas de jalon suivant avant la recette »). Whisper : l'application s'occupe de tout, rien à installer à la main. L'image Docker officielle de whisper.cpp ne convient pas (ses binaires sont compilés pour un processeur avec AVX-512 et plantent sur le Ryzen 7 5800X : « Instruction non permise », vérifié). Déroulé : « Transcrire » envoie l'audio à whisper puis le texte au modèle de la mise en forme, d'un coup ; la comparaison montre la transcription brute face à la mise en forme ; accepter crée la sous-page et met l'audio à la corbeille. La liste des mémos en attente permet d'écouter un mémo, de tout transcrire d'affilée et de mettre un mémo à la corbeille sans le transcrire. La sous-page est titrée par la date seule (« Mémo du 7 octobre 2026 à 16 h 24 »), sans titre proposé par le modèle. |
+| 2026-10-07 | Version 0.12.2, réponses d'Eloi pendant la recette J12. P2 tranché : Notes regarde la carte graphique et choisit seule le modèle local, ou bloque l'IA locale si la machine ne suit pas (pas de carte dédiée, ou aucun modèle d'au moins 7 milliards de paramètres qui tienne entièrement en mémoire vidéo) ; un modèle qui déborde est écarté. Sur son PC, qwen3:8b (comparaison du 2026-10-05 : fidèle, rapide ; gemma3:12b déborde de 8 Go, ministral-3:8b réécrit trop). LiteLLM remplace l'appel direct à OpenAI : adresse et clé dans les réglages, modèles et tarifs lus chez LiteLLM ; Eloi pense utiliser gpt-5.6-luna. La dépense du jour n'apparaît dans la barre de statut que si une fonction passe par LiteLLM. Montants en dollars. Consignes dans l'application, pas dans le dossier des notes. Le modèle ne voit ni code, ni callouts, ni images. Comparaison en Markdown. Pas de raccourci. Effort de raisonnement le plus bas, tant que les sorties restent bonnes. |
 | 2026-10-05 | P2 en partie tranché, au début de J12. Le PC d'Eloi a une Radeon RX 7600 (8 Go de mémoire vidéo), un Ryzen 7 5800X et 31 Go de mémoire ; un futur portable aura une carte NVIDIA. Ollama est installé par Eloi avec le script officiel (service systemd, ROCm sur la Radeon, CUDA sur une NVIDIA), pas par Notes. Le modèle local se choisit sur pièces : Ministral 8B, Qwen3 8B et Gemma 3 12B comparés sur des pages en français. Adresse et modèles sont des réglages du poste, non synchronisés, puisque chaque machine a sa carte. Whisper (J13) passe par un serveur whisper.cpp sur la carte (Vulkan ou ROCm sur AMD, CUDA sur NVIDIA), modèle `large-v3-turbo`, au lieu de `faster-whisper` qui n'utilise que le processeur avec une carte AMD. Ollama libère la carte entre deux usages, les deux ne se gênent pas. Seule API externe proposée : OpenAI. |
 | 2026-10-05 | Recette J11 validée par Eloi, retouches 0.11.1 à 0.11.4 comprises (liste des fautes, LanguageTool avec la session, « Ignorer » enregistré, mises à jour automatiques). J11 passe à « Fait », version 0.12.0. |
 | 2026-10-05 | Version 0.11.4, réponses d'Eloi aux dernières questions de la recette J11 : LanguageTool et son Java se mettent à jour automatiquement (au plus une fois par jour, essai sur un port à part avant de remplacer, retour à l'ancienne version si le serveur ne redémarre pas) ; LanguageTool ne publiant pas d'empreinte, ses mises à jour ne sont vérifiées que par https et par l'essai. Les suggestions restent dans l'ordre de LanguageTool. La phrase d'une faute coupée à 90 caractères de part et d'autre lui convient. |
@@ -1134,3 +1158,7 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-05 | 0.11.4 | Mises à jour de LanguageTool |
 | 2026-10-05 | 0.12.0 | J11 : correction validée |
 | 2026-10-05 | 0.12.1 | J12 : IA, en recette |
+| 2026-10-07 | 0.12.2 | IA : carte, LiteLLM |
+| 2026-10-08 | 0.12.3 | J13 : mémos, en recette |
+| 2026-10-08 | 0.12.4 | J14 : mode liste, en recette |
+| 2026-10-08 | 0.12.5 | Retours J13, J14, icône |

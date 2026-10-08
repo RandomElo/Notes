@@ -5,7 +5,7 @@ import type { SettingsStore } from '../settings/settings-store';
 import type { CompanionCredentials } from '../smb/protocol';
 
 /** Intervalle entre deux cycles (README §5). */
-const intervalleParDefautMs = 10_000;
+const intervalleParDefautMs = 5_000;
 /** Après une modification du dossier des notes, le cycle part ce délai plus tard : une rafale d'écritures n'en lance qu'un. */
 const delaiApresModificationParDefautMs = 1_000;
 /** À la fermeture, le dernier cycle a ce temps pour finir : au-delà, l'application se ferme quand même. */
@@ -48,7 +48,7 @@ interface Session {
 }
 
 /**
- * Déclenche la sync du desktop : au démarrage, toutes les 10 s, une seconde
+ * Déclenche la sync du desktop : au démarrage, toutes les 5 s, une seconde
  * après chaque modification du dossier des notes, à la demande et à la
  * fermeture (README §5). Un seul cycle à la fois. Garde la connexion
  * au NAS ouverte entre deux cycles et tient les verrous de page.

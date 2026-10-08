@@ -14,12 +14,12 @@ const boutonSecondaire =
 const boutonPrincipal =
   'bg-accent text-fond hover:bg-accent/85 focus-visible:bg-accent/75 inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-semibold outline-0 aria-disabled:opacity-60';
 
-const descriptions: Record<AiPageFunction, string> = {
+const descriptions: Record<Exclude<AiPageFunction, 'memo'>, string> = {
   relecture: 'Améliore la fluidité et la formulation, corrige les fautes, sans changer la structure ni le sens.',
   'mise-au-propre': 'Transforme des notes en vrac en document structuré et rédigé. Ce n’est pas un résumé : rien n’est retiré.',
 };
 
-const estFonction = (valeur: unknown): valeur is AiPageFunction => valeur === 'relecture' || valeur === 'mise-au-propre';
+const estFonction = (valeur: unknown): valeur is Exclude<AiPageFunction, 'memo'> => valeur === 'relecture' || valeur === 'mise-au-propre';
 
 type Etape =
   | { genre: 'choix' }
@@ -55,7 +55,7 @@ function Estimation({ estimation }: { estimation: AiEstimateResult | null }) {
   }
   const local = estimation.fournisseur === 'ollama';
   const lignes: Array<[string, string]> = [
-    ['Modèle', `${estimation.modele} (${local ? 'sur ce poste' : 'OpenAI'})`],
+    ['Modèle', `${estimation.modele} (${local ? (estimation.automatique ? 'sur ce poste, choisi par Notes' : 'sur ce poste') : 'LiteLLM'})`],
     ['Envoyé', libelleDeTokens(estimation.entree)],
     ['Réponse attendue', `${libelleDeTokens(estimation.sortie)}${estimation.appelsConnus === 0 ? ', estimée sans historique' : ''}`],
     ['Durée', estimation.dureeMs === null ? 'inconnue avant un premier essai de ce modèle' : libelleDeDuree(estimation.dureeMs)],
@@ -106,7 +106,7 @@ function Bilan({ resultat }: { resultat: Extract<AiRunResult, { ok: true }> }) {
  * tant que la proposition n'est pas acceptée.
  */
 export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiDialogProps) {
-  const [fonction, definirFonction] = useStoredState<AiPageFunction>('notes.ia.fonction', 'relecture', estFonction);
+  const [fonction, definirFonction] = useStoredState<Exclude<AiPageFunction, 'memo'>>('notes.ia.fonction', 'relecture', estFonction);
   const [mode, definirMode] = useStoredState<ComparisonMode>('notes.ia.comparaison', 'colonnes', estModeDeComparaison);
   const [estimation, definirEstimation] = useState<AiEstimateResult | null>(null);
   const [etape, definirEtape] = useState<Etape>({ genre: 'choix' });

@@ -29,7 +29,7 @@ class FausseConnexion extends MemoryRemoteFs {
 async function monter(options: { reglagesNas?: boolean; motDePasse?: string | null } = {}) {
   const dossier = await mkdtemp(join(tmpdir(), 'notes-sync-'));
   const reglages = new SettingsStore(join(dossier, 'settings.json'));
-  await reglages.ecrire({ nas: options.reglagesNas === false ? null : nas, vaultLocal: '/srv/notes', appareil: null, ia: reglagesIaParDefaut });
+  await reglages.ecrire({ nas: options.reglagesNas === false ? null : nas, vaultLocal: '/srv/notes', appareil: null, ia: reglagesIaParDefaut, memosMasques: null });
   const local = MemoryLocalFs.depuis({ 'Alpha/page.md': 'alpha\n' });
   const partage = new FausseConnexion();
   const connexions: CompanionCredentials[] = [];

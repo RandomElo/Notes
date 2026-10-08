@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparer } from './app';
+import { attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparerCoursesClassique } from './app';
 
 // Critère de J11 : aucune latence perceptible à la frappe. Plus le soulignement, la bulle, le dictionnaire,
 // l'exclusion du code, la vérification bloc par bloc et le service absent.
@@ -84,7 +84,7 @@ const barreDeStatut = (page: Page) => page.locator('footer');
 
 test('fautes soulignées bloc par bloc, corrigées, ignorées ou ajoutées au dictionnaire, sans gêner la frappe', async () => {
   const faux = await fauxLanguageTool();
-  const preparation = await preparer();
+  const preparation = await preparerCoursesClassique();
   const session = await lancer(preparation, [], { NOTES_LANGUAGETOOL_ADRESSE: faux.adresse });
   const { page, vault } = session;
 
@@ -171,7 +171,7 @@ test('fautes soulignées bloc par bloc, corrigées, ignorées ou ajoutées au di
 
 test('liste des fautes depuis la barre de statut : chaque faute dans sa phrase, corrigée sans quitter la liste', async () => {
   const faux = await fauxLanguageTool();
-  const session = await lancer(await preparer(), [], { NOTES_LANGUAGETOOL_ADRESSE: faux.adresse });
+  const session = await lancer(await preparerCoursesClassique(), [], { NOTES_LANGUAGETOOL_ADRESSE: faux.adresse });
   const { page, vault } = session;
 
   await ouvrirPage(page, 'Courses');
@@ -223,7 +223,7 @@ test('liste des fautes depuis la barre de statut : chaque faute dans sa phrase, 
 });
 
 test("sans LanguageTool installé : les réglages proposent l'installation, rien n'est souligné, l'édition marche", async () => {
-  const session = await lancer(await preparer());
+  const session = await lancer(await preparerCoursesClassique());
   const { page, vault } = session;
 
   await ouvrirPage(page, 'Courses');

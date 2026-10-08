@@ -1,5 +1,5 @@
 import { renommerMentions } from '@notes/document';
-import { LocalFsError, VaultError, ajouterIconeImage, changerIcone, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, deplacerPages, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
+import { LocalFsError, VaultError, ajouterIconeImage, changerIcone, changerMode, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, deplacerPages, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
 import type { BrokenMention, PageLocation, TreeNode, VaultContext } from '@notes/core';
 import type { ConflictReadResult, PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
 import { creerFileDAttente } from '../vault/serial-queue';
@@ -73,6 +73,14 @@ export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAtt
         return Promise.resolve(requeteInvalide());
       }
       return operation((contexte) => changerIcone(contexte, chemin, icone));
+    },
+
+    changerMode: (demande: unknown) => {
+      const { chemin, mode } = champs(demande);
+      if (!estChemin(chemin) || !(mode === null || mode === 'todo')) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return operation((contexte) => changerMode(contexte, chemin, mode));
     },
 
     ajouterIconeImage: (demande: unknown) => {

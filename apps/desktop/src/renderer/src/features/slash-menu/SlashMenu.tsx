@@ -30,7 +30,7 @@ export function SlashMenu({ editor, actions }: SlashMenuProps) {
 
   const ouvert = editor.isDestroyed ? null : slashOuvert(editor.state);
   const requete = ouvert?.requete ?? null;
-  const trouvees = requete === null ? [] : filtrerCommandes(requete);
+  const trouvees = requete === null ? [] : filtrerCommandes(requete, actions.modeListe());
   const rang = Math.min(choix, Math.max(0, trouvees.length - 1));
 
   // Une nouvelle recherche repart du premier résultat.

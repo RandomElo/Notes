@@ -8,6 +8,9 @@ export { PageMention, idDeLienInterne, prefixeDeLienInterne } from './schema/nod
 export type { PageMentionAttributes } from './schema/nodes/page-mention';
 export { estAdresseWeb, libelleDAdresse } from './links';
 export { mentionsARenommer, renommerMentions } from './operations/rename-mentions';
+export { convertirEnListe, normaliserListe, ouvrirNouvelleTache, rangerTaches, retirerTachesVides, sectionTerminee } from './operations/todo-mode';
+export { basculerTache } from './operations/toggle-task';
+export { ajouterTache } from './operations/list-items';
 export { lireMarkdown } from './markdown/parse';
 export { ecrireMarkdown } from './markdown/serialize';
 export type { FinDeLigne, PageSource, ParsedMarkdown, SourceBlock } from './markdown/types';

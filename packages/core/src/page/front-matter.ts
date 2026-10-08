@@ -1,6 +1,6 @@
 import { Document, isMap, parseDocument } from 'yaml';
 import { estId } from './id';
-import type { PageMeta, PageMode } from './types';
+import type { PageMeta, PageMode, PageRole } from './types';
 
 /**
  * Front-matter YAML d'une page. Les clés du fichier sont en anglais (id,
@@ -92,6 +92,7 @@ export function lireMeta(enTete: string | null): PageMeta | null {
     creeLe: texteDeDate(champs['created']),
     modifieLe: texteDeDate(champs['updated']),
     mode: champs['mode'] === 'todo' ? 'todo' : null,
+    ...(champs['role'] === 'memos' ? { role: 'memos' as const } : {}),
   };
 }
 
@@ -144,6 +145,7 @@ export interface FrontMatterChanges {
   creeLe?: string;
   modifieLe?: string;
   mode?: PageMode | null;
+  role?: PageRole | null;
 }
 
 const cles: Record<keyof FrontMatterChanges, string> = {
@@ -153,6 +155,7 @@ const cles: Record<keyof FrontMatterChanges, string> = {
   creeLe: 'created',
   modifieLe: 'updated',
   mode: 'mode',
+  role: 'role',
 };
 
 /**

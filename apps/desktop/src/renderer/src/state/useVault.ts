@@ -1,4 +1,4 @@
-import type { PageLocation, TreeNode } from '@notes/core';
+import type { PageLocation, PageMode, TreeNode } from '@notes/core';
 import { useCallback, useEffect, useState } from 'react';
 import type { VaultOperationResult, VaultState } from '../../../shared/ipc-contract';
 import { renommerEnSuivantLesMentions } from '../features/mentions/rename-follow';
@@ -95,6 +95,18 @@ export function useVault() {
     changerIcone: useCallback(
       async (chemin: string, choix: { icone: string | null } | { octets: Uint8Array }) => {
         const resultat = await ('octets' in choix ? api.ajouterIconeImage({ chemin, octets: choix.octets }) : api.changerIcone({ chemin, icone: choix.icone }));
+        if (!resultat.ok) {
+          return resultat.erreur.message;
+        }
+        appliquer(resultat);
+        return null;
+      },
+      [appliquer],
+    ),
+    /** Passe une page en mode liste de tâches, ou la ramène en page classique. Rend le message d'erreur, null sinon. */
+    changerMode: useCallback(
+      async (chemin: string, mode: PageMode | null) => {
+        const resultat = await api.changerMode({ chemin, mode });
         if (!resultat.ok) {
           return resultat.erreur.message;
         }

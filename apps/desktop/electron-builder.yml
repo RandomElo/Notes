@@ -14,8 +14,19 @@ extraResources:
   # Détourage des icônes : modèle et moteur ONNX en WebAssembly, préparés par scripts/prepare-models.sh.
   - from: resources/background-removal
     to: background-removal
+  # Transcription des mémos vocaux : serveur whisper.cpp (Vulkan, toutes variantes de processeur), compilé par scripts/build-whisper.sh.
+  - from: resources/whisper
+    to: whisper
+  # Décodeur des mémos que Chromium ne lit pas (AMR, WMA, AIFF…) : ffmpeg réduit à l'audio, compilé par scripts/build-ffmpeg.sh.
+  - from: resources/ffmpeg
+    to: ffmpeg
+  # Icône de la fenêtre (barre des tâches) ; la même, en toutes tailles, sert à l'AppImage.
+  - from: resources/icon
+    to: icon
 linux:
   executableName: notes
+  # Une image par taille (16x16.png à 1024x1024.png), détourées de l'icône dessinée pour Notes.
+  icon: resources/icon
   target:
     - target: AppImage
       arch: x64

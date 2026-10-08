@@ -11,15 +11,15 @@ describe('réglages IA du poste', () => {
     const reglages = {
       adresseOllama: 'http://192.0.2.10:11434/',
       adresseLitellm: 'http://192.0.2.10:4000',
-      modeles: { relecture: { fournisseur: 'litellm', modele: 'gpt-5.6-luna' }, 'mise-au-propre': { fournisseur: 'ollama', modele: 'ministral-3:8b' } },
-      consignes: { relecture: 'Relis.', 'mise-au-propre': '' },
+      modeles: { relecture: { fournisseur: 'litellm', modele: 'gpt-5.6-luna' }, 'mise-au-propre': { fournisseur: 'ollama', modele: 'ministral-3:8b' }, memo: { fournisseur: 'ollama', modele: '' } },
+      consignes: { relecture: 'Relis.', 'mise-au-propre': '', memo: null },
       seuilMensuelUsd: 5,
       tarifs: { 'gpt-5.6-luna': { entree: 0.2, sortie: 1.2 }, 'mauvais nom': { entree: 1, sortie: 1 }, autre: { entree: 'x' } },
     };
     expect(lireReglagesIa(reglages)).toEqual({
       ...reglages,
       adresseOllama: 'http://192.0.2.10:11434',
-      consignes: { relecture: 'Relis.', 'mise-au-propre': null },
+      consignes: { relecture: 'Relis.', 'mise-au-propre': null, memo: null },
       tarifs: { 'gpt-5.6-luna': { entree: 0.2, sortie: 1.2 } },
     });
   });

@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron';
 import { canaux, evenements } from '../shared/ipc-contract';
 import type { AiProgress } from '../shared/ai-contract';
+import type { WhisperState } from '../shared/memos-contract';
 import type { NotesApi, SpellcheckState, SyncStatus } from '../shared/ipc-contract';
 
 // Seule surface offerte au renderer : des fonctions nommées, jamais ipcRenderer lui-même.
@@ -37,6 +38,7 @@ const api: NotesApi = {
   renommerPage: (demande) => ipcRenderer.invoke(canaux.renommerPage, demande),
   listerMentionsCassees: () => ipcRenderer.invoke(canaux.listerMentionsCassees),
   changerIcone: (demande) => ipcRenderer.invoke(canaux.changerIcone, demande),
+  changerMode: (demande) => ipcRenderer.invoke(canaux.changerMode, demande),
   ajouterIconeImage: (demande) => ipcRenderer.invoke(canaux.ajouterIconeImage, demande),
   deplacerPage: (demande) => ipcRenderer.invoke(canaux.deplacerPage, demande),
   deplacerPages: (demande) => ipcRenderer.invoke(canaux.deplacerPages, demande),
@@ -158,6 +160,22 @@ const api: NotesApi = {
     const relais = (): void => ecouteur();
     ipcRenderer.on(evenements.historiqueIaModifie, relais);
     return () => ipcRenderer.removeListener(evenements.historiqueIaModifie, relais);
+  },
+
+  etatMemos: () => ipcRenderer.invoke(canaux.etatMemos),
+  masquerMemos: (demande) => ipcRenderer.invoke(canaux.masquerMemos, demande),
+  lireMemo: (demande) => ipcRenderer.invoke(canaux.lireMemo, demande),
+  transcrireMemo: (demande) => ipcRenderer.invoke(canaux.transcrireMemo, demande),
+  accepterMemo: (demande) => ipcRenderer.invoke(canaux.accepterMemo, demande),
+  ecarterMemo: (demande) => ipcRenderer.invoke(canaux.ecarterMemo, demande),
+  convertirMemo: (demande) => ipcRenderer.invoke(canaux.convertirMemo, demande),
+  ouvrirDossierMemos: () => ipcRenderer.invoke(canaux.ouvrirDossierMemos),
+  installerModeleWhisper: () => ipcRenderer.invoke(canaux.installerModeleWhisper),
+  annulerInstallationWhisper: () => ipcRenderer.invoke(canaux.annulerInstallationWhisper),
+  surEtatWhisper: (ecouteur) => {
+    const relais = (_evenement: unknown, etat: WhisperState): void => ecouteur(etat);
+    ipcRenderer.on(evenements.etatWhisperModifie, relais);
+    return () => ipcRenderer.removeListener(evenements.etatWhisperModifie, relais);
   },
 };
 

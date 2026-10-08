@@ -64,9 +64,12 @@ const famillesEnDernier = ['mistral3'];
 
 const go = (octets: number): string => `${Math.round((octets / 1024 ** 3) * 10) / 10} Go`.replace('.', ',');
 
+/** Classe de taille : 8B et 9B se valent, 12B les dépasse. La famille départage à l'intérieur d'une classe. */
+const classeDeTaille = (parametres: number | null): number => [10, 20, 40].filter((seuil) => (parametres ?? 0) >= seuil).length;
+
 function rang(modele: LocalModelFit, famille: string): number[] {
   const preferee = famillesPreferees.indexOf(famille);
-  return [-(Math.round(modele.parametres ?? 0)), preferee === -1 ? (famillesEnDernier.includes(famille) ? 99 : 50) : preferee];
+  return [-classeDeTaille(modele.parametres), preferee === -1 ? (famillesEnDernier.includes(famille) ? 99 : 50) : preferee];
 }
 
 /** « 8.2B » ou « 500M » en milliards de paramètres. */

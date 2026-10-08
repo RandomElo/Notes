@@ -40,7 +40,7 @@ export function SyncPanel({ etat, maintenant, surFermeture, surResolution }: Syn
           {etat.derniereSync !== null && etat.etat !== 'synchronise' && (
             <p className="text-discret text-xs">Dernière synchronisation réussie {momentDeSync(etat.derniereSync, maintenant)}.</p>
           )}
-          {etat.etat !== 'desactivee' && <p className="text-discret text-xs">Synchronisation automatique toutes les 10 secondes.</p>}
+          {etat.etat !== 'desactivee' && <p className="text-discret text-xs">Synchronisation automatique toutes les 5 secondes.</p>}
         </div>
         {etat.etat !== 'desactivee' && (
           <button ref={premier} type="button" onClick={synchroniser} disabled={lancement || etat.etat === 'en_cours'} className={`${classeBouton} flex shrink-0 items-center gap-1.5`}>

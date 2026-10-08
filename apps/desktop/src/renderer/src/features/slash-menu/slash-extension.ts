@@ -2,6 +2,7 @@ import { Extension } from '@tiptap/core';
 import type { Editor } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorState } from '@tiptap/pm/state';
+import { placerSousLaTache } from '../todo-mode/todo-extension';
 import { dateEnToutesLettres } from './slash-commands';
 import type { SlashAction } from './slash-commands';
 import { declencheur } from './slash-trigger';
@@ -81,6 +82,10 @@ export interface SlashActions {
   surTableau: () => void;
   /** Ouvre le sélecteur de fichiers et insère les images choisies au curseur. */
   surImage: () => void;
+  /** Vrai quand la page est en mode liste de tâches. */
+  modeListe: () => boolean;
+  /** Passe la page en mode liste, ou l'en sort. */
+  surModeListe: () => void;
 }
 
 /**
@@ -88,8 +93,17 @@ export interface SlashActions {
  * transformé sur place. S'il contient déjà du texte, la commande crée un
  * nouveau bloc en dessous, pour ne pas changer la nature de ce qui est écrit.
  */
+/** Commandes qui créent un bloc : en mode liste, il se range sous une tâche. */
+const blocsSousLaTache = new Set<SlashAction['genre']>(['paragraphe', 'code', 'tableau', 'image', 'callout']);
+
 export function appliquerCommande(editor: Editor, action: SlashAction, plage: SlashTrigger, actions: SlashActions): void {
   editor.chain().focus().deleteRange({ from: plage.de, to: plage.a }).run();
+  if (actions.modeListe() && blocsSousLaTache.has(action.genre)) {
+    const preparation = placerSousLaTache(editor.state);
+    if (preparation !== null) {
+      editor.view.dispatch(preparation);
+    }
+  }
   switch (action.genre) {
     case 'date':
       editor.chain().insertContent(dateEnToutesLettres(new Date())).run();
@@ -102,6 +116,9 @@ export function appliquerCommande(editor: Editor, action: SlashAction, plage: Sl
       return;
     case 'image':
       actions.surImage();
+      return;
+    case 'modeListe':
+      actions.surModeListe();
       return;
     case 'callout':
       insererCallout(editor);

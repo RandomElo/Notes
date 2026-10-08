@@ -8,6 +8,7 @@ import { versTexte } from '../fs/utf8';
 import { estId } from '../page/id';
 import { cleDeNom, nomLibre } from '../page/naming';
 import { analyserPage, cheminDuFichierPage } from '../page/page-file';
+import { cheminDeMemoValide, dossierDesMemos } from '../memos/memos';
 import { fichierPage } from '../page/types';
 import { aUneExtensionDImage, dossierAssets } from '../vault/assets';
 import { VaultError } from '../vault/context';
@@ -32,7 +33,8 @@ export const fichierMetaCorbeille = '.trashmeta.yaml';
 /** Une entrée plus vieille que ce délai est purgée au démarrage. */
 export const retentionCorbeilleMs = 30 * 24 * 60 * 60 * 1000;
 
-export type TrashKind = 'page' | 'image';
+/** Une page avec sa descendance, une image d'une page, ou l'audio d'un mémo vocal transcrit (README §13). */
+export type TrashKind = 'page' | 'image' | 'memo';
 
 /** Une entrée de la corbeille, telle que décrite par son `.trashmeta.yaml`. */
 export interface TrashEntry {
@@ -62,7 +64,8 @@ export interface TrashEntry {
 /** Ce que montre l'aperçu d'une entrée. */
 export type TrashPreview =
   | { nature: 'page'; titre: string; corps: string; sousPages: string[] }
-  | { nature: 'image'; titre: string; octets: Uint8Array };
+  | { nature: 'image'; titre: string; octets: Uint8Array }
+  | { nature: 'memo'; titre: string; octets: Uint8Array };
 
 /** Une corbeille, sur le poste ou sur le NAS. Chemins relatifs à la racine du vault. */
 export interface TrashStorage {
@@ -177,6 +180,14 @@ export async function mettreImageALaCorbeille(contexte: VaultContext, chemin: st
   });
 }
 
+/** Met l'audio d'un mémo vocal à la corbeille : transcrit (accepté) ou écarté sans transcription. */
+export async function mettreMemoALaCorbeille(contexte: VaultContext, chemin: string, titre: string): Promise<void> {
+  if (!cheminDeMemoValide(chemin) || (await contexte.fs.infos(chemin))?.estDossier !== false) {
+    throw new VaultError('introuvable', 'Ce mémo est introuvable.');
+  }
+  await deposer(contexte, chemin, { nature: 'memo', titre, id: null, parentId: null, suivantId: null, precedentId: null, rang: null });
+}
+
 /**
  * Range un dossier de page ou une image dans une nouvelle entrée. La
  * description est écrite avant le déplacement : une entrée sans son élément
@@ -239,8 +250,8 @@ async function exigerEntree(stockage: TrashStorage, entree: string): Promise<Tra
 export async function lireApercu(stockage: TrashStorage, entree: string): Promise<TrashPreview> {
   const lue = await exigerEntree(stockage, entree);
   const element = joindreChemins(dossierCorbeille, entree, lue.nom);
-  if (lue.nature === 'image') {
-    return { nature: 'image', titre: lue.titre, octets: await stockage.lire(element) };
+  if (lue.nature === 'image' || lue.nature === 'memo') {
+    return { nature: lue.nature, titre: lue.titre, octets: await stockage.lire(element) };
   }
   const corps = analyserPage(versTexte(await stockage.lire(cheminDuFichierPage(element)))).corps;
   return { nature: 'page', titre: lue.titre, corps, sousPages: await titresDesSousPages(stockage, element) };
@@ -278,6 +289,15 @@ export async function restaurerEntree(contexte: VaultContext, entree: string): P
   const dossier = joindreChemins(dossierCorbeille, entree);
   const arbre = await lireArbre(fs);
   const parent = lue.parentId === null ? null : cheminParId(arbre, lue.parentId);
+
+  if (lue.nature === 'memo') {
+    // Un mémo revient attendre sa transcription.
+    await fs.creerDossier(dossierDesMemos);
+    const chemin = joindreChemins(dossierDesMemos, nomDeFichierLibre(lue.nom, await nomsPris(fs, dossierDesMemos)));
+    await fs.renommer(joindreChemins(dossier, lue.nom), chemin);
+    await fs.supprimer(dossier);
+    return { chemin, id: null };
+  }
 
   if (lue.nature === 'image') {
     // Sans sa page, une image n'a nulle part où aller : on la laisse dans la corbeille.
@@ -463,7 +483,7 @@ function lireMeta(texte: string, entree: string): TrashEntry | null {
   const nom = champs['name'];
   const chemin = champs['path'];
   const date = champs['deleted'];
-  if ((nature !== 'page' && nature !== 'image') || typeof nom !== 'string' || nom.includes('/') || verifierCheminRelatif(nom) !== null) {
+  if ((nature !== 'page' && nature !== 'image' && nature !== 'memo') || typeof nom !== 'string' || nom.includes('/') || verifierCheminRelatif(nom) !== null) {
     return null;
   }
   if (typeof chemin !== 'string' || typeof date !== 'string' || !Number.isFinite(Date.parse(date))) {

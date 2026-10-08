@@ -5,6 +5,7 @@ import type { AiService } from '../ai/ai-service';
 import type { creerHandlersExport } from './export';
 import type { creerHandlersImages } from './images';
 import type { creerHandlersLiens } from './links';
+import type { creerHandlersMemos } from './memos';
 import type { creerHandlersNas } from './nas';
 import type { creerHandlersCorrection } from './spellcheck';
 import type { creerHandlersSync } from './sync';
@@ -25,6 +26,7 @@ export interface IpcDependencies {
   corbeille: ReturnType<typeof creerHandlersCorbeille>;
   correction: ReturnType<typeof creerHandlersCorrection>;
   ia: AiService;
+  memos: ReturnType<typeof creerHandlersMemos>;
   recherche: {
     etatDuFond: () => unknown;
     definirDemarrageAuto: (actif: unknown) => unknown;
@@ -41,7 +43,7 @@ export interface IpcDependencies {
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, recherche, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, memos, recherche, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -72,6 +74,7 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.renommerPage, (demande) => vault.renommerPage(demande));
   brancher(canaux.listerMentionsCassees, () => vault.listerMentionsCassees());
   brancher(canaux.changerIcone, (demande) => vault.changerIcone(demande));
+  brancher(canaux.changerMode, (demande) => vault.changerMode(demande));
   brancher(canaux.ajouterIconeImage, (demande) => vault.ajouterIconeImage(demande));
   brancher(canaux.deplacerPage, (demande) => vault.deplacerPage(demande));
   brancher(canaux.deplacerPages, (demande) => vault.deplacerPages(demande));
@@ -151,4 +154,15 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.lancerIa, (demande) => ia.lancer(demande));
   brancher(canaux.annulerIa, () => ia.annuler());
   brancher(canaux.historiqueIa, () => ia.lireHistorique());
+
+  brancher(canaux.etatMemos, () => memos.etat());
+  brancher(canaux.masquerMemos, (demande) => memos.masquer(demande));
+  brancher(canaux.lireMemo, (demande) => memos.lire(demande));
+  brancher(canaux.transcrireMemo, (demande) => memos.transcrire(demande));
+  brancher(canaux.accepterMemo, (demande) => memos.accepter(demande));
+  brancher(canaux.ecarterMemo, (demande) => memos.ecarter(demande));
+  brancher(canaux.convertirMemo, (demande) => memos.convertir(demande));
+  brancher(canaux.ouvrirDossierMemos, () => memos.ouvrirDossier());
+  brancher(canaux.installerModeleWhisper, () => memos.installerModele());
+  brancher(canaux.annulerInstallationWhisper, () => memos.annulerInstallation());
 }

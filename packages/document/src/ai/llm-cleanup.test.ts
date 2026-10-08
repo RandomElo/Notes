@@ -82,6 +82,11 @@ describe('nettoyage des sorties du modèle', () => {
     expect(nettoyer('Un.\n\n---\n\nDeux.\n\n***\n\nTitre\n---\n').markdown).toBe('Un.\n\nDeux.\n\nTitre\n---\n');
   });
 
+  it('retire les espaces de fin de ligne ajoutés, garde les retours forcés d’une page qui en avait', () => {
+    expect(nettoyer('- Biographie  \n- Œuvre  \n').markdown).toBe('- Biographie\n- Œuvre\n');
+    expect(nettoyer('Ligne un  \nLigne deux\n', 'Ligne un  \nLigne deux\n').markdown).toBe('Ligne un  \nLigne deux\n');
+  });
+
   it('ramène les puces à « - »', () => {
     expect(nettoyer('* un\n  + deux\n• trois\n').markdown).toBe('- un\n  - deux\n- trois\n');
   });

@@ -17,6 +17,17 @@ export interface Session {
 }
 
 /** Copie le vault d'exemple dans un dossier temporaire et prépare un profil qui l'ouvre. */
+/**
+ * Comme `preparer`, mais « Courses » est une page classique : dans le vault d'exemple elle est en mode liste, qui
+ * fait de tout paragraphe une tâche (README §14). Pour les essais qui s'en servent comme d'une page ordinaire.
+ */
+export async function preparerCoursesClassique(): Promise<{ vault: string; profil: string }> {
+  const preparation = await preparer();
+  const fichier = join(preparation.vault, 'Courses', 'page.md');
+  await writeFile(fichier, (await readFile(fichier, 'utf8')).replace('mode: todo\n', ''));
+  return preparation;
+}
+
 export async function preparer(): Promise<{ vault: string; profil: string }> {
   const base = await mkdtemp(join(tmpdir(), 'notes-e2e-'));
   const vault = join(base, 'vault');

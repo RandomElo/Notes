@@ -1,6 +1,7 @@
-import { Copy, Minus, NotebookText, RefreshCw, Square, X } from 'lucide-react';
+import { Copy, Minus, RefreshCw, Square, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
+import icone from '../../../../../resources/icon/64x64.png';
 import { api } from '../../lib/ipc';
 
 interface TitleBarProps {
@@ -35,7 +36,7 @@ export function TitleBar({ dossier, children }: TitleBarProps) {
     <header className="zone-de-deplacement border-bordure flex h-10 shrink-0 items-stretch border-b select-none">
       <div className="flex min-w-0 flex-1 items-center gap-3 pl-4">
         <div className="flex shrink-0 items-center gap-3" title={dossier === null ? undefined : `Dossier des notes : ${dossier}`}>
-          <NotebookText className="text-accent size-5 shrink-0" aria-hidden="true" />
+          <img src={icone} alt="" className="size-5 shrink-0" draggable={false} />
           <h1 className="shrink-0 text-sm font-semibold">Notes</h1>
           {version !== '' && <span className="text-discret shrink-0 text-xs whitespace-nowrap">version {version}</span>}
         </div>

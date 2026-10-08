@@ -10,7 +10,7 @@ describe('filtrerCommandes', () => {
   it('rend toutes les commandes sans recherche, et seulement celles qui existent déjà', () => {
     expect(libelles('')).toEqual(commandes.map((commande) => commande.libelle));
     expect(libelles('')).toEqual([
-      'Texte', 'Titre 1', 'Titre 2', 'Titre 3', 'Titre 4', 'Titre 5', 'Liste à puces', 'Liste numérotée', 'Tâche', 'Code',
+      'Texte', 'Titre 1', 'Titre 2', 'Titre 3', 'Titre 4', 'Titre 5', 'Liste à puces', 'Liste numérotée', 'Tâche', 'Mode liste de tâches', 'Code',
       'Tableau', 'Image', 'Callout', 'Page enfant', 'Lien vers une page', 'Date',
     ]);
     expect(libelles('lien')).toEqual(['Lien vers une page']);
@@ -22,13 +22,13 @@ describe('filtrerCommandes', () => {
   });
 
   it('ignore les accents et la casse', () => {
-    expect(libelles('TÂCHE')).toEqual(['Tâche']);
-    expect(libelles('tache')).toEqual(['Tâche']);
+    expect(libelles('TÂCHE')).toEqual(['Tâche', 'Mode liste de tâches']);
+    expect(libelles('tache')).toEqual(['Tâche', 'Mode liste de tâches']);
     expect(libelles('numerotee')).toEqual(['Liste numérotée']);
   });
 
   it('trouve par les noms anglais et par la syntaxe Markdown', () => {
-    expect(libelles('todo')).toEqual(['Tâche']);
+    expect(libelles('todo')).toEqual(['Tâche', 'Mode liste de tâches']);
     expect(libelles('h3')).toEqual(['Titre 3']);
     expect(libelles('bullet')).toEqual(['Liste à puces']);
     expect(libelles('today')).toEqual(['Date']);
@@ -93,5 +93,13 @@ describe('declencheur', () => {
   it('ne s’ouvre pas sur une sélection de texte', () => {
     const { document } = lireMarkdown('/tit');
     expect(declencheur(EditorState.create({ doc: document, selection: TextSelection.create(document, 1, 5) }))).toBeNull();
+  });
+});
+
+describe('commande du mode liste', () => {
+  it('se trouve par « todo list » et « keep », et sert à quitter le mode dans une page en liste', () => {
+    expect(libelles('keep')).toEqual(['Mode liste de tâches']);
+    expect(filtrerCommandes('mode liste', true).map((commande) => commande.libelle)).toContain('Quitter le mode liste');
+    expect(filtrerCommandes('', true).map((commande) => commande.libelle)).not.toContain('Mode liste de tâches');
   });
 });

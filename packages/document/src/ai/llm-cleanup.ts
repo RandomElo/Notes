@@ -186,6 +186,15 @@ function resserrer(lignes: string[]): string[] {
   return lignes.filter((ligne, index) => !(ligne.trim() === '' && index > 0 && lignes[index - 1]!.trim() === '')).map((ligne) => (ligne.trim() === '' ? '' : ligne));
 }
 
+/**
+ * Espaces en fin de ligne ajoutés par le modèle (qwen3 en met deux après
+ * chaque puce, vu en essai). Deux espaces font un retour à la ligne forcé en
+ * Markdown : on les garde si la page en avait.
+ */
+function retirerEspacesFinaux(lignes: string[], entreeEnAvait: boolean): string[] {
+  return entreeEnAvait ? lignes : lignes.map((ligne) => ligne.trimEnd());
+}
+
 /** Une relecture qui rend moins de 85 % des mots a sans doute retiré du texte (vu en essai : des paragraphes proches fusionnés). */
 const partMinimaleDesMots = 0.85;
 const mots = (texte: string): number => texte.replace(/\[\[BLOC-\d+\]\]/g, '').split(/\s+/).filter((mot) => /[\p{L}\p{N}]/u.test(mot)).length;
@@ -209,6 +218,8 @@ export function nettoyerSortie({ sortie, entree, reserves, titre, memeLongueur =
   texte = horsCode(texte, (lignes) => retirerEmojis(lignes, entree));
   texte = horsCode(texte, (lignes) => retirerGras(lignes, entree));
   texte = horsCode(texte, (lignes) => remettreLesTitres(lignes, entree, titre));
+  const entreeAvaitDesRetoursForces = entree.split('\n').some((ligne) => / {2,}$/.test(ligne));
+  texte = horsCode(texte, (lignes) => retirerEspacesFinaux(lignes, entreeAvaitDesRetoursForces));
 
   const motsRendus = mots(texte);
   const remis = remettreEnPlace(texte, reserves);

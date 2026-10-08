@@ -24,6 +24,7 @@ import { cleDeNoeud, clesDesAncetres, trouverParCle } from './features/sidebar/t
 import { StatusBar } from './features/status-bar/StatusBar';
 import { AiPanel } from './features/ai/AiPanel';
 import { AiUsageScreen } from './features/ai/AiUsageScreen';
+import { useMemos } from './features/voice-memos/useMemos';
 import { GlobalShortcutPanel } from './features/search/GlobalShortcutPanel';
 import { SpellcheckPanel } from './features/spellcheck/SpellcheckPanel';
 import { useSpellcheck } from './features/spellcheck/useSpellcheck';
@@ -55,6 +56,10 @@ function ongletsDeDepart(): TabsState {
 /** Disposition générale : arborescence à gauche, éditeur de la page ouverte ou réglages au centre. */
 export function App() {
   const vault = useVault();
+  // Mémos vocaux (README §13) : la page « Mémos vocaux » peut être masquée de l'arborescence sur ce poste.
+  const memos = useMemos();
+  const memosMasques = memos.etat?.masquee === true;
+  const vaultAffiche = useMemo(() => (memosMasques ? { ...vault, arbre: vault.arbre.filter((noeud) => noeud.role !== 'memos') } : vault), [vault, memosMasques]);
   // undefined tant que l'état du vault n'est pas connu : le thème attend de savoir quel dossier lire.
   const theme = useTheme(vault.etat === null ? undefined : vault.etat.dossier);
   useSpellcheck();
@@ -414,7 +419,9 @@ export function App() {
       <div className="flex min-h-0 flex-1">
         {vault.etat?.dossier != null && barreVisible && (
           <Sidebar
-            vault={vault}
+            vault={vaultAffiche}
+            memosMasques={memosMasques}
+            surMasquageDesMemos={(masquer) => void api.masquerMemos({ masquer }).then(memos.definir)}
             selection={reglagesOuverts || corbeilleOuverte || historiqueIaOuvert ? null : selection}
             surSelection={selectionner}
             deplies={deplies}
@@ -522,6 +529,9 @@ export function App() {
               surOuvrirPage={selectionner}
               surIcone={(x, y) => definirChoixDIcone({ chemin: noeudSelectionne.chemin, icone: noeudSelectionne.icone, x, y })}
               surExport={() => definirExportDe(noeudSelectionne.chemin)}
+              surMode={(mode) => vault.changerMode(noeudSelectionne.chemin, mode)}
+              memos={noeudSelectionne.role === 'memos' ? memos.etat : null}
+              surMemos={memos.definir}
             />
           ) : (
             <PageSummary

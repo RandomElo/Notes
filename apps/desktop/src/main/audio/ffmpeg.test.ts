@@ -1,0 +1,45 @@
+import { EventEmitter } from 'node:events';
+import { PassThrough } from 'node:stream';
+import type { ChildProcess } from 'node:child_process';
+import { describe, expect, it } from 'vitest';
+import { argumentsDeConversion, convertirEnWav } from './ffmpeg';
+
+/** Un faux ffmpeg : écrit « sortie » puis se termine avec « code ». */
+function fauxFfmpeg(sortie: Buffer, code: number, erreurs = '') {
+  const appels: { binaire: string; args: string[] }[] = [];
+  const lancer = (binaire: string, args: string[]): ChildProcess => {
+    appels.push({ binaire, args });
+    const processus = new EventEmitter() as ChildProcess;
+    const stdout = new PassThrough();
+    const stderr = new PassThrough();
+    Object.assign(processus, { stdout, stderr, kill: () => true });
+    setTimeout(() => {
+      stderr.end(erreurs);
+      stdout.end(sortie);
+      stdout.on('end', () => setTimeout(() => processus.emit('close', code), 0));
+    }, 0);
+    return processus;
+  };
+  return { lancer, appels };
+}
+
+describe('conversion par ffmpeg', () => {
+  it('demande un WAV 16 kHz mono sur la sortie, le fichier préfixé par file:', () => {
+    const args = argumentsDeConversion('/notes/.notes/memos/-i.amr');
+    expect(args).toContain('file:/notes/.notes/memos/-i.amr');
+    expect(args.slice(args.indexOf('-ar'), args.indexOf('-ar') + 2)).toEqual(['-ar', '16000']);
+    expect(args.at(-1)).toBe('pipe:1');
+  });
+
+  it('rend les octets du WAV', async () => {
+    const wav = Buffer.concat([Buffer.from('RIFF'), Buffer.alloc(100)]);
+    const { lancer, appels } = fauxFfmpeg(wav, 0);
+    expect(await convertirEnWav('/ressources/ffmpeg', '/m.amr', lancer)).toEqual(new Uint8Array(wav));
+    expect(appels[0]?.binaire).toBe('/ressources/ffmpeg');
+  });
+
+  it('refuse un fichier sans son, et un fichier illisible', async () => {
+    await expect(convertirEnWav('f', '/x', fauxFfmpeg(Buffer.alloc(44), 0).lancer)).rejects.toThrow('ne contient pas d’audio');
+    await expect(convertirEnWav('f', '/x', fauxFfmpeg(Buffer.alloc(0), 1, 'moov atom not found').lancer)).rejects.toThrow('ne se lit pas');
+  });
+});

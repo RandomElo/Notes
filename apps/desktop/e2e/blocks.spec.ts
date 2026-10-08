@@ -2,7 +2,7 @@ import { access } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, ouvrirPage, preparer, titreDePage } from './app';
+import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, ouvrirPage, preparer, preparerCoursesClassique, titreDePage } from './app';
 
 // Critère de sortie de J3 : une page se restructure sans souris.
 
@@ -127,7 +127,7 @@ test('le menu « / » se filtre sans accents, se ferme sur Échap et insère tit
   const menu = page.getByRole('listbox', { name: 'Commandes' });
 
   await taper(page, '/');
-  await expect(menu.getByRole('option')).toHaveCount(16);
+  await expect(menu.getByRole('option')).toHaveCount(17);
   // Ni citation ni séparateur dans le menu.
   await taper(page, 'sepa');
   await expect(menu.getByRole('option')).toHaveCount(0);
@@ -283,7 +283,7 @@ test('« /page » crée une sous-page : on la nomme, puis le curseur est dans so
 });
 
 test('la poignée apparaît au survol d’un bloc ou sur une sélection, ouvre son menu et déplace par glisser-déposer', async () => {
-  const session = await lancer(await preparer());
+  const session = await lancer(await preparerCoursesClassique());
   const { page, vault } = session;
   await ouvrirPage(page, 'Courses');
   const poignee = page.getByRole('button', { name: 'Déplacer le bloc ou ouvrir son menu' });
@@ -336,7 +336,7 @@ test('la poignée apparaît au survol d’un bloc ou sur une sélection, ouvre s
 });
 
 test('un clic sous le dernier bloc met le curseur dans un paragraphe vide, sans rien écrire', async () => {
-  const session = await lancer(await preparer());
+  const session = await lancer(await preparerCoursesClassique());
   const { page, vault } = session;
   await ouvrirPage(page, 'Courses');
   const avant = await lireCorps(vault, 'Courses');

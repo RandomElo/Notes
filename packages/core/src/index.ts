@@ -13,7 +13,7 @@ export { analyserPage, cheminDuFichierPage, lirePage } from './page/page-file';
 export { natureDIcone } from './page/icon';
 export type { PageIcon } from './page/icon';
 export { fichierPage } from './page/types';
-export type { PageFile, PageMeta, PageMode } from './page/types';
+export type { PageFile, PageMeta, PageMode, PageRole } from './page/types';
 
 export { aUneExtensionDImage, ajouterImage, dossierAssets, extensionsDImage, listerImagesOrphelines, natureDImage, tailleMaxAvantConversion, tailleMaxDImage } from './vault/assets';
 export type { ImageKind } from './vault/assets';
@@ -34,6 +34,7 @@ export { cheminDeFavicon, dossierFavicons, enregistrerFavicon } from './vault/fa
 export { ajouterAuDictionnaire, ajouterAuxIgnores, fichierDesIgnores, fichierDuDictionnaire, ligneDIgnore, lireDictionnaire, lireIgnores, motValide, motsDuDictionnaire } from './vault/dictionary';
 export type { IgnoredRemark } from './vault/dictionary';
 export { ajouterIconeImage, changerIcone } from './vault/icon';
+export { changerMode } from './vault/page-mode';
 export { indexerTitres } from './vault/titles-index';
 export type { TitleEntry } from './vault/titles-index';
 export { lireArbre, trouverNoeud } from './vault/tree';
@@ -56,6 +57,7 @@ export {
   lireApercu,
   mettreALaCorbeille,
   mettreImageALaCorbeille,
+  mettreMemoALaCorbeille,
   placeDOrigine,
   purgerCorbeille,
   rapatrierEntree,
@@ -76,3 +78,18 @@ export { calibrer, debutDePeriode, depenseDeLaPeriode, ratioDeSortieParDefaut, t
 export type { Calibration, UsageBucket, UsagePeriod } from './ai/usage-stats';
 export { adresseDeServiceValide, adresseOllamaParDefaut, fonctionsDePage, lireReglagesIa, nomDeModeleValide, reglagesIaParDefaut } from './config/ai-settings';
 export type { AiModelChoice, AiPageFunction, AiPrice, AiSettings } from './config/ai-settings';
+export {
+  cheminDeMemoValide,
+  creerPageDeMemo,
+  dateDuNom,
+  dossierDesMemos,
+  estFichierAudio,
+  listerMemos,
+  nomDeMemo,
+  pageDesMemos,
+  pageDesMemosMasquee,
+  titreDeLaPageDesMemos,
+  titreDuMemo,
+  trouverPageDesMemos,
+} from './memos/memos';
+export type { VoiceMemo } from './memos/memos';

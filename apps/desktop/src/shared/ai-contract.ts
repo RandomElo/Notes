@@ -8,6 +8,7 @@ import type { AiPageFunction, AiProvider, AiRun, AiSettings, UsageBucket, UsageP
 export const libellesDesFonctions: Record<AiPageFunction, string> = {
   relecture: 'Relecture stylistique',
   'mise-au-propre': 'Mise au propre',
+  memo: 'Mise en forme des mémos',
 };
 
 /** Consignes de Notes, remplaçables dans les réglages. Les repères `[[BLOC-n]]` sont expliqués au modèle. */
@@ -25,6 +26,13 @@ export const consignesParDefaut: Record<AiPageFunction, string> = {
     'Développe les abréviations et les phrases télégraphiques. Ce n’est pas un résumé : tout ce que disent les notes doit rester. N’invente aucun fait.',
     'Garde les liens tels quels. Les lignes de la forme [[BLOC-1]] remplacent des blocs mis de côté : recopie-les telles quelles, à l’endroit qui convient.',
     'Réponds uniquement par le document, en Markdown, sans phrase d’introduction ni de conclusion, sans emoji et sans gras ajouté.',
+  ].join('\n'),
+  memo: [
+    'Tu reçois la transcription brute d’un mémo vocal en français : la ponctuation et certains mots peuvent être faux.',
+    'Remets-la au propre en Markdown : ponctuation, majuscules, paragraphes ; une liste quand on énumère ; des titres seulement si le mémo aborde plusieurs sujets bien distincts.',
+    'Corrige les mots mal transcrits quand le sens est évident, retire les hésitations (euh, ben, bon) et les répétitions.',
+    'Garde le sens, le ton et toutes les informations. N’ajoute rien, ne résume pas.',
+    'Réponds uniquement par le texte, sans phrase d’introduction ni de conclusion, sans emoji et sans gras ajouté.',
   ].join('\n'),
 };
 

@@ -40,11 +40,11 @@ describe('validerReglagesNas', () => {
 
 describe('lireReglages', () => {
   it('revient au défaut sur un contenu abîmé', () => {
-    expect(lireReglages(undefined)).toEqual({ nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut });
-    expect(lireReglages({ nas: { hote: '' }, vaultLocal: 'relatif/chemin', appareil: '../x' })).toEqual({ nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut });
+    expect(lireReglages(undefined)).toEqual({ nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut, memosMasques: null });
+    expect(lireReglages({ nas: { hote: '' }, vaultLocal: 'relatif/chemin', appareil: '../x' })).toEqual({ nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut, memosMasques: null });
   });
 
   it('garde des réglages valides', () => {
-    expect(lireReglages({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000' })).toEqual({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000', ia: reglagesIaParDefaut });
+    expect(lireReglages({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000' })).toEqual({ nas: valide, vaultLocal: '/srv/notes', appareil: '0199a0b0-0000-7000', ia: reglagesIaParDefaut, memosMasques: null });
   });
 });

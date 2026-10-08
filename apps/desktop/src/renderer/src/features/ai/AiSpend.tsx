@@ -5,15 +5,15 @@ import { libelleDeDollars } from './ai-labels';
 
 /**
  * Dépense IA du jour dans la barre de statut (README §7, §12). Elle n'apparaît
- * qu'une fois OpenAI utilisé ce mois-ci : un modèle local ne coûte rien. Un
- * clic ouvre l'historique.
+ * que si une fonction passe par LiteLLM (choix d'Eloi, 2026-10-05) : un modèle
+ * local ne coûte rien. Un clic ouvre l'historique.
  */
 export function AiSpend({ surOuverture }: { surOuverture: () => void }) {
-  const [depense, definirDepense] = useState<{ jour: number; mois: number; seuil: number | null } | null>(null);
+  const [depense, definirDepense] = useState<{ jour: number; mois: number; seuil: number | null; visible: boolean } | null>(null);
 
   useEffect(() => {
     const lire = (): void =>
-      void api.historiqueIa().then((vue) => definirDepense({ jour: vue.depenseDuJourUsd, mois: vue.depenseDuMoisUsd, seuil: vue.seuilMensuelUsd }));
+      void api.historiqueIa().then((vue) => definirDepense({ jour: vue.depenseDuJourUsd, mois: vue.depenseDuMoisUsd, seuil: vue.seuilMensuelUsd, visible: vue.litellmChoisi }));
     lire();
     const desabonner = api.surHistoriqueIa(lire);
     // Le jour change à minuit ; le dossier des notes peut aussi recevoir des appels d'un autre poste.
@@ -24,7 +24,7 @@ export function AiSpend({ surOuverture }: { surOuverture: () => void }) {
     };
   }, []);
 
-  if (depense === null || depense.mois === 0) {
+  if (depense === null || !depense.visible) {
     return null;
   }
   const depasse = depense.seuil !== null && depense.mois > depense.seuil;

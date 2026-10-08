@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, lireVault, ouvrirPage, preparer } from './app';
+import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, lireVault, ouvrirPage, preparer, preparerCoursesClassique } from './app';
 
 // Critère de sortie de J2 : aller-retour Markdown sans perte, vérifié dans l'application réelle.
 
@@ -263,7 +263,7 @@ test('une note venue d’un autre outil est montrée en lecture seule, sans êtr
 });
 
 test('un surlignage déjà écrit dans un fichier est affiché et reste intact', async () => {
-  const prepare = await preparer();
+  const prepare = await preparerCoursesClassique();
   const fichier = join(prepare.vault, 'Courses', 'page.md');
   const avant = await readFile(fichier, 'utf8');
   await writeFile(fichier, avant.replace('- [ ] Pâtes', '- [ ] Pâtes ==fraîches==') + '\nUn ==mot surligné== ailleurs.\n');

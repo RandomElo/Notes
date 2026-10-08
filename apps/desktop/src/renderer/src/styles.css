@@ -194,3 +194,46 @@ body {
 .faute-grammaire {
   text-decoration-color: var(--color-accent);
 }
+
+/* Mode liste de tâches : titre de la section « Terminé », dans la liste, et tâches cachées quand elle est repliée. */
+.notes-page ul[data-type='taskList'] > li.titre-termine {
+  display: block;
+  margin-top: 0.8em;
+  user-select: none;
+}
+
+.notes-page li.titre-termine button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  border-radius: 0.3em;
+  padding: 0.1em 0.4em 0.1em 0.2em;
+  margin-left: -0.2em;
+  color: var(--color-discret);
+  font-size: 0.875em;
+  cursor: pointer;
+  outline: 0;
+}
+
+.notes-page li.titre-termine button:hover {
+  background-color: color-mix(in srgb, var(--color-texte) 10%, transparent);
+  color: var(--color-texte);
+}
+
+.notes-page li.titre-termine button:focus-visible {
+  background-color: color-mix(in srgb, var(--color-texte) 20%, transparent);
+  color: var(--color-texte);
+}
+
+.notes-page li.tache-repliee {
+  display: none !important;
+}
+
+/* Tâche vide où se trouve le curseur, en mode liste : « Nouvelle tâche ». */
+.notes-page p.invite-tache::before {
+  float: left;
+  height: 0;
+  color: var(--color-discret);
+  content: attr(data-placeholder);
+  pointer-events: none;
+}

@@ -219,8 +219,8 @@ export function AiUsageScreen() {
       <div>
         <h2 className="text-xl font-semibold">Historique des fonctions IA</h2>
         <p className="text-discret mt-1 text-sm">
-          Tous les appels, de tous les postes (gardés dans le dossier des notes). Seuls les appels à OpenAI coûtent ; les montants sont en dollars, la monnaie
-          de facturation d’OpenAI.
+          Tous les appels, de tous les postes (gardés dans le dossier des notes). Seuls les appels par LiteLLM coûtent ; les montants sont en dollars, la monnaie
+          de facturation des fournisseurs.
         </p>
       </div>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">

@@ -3,7 +3,7 @@ import type { LocalFs } from '../fs/local-fs';
 import { estFichierDeConflit } from '../page/conflict';
 import { analyserPage } from '../page/page-file';
 import { fichierPage } from '../page/types';
-import type { PageMode } from '../page/types';
+import type { PageMode, PageRole } from '../page/types';
 import { lireOrdre } from './order';
 
 /**
@@ -24,6 +24,8 @@ export interface TreeNode {
   titre: string;
   icone: string | null;
   mode: PageMode | null;
+  /** `memos` pour la page « Mémos vocaux ». */
+  role?: PageRole;
   enfants: TreeNode[];
 }
 
@@ -87,6 +89,7 @@ async function lireDossier(fs: LocalFs, chemin: string, nom: string): Promise<Tr
     titre: meta.titre,
     icone: meta.icone,
     mode: meta.mode,
+    ...(meta.role === undefined ? {} : { role: meta.role }),
     enfants,
   };
 }

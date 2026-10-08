@@ -1,6 +1,6 @@
 import { natureDIcone } from '@notes/core';
-import type { TreeNode } from '@notes/core';
-import { ecrireMarkdown, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
+import type { PageMode, TreeNode } from '@notes/core';
+import { convertirEnListe, ouvrirNouvelleTache, ecrireMarkdown, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
 import type { ImageAttributes, OutlineEntry } from '@notes/document';
 import { classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
 import { Node as NoeudTiptap } from '@tiptap/core';
@@ -9,12 +9,15 @@ import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import type { MentionedPage, Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { Download, FileText, List, Lock, Sparkles, X } from 'lucide-react';
-import { Selection } from '@tiptap/pm/state';
+import { Download, FileText, List, ListChecks, Lock, Sparkles, X } from 'lucide-react';
+import { Selection, TextSelection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
+import type { MemosState } from '../../../../shared/memos-contract';
 import { api } from '../../lib/ipc';
+import { estBooleen, useStoredState } from '../../state/useStoredState';
 import { AiDialog } from '../ai/AiDialog';
+import { MemoList } from '../voice-memos/MemoList';
 import { BlockHandle } from '../blocks/BlockHandle';
 import { BlockKeys } from '../blocks/block-extension';
 import { CodeBlockView } from '../code-block/CodeBlockView';
@@ -51,6 +54,7 @@ import { OutlineDialog } from '../outline/OutlineDialog';
 import { OutlineRail } from '../outline/OutlineRail';
 import { allerAuTitre, useOutline } from '../outline/useOutline';
 import { FloatingToolbar } from '../toolbar/FloatingToolbar';
+import { TodoMode, cleDuModeListe, definirModeListe } from '../todo-mode/todo-extension';
 import { allerALaFin } from './end-click';
 import { PageSaver } from './page-saver';
 import type { SaveState } from './page-saver';
@@ -71,6 +75,8 @@ interface ExtensionsDeLEditeur {
   surLienDImage: (adresse: string, position: number) => void;
   /** Ouverture d'une page par un lien ou une mention, et titre d'une page pour un lien collé. */
   liens: LinkOptions;
+  /** « Terminé » replié ou déplié, en mode liste. */
+  surRepli: (replie: boolean) => void;
 }
 
 /** Icône d'une page mentionnée : celle de la page, sinon une page blanche. */
@@ -84,7 +90,7 @@ function IconeDeMention({ page }: { page: MentionedPage }) {
  * collées ou déposées, correction orthographique, annuler et rétablir,
  * curseur entre deux blocs, repère de dépôt, invite.
  */
-function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage, liens }: ExtensionsDeLEditeur): AnyExtension[] {
+function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage, liens, surRepli }: ExtensionsDeLEditeur): AnyExtension[] {
   const affichage = extensionsDAffichage(
     { resoudre: (src) => adresseDImage(chemin(), src), agrandir },
     { pages: annuaireDesPages, Icone: IconeDeMention, ouvrir: liens.ouvrirPage },
@@ -104,11 +110,13 @@ function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage
     // Après les images : un lien d'image collé leur revient.
     LinkBehaviour.configure(liens),
     SpellcheckDecorations,
+    TodoMode.configure({ surRepli }),
     UndoRedo,
     Gapcursor,
     Dropcursor.configure({ color: 'var(--color-accent)', width: 2 }),
     Placeholder.configure({
-      placeholder: 'Écris ici, ou tape / pour choisir un bloc',
+      // Page vide. L'invite d'une tâche vide vient du mode liste (todo-extension.ts).
+      placeholder: ({ editor }) => (cleDuModeListe.getState(editor.state)?.actif === true ? 'Nouvelle tâche' : 'Écris ici, ou tape / pour choisir un bloc'),
     }),
   ];
 }
@@ -137,10 +145,15 @@ interface PageEditorProps {
   surIcone: (x: number, y: number) => void;
   /** Ouvre la fenêtre d'export de la page. */
   surExport: () => void;
+  /** Passe la page en mode liste de tâches, ou l'en sort. Rend le message d'erreur, null sinon. */
+  surMode: (mode: PageMode | null) => Promise<string | null>;
+  /** Mémos en attente, pour la page « Mémos vocaux » seulement (README §13) ; null pour toute autre page. */
+  memos: MemosState | null;
+  surMemos: (etat: MemosState) => void;
 }
 
 /** Page ouverte : fil d'Ariane, titre, puis l'éditeur de son contenu. */
-export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible, surOuvrirPage, surIcone, surExport }: PageEditorProps) {
+export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible, surOuvrirPage, surIcone, surExport, surMode, memos, surMemos }: PageEditorProps) {
   // Entrée ou flèche bas dans le titre : le curseur passe au début du contenu.
   const [descentes, descendre] = useState(0);
   const [chargement, definirChargement] = useState<Chargement>({ etat: 'lecture' });
@@ -155,6 +168,23 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   const sommaire = useOutline(editeur);
   const [sommaireOuvert, definirSommaireOuvert] = useState(false);
   const [iaOuverte, definirIaOuverte] = useState(false);
+  const modeListe = noeud.mode === 'todo';
+  const [erreurDeMode, definirErreurDeMode] = useState<string | null>(null);
+  // Activer le mode écrit `mode: todo`, puis convertit la page en tâches dans l'éditeur : une étape d'annulation,
+  // enregistrée comme une frappe. Le quitter ne touche pas au contenu, les tâches restent des cases normales.
+  const basculerModeListe = async (): Promise<void> => {
+    const activer = !modeListe;
+    const erreur = await surMode(activer ? 'todo' : null);
+    definirErreurDeMode(erreur);
+    if (erreur === null && activer && editeur !== null && !editeur.isDestroyed) {
+      // La page devient une liste, et une tâche vide attend avant « Terminé » : on peut écrire tout de suite.
+      const tr = editeur.state.tr;
+      convertirEnListe(tr);
+      const curseur = ouvrirNouvelleTache(tr);
+      editeur.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, curseur)).scrollIntoView());
+      editeur.view.focus();
+    }
+  };
   // Corps de la page tel qu'il est dans l'éditeur, en Markdown (fourni par la surface d'édition).
   const lireCorps = useRef<(() => string) | null>(null);
   const lireLeCorps = useMemo(() => () => lireCorps.current?.() ?? '', []);
@@ -208,6 +238,17 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
             </button>
             <button
               type="button"
+              onClick={() => void basculerModeListe()}
+              disabled={lectureSeule || chargement.etat !== 'pret'}
+              aria-pressed={modeListe}
+              aria-label="Mode liste de tâches"
+              title={modeListe ? 'Quitter le mode liste : la page redevient classique, les tâches restent' : 'Passer en liste de tâches : paragraphes et puces deviennent des tâches'}
+              className={`flex size-6 items-center justify-center rounded outline-0 disabled:opacity-40 ${modeListe ? 'bg-accent/20 text-accent hover:bg-accent/30 focus-visible:bg-accent/40' : 'text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte'}`}
+            >
+              <ListChecks className="size-4" aria-hidden="true" />
+            </button>
+            <button
+              type="button"
               onClick={() => definirIaOuverte(true)}
               aria-disabled={lectureSeule || chargement.etat !== 'pret'}
               disabled={lectureSeule || chargement.etat !== 'pret'}
@@ -236,6 +277,12 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
 
         {verrou.verrou.etat === 'autre' && <LockNotice nom={verrou.verrou.nom} surForcage={verrou.forcer} />}
         <ConflictNotice conflits={conflits} surResolution={surConflit} />
+        {memos !== null && <MemoList etat={memos} surEtat={surMemos} />}
+        {erreurDeMode !== null && (
+          <p role="alert" className="bg-erreur/10 mb-4 rounded-md p-3 text-sm">
+            Le mode liste n'a pas pu être changé : {erreurDeMode}
+          </p>
+        )}
 
         {chargement.etat === 'erreur' && (
           <p role="alert" className="bg-erreur/10 rounded-md p-3 text-sm">
@@ -260,6 +307,8 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
             surLecteurDeCorps={(lecteur) => {
               lireCorps.current = lecteur;
             }}
+            modeListe={modeListe}
+            surModeListe={() => void basculerModeListe()}
           />
         )}
       </article>
@@ -320,9 +369,12 @@ interface EditorSurfaceProps {
   surEditeur: (editeur: Editor | null) => void;
   /** Donne à la page de quoi lire son corps en Markdown, pour les fonctions IA. */
   surLecteurDeCorps: (lecteur: (() => string) | null) => void;
+  /** La page est en mode liste de tâches (README §14). */
+  modeListe: boolean;
+  surModeListe: () => void;
 }
 
-function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur, surLecteurDeCorps }: EditorSurfaceProps) {
+function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur, surLecteurDeCorps, modeListe, surModeListe }: EditorSurfaceProps) {
   const [erreurDImage, definirErreurDImage] = useState<string | null>(null);
   // Position où ouvrir la grille de taille d'un tableau (`/tableau`), null quand elle est fermée.
   const [grille, definirGrille] = useState<number | null>(null);
@@ -330,6 +382,12 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
   // Lien d'image collé, en attente de la réponse : télécharger ou garder le lien.
   const [lienColle, definirLienColle] = useState<{ adresse: string; position: number } | null>(null);
   const depart = useMemo(() => lireMarkdown(corps), [corps]);
+  // « Terminé » replié ou non, retenu page par page : une préférence d'affichage, pas le contenu.
+  const [replie, definirReplie] = useStoredState(`notes.termine-replie.${id}`, false, estBooleen);
+  const modeListeActuel = useRef({ modeListe, surModeListe });
+  useEffect(() => {
+    modeListeActuel.current = { modeListe, surModeListe };
+  }, [modeListe, surModeListe]);
   // Texte d'origine de chaque bloc : c'est ce qui permet de ne réécrire que les blocs modifiés.
   const source = useRef(depart.source);
   const cheminActuel = useRef(chemin);
@@ -384,8 +442,9 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
         surErreurDImage: definirErreurDImage,
         surLienDImage: (adresse, position) => definirLienColle({ adresse, position }),
         liens,
+        surRepli: definirReplie,
       }),
-    [liens],
+    [liens, definirReplie],
   );
 
   const editeur = useEditor({
@@ -461,6 +520,14 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
     [editeur, id],
   );
 
+  // L'état de repli n'est lu qu'à l'activation : ensuite, c'est le bouton de la section qui le change dans l'éditeur.
+  const replieRetenu = useRef(replie);
+  useEffect(() => {
+    if (!editeur.isDestroyed) {
+      definirModeListe(editeur.view, modeListe, replieRetenu.current);
+    }
+  }, [editeur, modeListe]);
+
   useEffect(() => {
     if (descentes > 0) {
       editeur.commands.focus('start');
@@ -526,15 +593,25 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
       if (evenement.button !== 0 || lectureSeule || !(cible instanceof Element) || cible.closest('[data-zone-page]') === null) {
         return;
       }
+      // En mode liste, le vide de l'éditeur sous la dernière tâche compte aussi : c'est là qu'on clique pour en ajouter une.
+      const sousLaListe =
+        modeListeActuel.current.modeListe && cible === editeur.view.dom && evenement.clientY > (editeur.view.dom.lastElementChild?.getBoundingClientRect().bottom ?? Infinity);
       // Seulement le fond : ni le contenu, ni un bouton, un champ ou un message.
-      if (editeur.view.dom.contains(cible) || cible.closest('button, a, input, textarea, nav, [role="alert"], [contenteditable]') !== null) {
+      if (!sousLaListe && (editeur.view.dom.contains(cible) || cible.closest('button, a, input, textarea, nav, [role="alert"], [contenteditable]') !== null)) {
         return;
       }
-      if (evenement.clientY <= editeur.view.dom.getBoundingClientRect().bottom) {
+      if (!sousLaListe && evenement.clientY <= editeur.view.dom.getBoundingClientRect().bottom) {
         return;
       }
       evenement.preventDefault();
-      editeur.view.dispatch(allerALaFin(editeur.state));
+      if (modeListeActuel.current.modeListe) {
+        // En mode liste : une tâche vide avant « Terminé », comme la ligne d'ajout de Keep.
+        const tr = editeur.state.tr;
+        const curseur = ouvrirNouvelleTache(tr);
+        editeur.view.dispatch(tr.setSelection(TextSelection.create(tr.doc, curseur)).scrollIntoView());
+      } else {
+        editeur.view.dispatch(allerALaFin(editeur.state));
+      }
       editeur.view.focus();
     };
     document.addEventListener('mousedown', surClic);
@@ -545,6 +622,8 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
     () => ({
       surSousPage,
       surTableau: () => definirGrille(editeur.state.selection.from),
+      modeListe: () => modeListeActuel.current.modeListe,
+      surModeListe: () => modeListeActuel.current.surModeListe(),
       surImage: () => {
         const position = editeur.state.selection.from;
         void api.choisirImages().then(async (resultat) => {

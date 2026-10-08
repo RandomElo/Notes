@@ -1,5 +1,6 @@
+import type { MemoAcceptance, MemoConversion, MemosState, MemoTranscription, WhisperState } from './memos-contract';
 import type { AiProgress, AiRequest, AiEstimateResult, AiRunResult, AiState, AiUsageView } from './ai-contract';
-import type { AiSettings, BrokenMention, ConflictVersions, IgnoredRemark, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, VaultErrorCode } from '@notes/core';
+import type { AiSettings, BrokenMention, ConflictVersions, IgnoredRemark, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, PageMode, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, VaultErrorCode } from '@notes/core';
 
 /**
  * Contrat IPC entre le main, le preload et le renderer. Tout canal ajouté ici
@@ -66,6 +67,7 @@ export const canaux = {
   listerMentionsCassees: 'vault:mentions-cassees',
   changerIcone: 'vault:changer-icone',
   ajouterIconeImage: 'vault:ajouter-icone-image',
+  changerMode: 'vault:changer-mode',
   exporter: 'export:exporter',
   montrerExport: 'export:montrer',
   lireImageDExport: 'export:lire-image',
@@ -95,6 +97,16 @@ export const canaux = {
   lancerIa: 'ia:lancer',
   annulerIa: 'ia:annuler',
   historiqueIa: 'ia:historique',
+  etatMemos: 'memos:etat',
+  masquerMemos: 'memos:masquer',
+  lireMemo: 'memos:lire',
+  transcrireMemo: 'memos:transcrire',
+  accepterMemo: 'memos:accepter',
+  ecarterMemo: 'memos:ecarter',
+  convertirMemo: 'memos:convertir',
+  ouvrirDossierMemos: 'memos:ouvrir-dossier',
+  installerModeleWhisper: 'memos:installer-modele',
+  annulerInstallationWhisper: 'memos:annuler-installation',
 } as const;
 
 /**
@@ -128,6 +140,8 @@ export const evenements = {
   avancementIa: 'ia:avancement',
   /** Un appel IA vient d'entrer dans l'historique : la dépense affichée est à relire. */
   historiqueIaModifie: 'ia:historique-modifie',
+  /** Le modèle de transcription se télécharge, ou le serveur a démarré ou s'est arrêté. Porte l'état. */
+  etatWhisperModifie: 'memos:etat-whisper',
 } as const;
 
 /** Une étape de l'installation de la correction orthographique : un fichier à télécharger, vérifier, décompresser. */
@@ -380,6 +394,8 @@ export interface NotesApi {
   changerIcone(demande: { chemin: string; icone: string | null }): Promise<VaultOperationResult>;
   /** Copie une image déjà recadrée (128 × 128, WebP) dans les `assets/` de la page et en fait son icône. */
   ajouterIconeImage(demande: { chemin: string; octets: Uint8Array }): Promise<VaultOperationResult>;
+  /** Passe une page en mode liste de tâches (`todo`) ou la ramène en page classique (null). Seul le front-matter change. */
+  changerMode(demande: { chemin: string; mode: PageMode | null }): Promise<VaultOperationResult>;
   deplacerPage(demande: { chemin: string; parent: string; index?: number }): Promise<VaultOperationResult>;
   /** Déplace plusieurs pages ensemble, à la suite, dans l'ordre donné. Une page dont un ancêtre est aussi déplacé suit celui-ci. */
   deplacerPages(demande: { chemins: string[]; parent: string; index?: number }): Promise<VaultOperationResult>;
@@ -528,4 +544,25 @@ export interface NotesApi {
   /** Appels passés et leurs totaux par période (`.notes/ai-usage.json`). */
   historiqueIa(): Promise<AiUsageView>;
   surHistoriqueIa(ecouteur: () => void): () => void;
+
+  /** Mémos vocaux en attente, page « Mémos vocaux », masquage, état de la transcription. Crée la page au premier mémo. */
+  etatMemos(): Promise<MemosState>;
+  /** Masque la page « Mémos vocaux » de l'arborescence sur ce poste, ou la réaffiche. */
+  masquerMemos(demande: { masquer: boolean }): Promise<MemosState>;
+  /** Octets d'un mémo (`.notes/memos/…`), pour l'écouter ou le convertir. null s'il n'existe plus. */
+  lireMemo(demande: { chemin: string }): Promise<Uint8Array | null>;
+  /** Transcrit un WAV 16 kHz mono (converti par la page). Lance le serveur s'il ne tourne pas. */
+  transcrireMemo(demande: { wav: Uint8Array }): Promise<MemoTranscription>;
+  /** Crée la sous-page du mémo avec le texte accepté, puis met l'audio à la corbeille. */
+  accepterMemo(demande: { chemin: string; corps: string }): Promise<MemoAcceptance>;
+  /** Met un mémo à la corbeille sans le transcrire. */
+  ecarterMemo(demande: { chemin: string }): Promise<MemosState>;
+  /** Décode par le ffmpeg de Notes un mémo que la page ne lit pas, en WAV 16 kHz mono. */
+  convertirMemo(demande: { chemin: string }): Promise<MemoConversion>;
+  /** Ouvre le dossier où arrivent les mémos (`.notes/memos/`) dans le gestionnaire de fichiers. */
+  ouvrirDossierMemos(): Promise<{ ok: true } | { ok: false; message: string }>;
+  /** Télécharge le modèle de transcription (574 Mo). L'avancement arrive par surEtatWhisper. */
+  installerModeleWhisper(): Promise<WhisperState>;
+  annulerInstallationWhisper(): Promise<void>;
+  surEtatWhisper(ecouteur: (etat: WhisperState) => void): () => void;
 }

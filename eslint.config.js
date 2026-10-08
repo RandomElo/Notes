@@ -15,7 +15,7 @@ const interdire = (...motifs) => ({ 'no-restricted-imports': ['error', { pattern
 
 export default tseslint.config(
   {
-    ignores: ['**/node_modules/', '**/out/', '**/dist/', '**/release/', '**/resources/', 'apps/smb-companion/', 'apps/mobile/android/', 'poc/'],
+    ignores: ['**/node_modules/', '**/out/', '**/dist/', '**/release/', '**/resources/', '.cache/', 'apps/smb-companion/', 'apps/mobile/android/', 'poc/'],
   },
   js.configs.recommended,
   ...tseslint.configs.recommended,

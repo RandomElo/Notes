@@ -28,7 +28,11 @@ import { SecretStore } from './secrets/secret-store';
 import { durcirContenu, durcirSession } from './security/window-security';
 import { SettingsStore } from './settings/settings-store';
 import { AiService } from './ai/ai-service';
-import { detecterCartes, sourcesDuPoste } from './ai/hardware';
+import { carteRetenue, detecterCartes, sourcesDuPoste } from './ai/hardware';
+import { creerHandlersMemos } from './ipc/memos';
+import { convertirEnWav } from './audio/ffmpeg';
+import { dossierDeWhisper } from './whisper/model';
+import { WhisperService } from './whisper/whisper-service';
 import type { GpuInfo } from './ai/hardware';
 import { CompanionProcess, lanceurDeBinaire } from './smb/companion-process';
 import { CompanionRemoteFs } from './smb/companion-remote-fs';
@@ -190,6 +194,8 @@ async function choisirDestinationDExport(nomPropose: string, format: { extension
 function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
   handlers.reinitialiser();
   fenetre = new BrowserWindow({
+    // Icône de la barre des tâches (README §17) ; celle de l'AppImage vient d'electron-builder.
+    icon: join(dossierRessources(), 'icon', '256x256.png'),
     width: 1100,
     height: 760,
     minWidth: 720,
@@ -330,12 +336,35 @@ function demarrer(): void {
       // Notes quitte : seule une installation en cours s'arrête, LanguageTool continue pour l'extension du navigateur.
       app.on('will-quit', () => correction.arreter());
       let cartesDuPoste: Promise<GpuInfo[]> | null = null;
+      // Hors AppImage, NOTES_CARTES_ESSAI donne une carte imaginaire (essais de bout en bout) : un essai ne dépend pas de la carte du poste.
+      const cartesDEssai = (): Promise<GpuInfo[]> | null => {
+        const brut = app.isPackaged ? undefined : process.env['NOTES_CARTES_ESSAI'];
+        return brut === undefined || brut === '' ? null : Promise.resolve(JSON.parse(brut) as GpuInfo[]);
+      };
       // Le nom des cartes vu par Chromium (« AMD Radeon RX 7600 (radeonsi, navi33…) ») : /sys ne le donne pas.
       const nomsDesCartes = async (): Promise<string[]> => {
         const infos = (await app.getGPUInfo('complete')) as { auxAttributes?: { glRenderer?: unknown }; gpuDevice?: Array<{ deviceString?: unknown }> };
         const noms = [infos.auxAttributes?.glRenderer, ...(infos.gpuDevice ?? []).map((carte) => carte.deviceString)];
         return noms.filter((nom): nom is string => typeof nom === 'string' && nom !== '');
       };
+      const obtenirCartes = (): Promise<GpuInfo[]> => (cartesDuPoste ??= cartesDEssai() ?? detecterCartes(sourcesDuPoste(nomsDesCartes)));
+      // Mémos vocaux (README §13) : serveur whisper.cpp livré dans l'AppImage, modèle téléchargé à la demande à côté d'elle.
+      // Hors AppImage, NOTES_WHISPER_ADRESSE désigne un serveur déjà lancé (essais de bout en bout).
+      const adresseWhisper = app.isPackaged ? undefined : process.env['NOTES_WHISPER_ADRESSE'];
+      const whisper = new WhisperService({
+        dossier: dossierDeWhisper(process.env, homedir()),
+        binaire: join(dossierRessources(), 'whisper', 'whisper-server'),
+        // Une session à part, sans cookies ni cache partagés avec la fenêtre.
+        telecharger: (adresse, signal) => session.fromPartition('telechargements-whisper').fetch(adresse, { signal }),
+        surEtat: (etat) => fenetre?.webContents.send(evenements.etatWhisperModifie, etat),
+        carte: async () => {
+          const carte = carteRetenue(await obtenirCartes());
+          return carte?.dediee === true ? carte.nom : null;
+        },
+        ...(adresseWhisper === undefined || adresseWhisper === '' ? {} : { adresseExterne: adresseWhisper }),
+      });
+      void whisper.demarrer();
+      app.on('will-quit', () => whisper.arreter());
       const handlersVault = creerHandlersVault({ vault, file: fileDuVault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
       const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
       const handlersCorbeille = creerHandlersCorbeille({ vault, file: fileDuVault, avecNas: (action) => sync.avecNas(action) });
@@ -388,7 +417,7 @@ function demarrer(): void {
         // Fonctions IA (README §12) : Ollama sur le poste, choisi selon la carte graphique, LiteLLM sur option. La clé reste dans le coffre, jamais envoyée au renderer.
         ia: new AiService({
           // La carte ne change pas pendant une session : lue une fois, à la première demande.
-          cartes: () => (cartesDuPoste ??= detecterCartes(sourcesDuPoste(nomsDesCartes))),
+          cartes: obtenirCartes,
           reglages,
           secrets,
           contexte: () => vault.contexte(),
@@ -396,6 +425,15 @@ function demarrer(): void {
           surAvancement: (avancement) => fenetre?.webContents.send(evenements.avancementIa, avancement),
           surHistorique: () => fenetre?.webContents.send(evenements.historiqueIaModifie),
           octetsAleatoires: (taille) => randomBytes(taille),
+        }),
+        memos: creerHandlersMemos({
+          vault,
+          enSerie: handlersVault.enSerie,
+          reglages,
+          whisper,
+          // Décodeur livré dans l'AppImage (scripts/build-ffmpeg.sh), jamais cherché sur le poste.
+          convertir: (fichier) => convertirEnWav(join(dossierRessources(), 'ffmpeg', 'ffmpeg'), fichier),
+          ouvrirDossier: (dossier) => shell.openPath(dossier),
         }),
         recherche: {
           etatDuFond: () => etatDuFond(),

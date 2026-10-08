@@ -1,6 +1,6 @@
 /**
  * Textes des fonctions IA : montants, tokens, durées. Les montants sont en
- * dollars, la monnaie de facturation d'OpenAI.
+ * dollars, la monnaie de facturation des fournisseurs passés par LiteLLM.
  */
 
 const nombre = new Intl.NumberFormat('fr-FR');

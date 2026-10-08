@@ -21,6 +21,10 @@ out/
 release/
 apps/desktop/resources/bin/
 apps/desktop/resources/background-removal/
+apps/desktop/resources/whisper/
+apps/desktop/resources/ffmpeg/
+# Outils de compilation de whisper.cpp (cmake, SDK Vulkan, sources), téléchargés par scripts/build-whisper.sh.
+.cache/
 
 # Playwright
 test-results/

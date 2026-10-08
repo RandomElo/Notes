@@ -15,6 +15,8 @@ export interface Settings {
   appareil: string | null;
   /** Fonctions IA de ce poste (J12). */
   ia: AiSettings;
+  /** Page « Mémos vocaux » masquée sur ce poste : les mémos présents au moment de masquer. null quand elle est visible (J13). */
+  memosMasques: string[] | null;
 }
 
 export interface NasSettings {
@@ -33,7 +35,7 @@ export type NasSettingsValidation =
   | { ok: true; valeur: NasSettings }
   | { ok: false; erreurs: Partial<Record<NasSettingsField, string>> };
 
-export const reglagesParDefaut: Settings = { nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut };
+export const reglagesParDefaut: Settings = { nas: null, vaultLocal: null, appareil: null, ia: reglagesIaParDefaut, memosMasques: null };
 
 const hoteValide = /^[A-Za-z0-9]([A-Za-z0-9._-]{0,251}[A-Za-z0-9])?$/;
 // eslint-disable-next-line no-control-regex
@@ -99,10 +101,16 @@ export function lireReglages(valeur: unknown): Settings {
     vaultLocal: estCheminAbsolu(brut['vaultLocal']) ? brut['vaultLocal'] : null,
     appareil: estIdentifiantDAppareil(brut['appareil']) ? brut['appareil'] : null,
     ia: lireReglagesIa(brut['ia']),
+    memosMasques: lireMemosMasques(brut['memosMasques']),
   };
 }
 
 /** Un identifiant d'appareil : des chiffres hexadécimaux et des tirets, rien d'autre. */
 export function estIdentifiantDAppareil(valeur: unknown): valeur is string {
   return typeof valeur === 'string' && /^[0-9a-f-]{8,64}$/.test(valeur);
+}
+
+/** Les noms des mémos vus au moment de masquer leur page ; null pour une page visible ou un contenu abîmé. */
+function lireMemosMasques(valeur: unknown): string[] | null {
+  return Array.isArray(valeur) && valeur.length <= 10_000 && valeur.every((nom) => typeof nom === 'string' && nom.length <= 255 && !nom.includes('/')) ? (valeur as string[]) : null;
 }

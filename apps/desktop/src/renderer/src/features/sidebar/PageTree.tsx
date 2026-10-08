@@ -1,6 +1,6 @@
 import { dossierParent, titreParDefaut, trouverNoeud } from '@notes/core';
 import type { TreeNode } from '@notes/core';
-import { ArrowDownToLine, Copy, FilePlus, Pencil, Smile, Trash2 } from 'lucide-react';
+import { ArrowDownToLine, Copy, Eye, EyeOff, FilePlus, Pencil, Smile, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
 import type { Vault } from '../../state/useVault';
@@ -31,6 +31,10 @@ export interface PageTreeProps {
   surIcone: (noeud: TreeNode, x: number, y: number) => void;
   /** Met ces pages à la corbeille (sans leurs sous-pages sélectionnées, qui partent avec elles). Vrai si c'est fait. */
   surCorbeille: (noeuds: TreeNode[]) => Promise<boolean>;
+  /** Masque la page « Mémos vocaux » de l'arborescence sur ce poste, ou la réaffiche (README §13). */
+  surMasquageDesMemos: (masquer: boolean) => void;
+  /** La page « Mémos vocaux » est masquée : le clic droit dans le vide propose de la réafficher. */
+  memosMasques: boolean;
 }
 
 interface Survol {
@@ -53,7 +57,8 @@ export function PageTree(props: PageTreeProps) {
   const [choix, definirChoix] = useState<ReadonlySet<string>>(new Set());
   const [ancre, definirAncre] = useState<string | null>(null);
   const [survol, definirSurvol] = useState<Survol | null>(null);
-  const [menu, definirMenu] = useState<{ noeud: TreeNode; x: number; y: number } | null>(null);
+  // Menu d'une ligne, ou du fond (noeud null) : réafficher la page « Mémos vocaux ».
+  const [menu, definirMenu] = useState<{ noeud: TreeNode | null; x: number; y: number } | null>(null);
   // Pages avec sous-pages en attente de confirmation avant la corbeille.
   const [aConfirmer, definirAConfirmer] = useState<{ noeuds: TreeNode[]; x: number; y: number } | null>(null);
   const elements = useRef(new Map<string, HTMLDivElement>());
@@ -160,6 +165,7 @@ export function PageTree(props: PageTreeProps) {
           void vault.dupliquerPage(noeud.chemin).then((page) => page !== null && props.surSelection(page.id));
         },
       },
+      ...(noeud.role === 'memos' ? [{ libelle: 'Masquer de l’arborescence', icone: EyeOff, action: () => props.surMasquageDesMemos(true) }] : []),
       { libelle: 'Mettre à la corbeille', icone: Trash2, raccourci: 'Suppr', action: () => supprimer([noeud], { x, y }) },
     ];
   };
@@ -333,6 +339,13 @@ export function PageTree(props: PageTreeProps) {
       className="min-h-0 flex-1 overflow-y-auto px-2 pb-6"
       onDragOver={surSurvolDuFond}
       onDrop={surDepotSurLeFond}
+      onContextMenu={(evenement) => {
+        // Seulement le fond : une ligne a son propre menu.
+        if (evenement.target === evenement.currentTarget && props.memosMasques) {
+          evenement.preventDefault();
+          definirMenu({ noeud: null, x: evenement.clientX, y: evenement.clientY });
+        }
+      }}
     >
       {lignes.length === 0 && <p className="text-discret px-2 py-3 text-sm">Aucune page pour l'instant.</p>}
       {lignes.map(({ noeud, profondeur }, rang) => {
@@ -418,7 +431,12 @@ export function PageTree(props: PageTreeProps) {
         />
       )}
       {menu !== null && (
-        <ContextMenu x={menu.x} y={menu.y} elements={elementsDuMenu(menu.noeud, menu.x, menu.y)} surFermeture={() => definirMenu(null)} />
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          elements={menu.noeud === null ? [{ libelle: 'Réafficher « Mémos vocaux »', icone: Eye, action: () => props.surMasquageDesMemos(false) }] : elementsDuMenu(menu.noeud, menu.x, menu.y)}
+          surFermeture={() => definirMenu(null)}
+        />
       )}
     </div>
   );
