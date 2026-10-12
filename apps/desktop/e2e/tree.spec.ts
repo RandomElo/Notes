@@ -75,6 +75,28 @@ test('Échap sur le nom d’une page neuve la supprime et rouvre la page d’ava
   await fermer(session);
 });
 
+test('une page neuve quittée sans nom ni contenu disparaît ; cliquer dans son contenu la garde', async () => {
+  const session = await lancer(await preparer());
+  const { page, vault } = session;
+  const avant = await lireVault(vault);
+
+  // Clic sur une autre page pendant le nommage : la page neuve, vide, n'est pas gardée en « Sans titre ».
+  await ouvrirPage(page, 'Courses');
+  await page.keyboard.press('Control+n');
+  await expect(champDuNom(page)).toHaveValue('Sans titre');
+  await ligne(page, 'Projets').click();
+  await expect(ligne(page, 'Sans titre')).toHaveCount(0);
+  await expect.poll(() => lireVault(vault)).toEqual(avant);
+
+  // Clic dans son contenu pour y écrire tout de suite : elle reste.
+  await page.keyboard.press('Control+n');
+  await champDuNom(page).waitFor();
+  await editeur(page).click();
+  await expect(champDuNom(page)).toHaveCount(0);
+  await expect(ligne(page, 'Sans titre')).toHaveCount(1);
+  await fermer(session);
+});
+
 test('Échap garde une page « Sans titre » qui a du contenu', async () => {
   const session = await lancer(await preparer());
   const { page, vault } = session;

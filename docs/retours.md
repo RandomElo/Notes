@@ -4,23 +4,13 @@ Modifications demandées par Eloi, notées telles quelles, pas encore implément
 
 | Date | Demande | État |
 |---|---|---|
-| 2026-10-08 | Quand une page a des sous-pages, afficher un bloc en haut de la page qui les liste, comme sur Notion. | À faire |
-| 2026-10-08 | Modèle local qui déborde de la mémoire vidéo (réponse à la question 2 de J12) : abandonner l'appel et afficher un message, au lieu de passer à un modèle plus petit. Message à rédiger : dire quoi faire (fermer l'application qui occupe la carte, relancer). | À faire |
-| 2026-10-08 | Nouvelle icône du logiciel déposée dans `~/Téléchargements` : la reprendre à la place de la précédente (détourer si le fond est un faux damier, toutes les tailles de 16 à 1024 dans `apps/desktop/resources/icon/`, vérifier dans l'AppImage). | À faire |
+| 2026-10-08 | Quand une page a des sous-pages, afficher un bloc en haut de la page qui les liste, comme sur Notion. | Fait (0.15.8) |
+| 2026-10-08 | Modèle local qui déborde de la mémoire vidéo (réponse à la question 2 de J12) : abandonner l'appel et afficher un message, au lieu de passer à un modèle plus petit. Message à rédiger : dire quoi faire (fermer l'application qui occupe la carte, relancer). | Fait (0.12.6) |
+| 2026-10-08 | Nouvelle icône du logiciel déposée dans `~/Téléchargements` : la reprendre à la place de la précédente (détourer si le fond est un faux damier, toutes les tailles de 16 à 1024 dans `apps/desktop/resources/icon/`, vérifier dans l'AppImage). | Fait (0.12.6) |
+| 2026-10-09 | Abandon de LiteLLM ; dans la fenêtre d'une fonction IA, pouvoir copier la consigne avec le texte pour un autre outil. | Fait (0.12.6) |
 | 2026-10-08 | Le premier bloc d'une page devrait être un callout qui la présente : il sépare visuellement le titre de la page du premier titre `#` du contenu. | À faire |
 
 ## Questions à poser avant de coder
-
-Bloc des sous-pages :
-
-- Le bloc est-il seulement affiché (calculé depuis l'arborescence, rien dans le fichier), ou écrit dans `page.md` ? S'il est écrit, il faut une syntaxe lisible hors de l'application (règle 5).
-- Que montre chaque ligne : icône et titre seulement, ou aussi un extrait, une date ?
-- Ordre : celui de l'arborescence (`.order`) ?
-- Le bloc se replie-t-il ? Peut-on le masquer page par page ?
-- Peut-on y créer une sous-page, ou réordonner les sous-pages par glisser-déposer ?
-- Sur la page « Mémos vocaux », dont les sous-pages sont les mémos transcrits, faut-il aussi ce bloc ?
-- À l'export (PDF, HTML, ZIP), le bloc apparaît-il ?
-- Sur Notion, une sous-page est un bloc à l'endroit où on l'a créée, pas une liste en haut. Eloi veut bien une liste en haut de page ?
 
 Callout de présentation en tête de page :
 

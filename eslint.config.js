@@ -56,6 +56,15 @@ export default tseslint.config(
     rules: interdire([{ group: ['**/renderer/**', 'react', 'react-dom'], message: "Pas d'interface dans le main ni le preload." }]),
   },
   {
+    files: ['apps/mobile/src/**'],
+    languageOptions: { globals: { ...globals.browser } },
+    rules: interdire(plateformes.slice(0, 3), [{ group: ['@notes/core/testing'], message: 'Les outils de test ne vont pas dans l\'application, sauf la démonstration (demo.ts).' }]),
+  },
+  {
+    files: ['apps/mobile/src/platform/demo.ts'],
+    rules: interdire(plateformes.slice(0, 3)),
+  },
+  {
     files: ['apps/desktop/src/shared/**'],
     rules: interdire(plateformes, interface_),
   },

@@ -3,10 +3,9 @@ import { homedir } from 'node:os';
 import { writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
-import { estId, extensionsDImage } from '@notes/core';
-import { BrowserWindow, app, dialog, globalShortcut, net, session, shell } from 'electron';
+import { extensionsDImage } from '@notes/core';
+import { BrowserWindow, app, dialog, net, session, shell } from 'electron';
 import { evenements } from '../shared/ipc-contract';
-import type { BackgroundState, PageRequest } from '../shared/ipc-contract';
 import { imprimerEnPdf } from './export/pdf';
 import { declarerSchemaDesImages, lireImageDuVault, servirLesImages } from './images/asset-protocol';
 import { telechargerImage } from './images/download';
@@ -27,11 +26,12 @@ import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
 import { SecretStore } from './secrets/secret-store';
 import { durcirContenu, durcirSession } from './security/window-security';
 import { SettingsStore } from './settings/settings-store';
-import { AiService } from './ai/ai-service';
+import { AiService, ancienneCleLitellm } from './ai/ai-service';
 import { carteRetenue, detecterCartes, sourcesDuPoste } from './ai/hardware';
 import { creerHandlersMemos } from './ipc/memos';
-import { convertirEnWav } from './audio/ffmpeg';
+import { convertirEnWav, dureeAudio } from './audio/ffmpeg';
 import { dossierDeWhisper } from './whisper/model';
+import { TranscriptionMeasures } from './whisper/timing';
 import { WhisperService } from './whisper/whisper-service';
 import type { GpuInfo } from './ai/hardware';
 import { CompanionProcess, lanceurDeBinaire } from './smb/companion-process';
@@ -39,9 +39,7 @@ import { CompanionRemoteFs } from './smb/companion-remote-fs';
 import { identiteDuPoste } from './sync/device';
 import { IndexFile } from './sync/index-file';
 import { SyncScheduler } from './sync/scheduler';
-import { Autostart, argumentEnFond } from './search/autostart';
-import { PendingRequest, demandeLaRecherche } from './search/search-request';
-import { SearchWindow } from './search/search-window';
+import { pageDemandee, sansPage } from './launch/page-argument';
 import { attendreLaFinDeLAncienne, relancerApresLaFin } from './update/relaunch';
 import { UpdateWatcher } from './update/update-watcher';
 import { cheminDuDemarrage } from './languagetool/launcher';
@@ -74,48 +72,43 @@ const preferencesDesFenetres = {
   webSecurity: true,
 };
 
-/** Charge la page de l'application, sur sa vue « recherche » pour la petite fenêtre du raccourci global. */
-function chargerApplication(cible: BrowserWindow, vue?: 'recherche'): void {
+/** Charge la page de l'application dans une fenêtre, durcie. */
+function chargerApplication(cible: BrowserWindow): void {
   durcirContenu(cible.webContents, urlApplication);
   if (urlDeveloppement !== undefined) {
-    void cible.loadURL(vue === undefined ? urlDeveloppement : `${urlDeveloppement}#${vue}`);
+    void cible.loadURL(urlDeveloppement);
   } else {
-    void cible.loadFile(fichierRenderer, vue === undefined ? {} : { hash: vue });
+    void cible.loadFile(fichierRenderer);
   }
 }
 
-/** Raccourci global, capté par l'application tant qu'elle tourne (README §7). */
-const raccourciGlobal = { touches: 'Control+Alt+Space', libelle: 'Ctrl+Alt+Espace' };
-
-// Notes reste lancée en fond une fois sa fenêtre fermée, avec la petite fenêtre de recherche prête et cachée :
-// le raccourci global l'affiche aussitôt. Une page choisie s'ouvre dans la fenêtre principale.
-const pagesDemandees = new PendingRequest<PageRequest>(() => fenetre?.webContents.send(evenements.pageDemandee));
-const fenetreDeRecherche = new SearchWindow({
-  webPreferences: preferencesDesFenetres,
-  charger: (cible) => chargerApplication(cible, 'recherche'),
-});
-/** `--recherche` : seule la recherche s'affiche. `--fond` (ouverture de session) : rien ne s'affiche. */
-const lancement = demandeLaRecherche(process.argv) ? 'recherche' : process.argv.includes(argumentEnFond) ? 'fond' : 'fenetre';
-/** Ouvre ou ramène la fenêtre principale, sync reprise. Branchée une fois l'application prête. */
+/**
+ * Page demandée par `--page=<id>` (la barre de recherche du poste), au
+ * lancement ou par une seconde instance : le renderer la prend au démarrage
+ * et à chaque avis, si bien qu'une demande arrivée avant son chargement
+ * n'est pas perdue.
+ */
+let pageEnAttente = pageDemandee(process.argv);
+function demanderPage(id: string): void {
+  pageEnAttente = id;
+  fenetre?.webContents.send(evenements.pageDemandee);
+}
+/** Ramène la fenêtre principale. Branchée une fois l'application prête. */
 let ouvrirFenetrePrincipale = (): void => undefined;
-/** Vrai une fois « Quitter » demandé : la fenêtre qui se ferme arrête alors l'application. */
-let quitteDemandee = false;
 /** Une nouvelle version a remplacé l'AppImage (`npm run installer`) : relancer dès que possible. */
 let miseAJourInstallee = false;
 
 /**
- * Quitte pour de bon : la fenêtre principale enregistre d'abord sa page, puis
- * l'application s'arrête. Avec « relancer », elle redémarre sur la nouvelle
- * version installée, en fond si sa fenêtre était fermée.
+ * Quitte : la fenêtre principale enregistre d'abord sa page, puis
+ * l'application s'arrête (fermer la fenêtre quitte Notes, choix d'Eloi du
+ * 2026-10-12). Avec « relancer », elle redémarre sur la nouvelle version.
  */
 function quitterNotes(relancer = false): void {
-  quitteDemandee = true;
   const appImage = process.env['APPIMAGE'];
   if (relancer && appImage !== undefined && appImage !== '') {
-    // Mêmes arguments qu'au lancement (profil, etc.), sauf ce qui dit quoi afficher : en fond si la fenêtre était fermée.
+    // Mêmes arguments qu'au lancement (profil, etc.), sans la page demandée : les onglets sont retrouvés.
     // Hors AppImage, Electron reçoit en plus le dossier de l'application, qui n'est pas un argument de l'utilisateur.
-    const argumentsDOrigine = process.argv.slice(app.isPackaged ? 1 : 2).filter((argument) => argument !== argumentEnFond && !demandeLaRecherche([argument]));
-    relancerApresLaFin(appImage, [...argumentsDOrigine, ...(fenetre === null ? [argumentEnFond] : [])]);
+    relancerApresLaFin(appImage, sansPage(process.argv.slice(app.isPackaged ? 1 : 2)));
   }
   if (fenetre === null) {
     app.quit();
@@ -188,8 +181,7 @@ async function choisirDestinationDExport(nomPropose: string, format: { extension
 }
 
 /**
- * Fenêtre principale. La fermer l'enregistre et la détruit, mais l'application
- * reste en fond pour la recherche et la sync (sauf « Quitter »).
+ * Fenêtre principale. La fermer l'enregistre, puis quitte Notes.
  */
 function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
   handlers.reinitialiser();
@@ -218,12 +210,6 @@ function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
   });
   fenetre.on('closed', () => {
     fenetre = null;
-    if (quitteDemandee) {
-      app.quit();
-    } else if (miseAJourInstallee) {
-      // Fenêtre fermée : rien ne gêne, on passe à la nouvelle version, en fond.
-      quitterNotes(true);
-    }
   });
 
   chargerApplication(fenetre);
@@ -246,10 +232,10 @@ function demarrer(): void {
     app.quit();
   } else {
     app.on('second-instance', (_evenement, argv) => {
-      if (demandeLaRecherche(argv)) {
-        fenetreDeRecherche.ouvrir();
-      } else if (!argv.includes(argumentEnFond)) {
-        ouvrirFenetrePrincipale();
+      ouvrirFenetrePrincipale();
+      const id = pageDemandee(argv);
+      if (id !== null) {
+        demanderPage(id);
       }
     });
 
@@ -270,6 +256,8 @@ function demarrer(): void {
 
       const lancerCompagnon = lanceurDeBinaire(cheminCompagnon());
       const secrets = new SecretStore(join(donnees, 'secrets.enc'), chiffreSafeStorage);
+      // LiteLLM est abandonné (2026-10-09) : sa clé, si une version 0.12.x l'avait enregistrée, ne reste pas sur le disque.
+      void secrets.oublier(ancienneCleLitellm).catch(() => undefined);
       // Enregistrements de pages et écritures de la sync passent par la même file : aucun ne se glisse entre la vérification et l'écriture de l'autre.
       const fileDuVault = creerFileDAttente();
       const sync = new SyncScheduler({
@@ -307,16 +295,6 @@ function demarrer(): void {
           syncTerminee = true;
           app.quit();
         });
-      });
-
-      // Démarrage avec la session : un fichier .desktop écrit seulement quand on le demande dans les réglages.
-      const dossierDeConfiguration = process.env['XDG_CONFIG_HOME'] ?? '';
-      const demarrageAuto = new Autostart(dossierDeConfiguration === '' ? join(homedir(), '.config') : dossierDeConfiguration, process.env['APPIMAGE']);
-      let raccourciActif = false;
-      const etatDuFond = async (): Promise<BackgroundState> => ({
-        raccourci: raccourciGlobal.libelle,
-        raccourciActif,
-        demarrageAuto: demarrageAuto.disponible() ? await demarrageAuto.actif() : null,
       });
 
       const detourage = new BackgroundRemoval(join(dossierRessources(), 'background-removal'));
@@ -362,6 +340,8 @@ function demarrer(): void {
           return carte?.dediee === true ? carte.nom : null;
         },
         ...(adresseWhisper === undefined || adresseWhisper === '' ? {} : { adresseExterne: adresseWhisper }),
+        // Vitesse de transcription propre à ce poste : à côté des réglages, pas dans le dossier des notes.
+        mesures: new TranscriptionMeasures(join(donnees, 'transcriptions.json')),
       });
       void whisper.demarrer();
       app.on('will-quit', () => whisper.arreter());
@@ -371,6 +351,18 @@ function demarrer(): void {
       // Purge de la corbeille au démarrage (README §10) : celle du poste ici, celle du NAS au premier cycle.
       void handlersCorbeille.purgerAuDemarrage();
       vault.surChangementDeDossier(() => void handlersCorbeille.purgerAuDemarrage());
+      // Fonctions IA (README §12) : Ollama sur le poste, modèle choisi selon la carte graphique.
+      const ia = new AiService({
+        // La carte ne change pas pendant une session : lue une fois, à la première demande.
+        cartes: obtenirCartes,
+        reglages,
+        contexte: () => vault.contexte(),
+        enSerie: handlersVault.enSerie,
+        surAvancement: (avancement) => fenetre?.webContents.send(evenements.avancementIa, avancement),
+        surHistorique: () => fenetre?.webContents.send(evenements.historiqueIaModifie),
+        octetsAleatoires: (taille) => randomBytes(taille),
+      });
+      const ffmpeg = join(dossierRessources(), 'ffmpeg', 'ffmpeg');
       enregistrerCanaux({
         fenetre: handlersFenetre,
         vault: handlersVault,
@@ -414,61 +406,33 @@ function demarrer(): void {
         }),
         corbeille: handlersCorbeille,
         correction: creerHandlersCorrection({ correction, vault, enSerie: handlersVault.enSerie }),
-        // Fonctions IA (README §12) : Ollama sur le poste, choisi selon la carte graphique, LiteLLM sur option. La clé reste dans le coffre, jamais envoyée au renderer.
-        ia: new AiService({
-          // La carte ne change pas pendant une session : lue une fois, à la première demande.
-          cartes: obtenirCartes,
-          reglages,
-          secrets,
-          contexte: () => vault.contexte(),
-          enSerie: handlersVault.enSerie,
-          surAvancement: (avancement) => fenetre?.webContents.send(evenements.avancementIa, avancement),
-          surHistorique: () => fenetre?.webContents.send(evenements.historiqueIaModifie),
-          octetsAleatoires: (taille) => randomBytes(taille),
-        }),
+        ia,
         memos: creerHandlersMemos({
           vault,
           enSerie: handlersVault.enSerie,
           reglages,
           whisper,
+          ia,
           // Décodeur livré dans l'AppImage (scripts/build-ffmpeg.sh), jamais cherché sur le poste.
-          convertir: (fichier) => convertirEnWav(join(dossierRessources(), 'ffmpeg', 'ffmpeg'), fichier),
+          convertir: (fichier) => convertirEnWav(ffmpeg, fichier),
+          dureeAudio: (fichier) => dureeAudio(ffmpeg, fichier),
           ouvrirDossier: (dossier) => shell.openPath(dossier),
         }),
-        recherche: {
-          etatDuFond: () => etatDuFond(),
-          definirDemarrageAuto: async (actif) => {
-            if (typeof actif === 'boolean') {
-              await demarrageAuto.definir(actif);
-            }
-            return etatDuFond();
-          },
+        lancement: {
           quitter: () => quitterNotes(),
           relancer: () => quitterNotes(true),
           miseAJourEnAttente: () => miseAJourInstallee,
-          choisir: (demande) => {
-            const { id, nouvelOnglet } = (typeof demande === 'object' && demande !== null ? demande : {}) as { id?: unknown; nouvelOnglet?: unknown };
-            if (typeof id !== 'string' || !estId(id)) {
-              return;
-            }
-            // La fenêtre principale passe devant d'abord : la fenêtre de recherche, en perdant le focus, ne doit pas arrêter l'application.
-            pagesDemandees.demander({ id, nouvelOnglet: nouvelOnglet === true });
-            ouvrirFenetrePrincipale();
-            fenetreDeRecherche.cacher();
+          prendrePage: () => {
+            const id = pageEnAttente;
+            pageEnAttente = null;
+            return id;
           },
-          fermer: () => fenetreDeRecherche.cacher(),
-          ajuster: (demande) => {
-            const hauteur = typeof demande === 'object' && demande !== null ? (demande as { hauteur?: unknown }).hauteur : undefined;
-            if (typeof hauteur === 'number') {
-              fenetreDeRecherche.ajusterHauteur(hauteur);
-            }
-          },
-          prendrePage: () => pagesDemandees.prendre(),
         },
         expediteurAutorise: (evenement) =>
           evenement.senderFrame !== null &&
           evenement.senderFrame.url.startsWith(urlApplication) &&
-          ((fenetre !== null && evenement.senderFrame === fenetre.webContents.mainFrame) || fenetreDeRecherche.estLaPage(evenement.senderFrame)),
+          fenetre !== null &&
+          evenement.senderFrame === fenetre.webContents.mainFrame,
       });
 
       ouvrirFenetrePrincipale = () => {
@@ -478,37 +442,22 @@ function demarrer(): void {
           ramenerFenetre();
         }
       };
-      if (lancement === 'fenetre') {
-        ouvrirFenetrePrincipale();
-      }
-      // Après la fenêtre principale : elle reste la première fenêtre créée.
-      fenetreDeRecherche.preparer();
-      if (lancement === 'recherche') {
-        fenetreDeRecherche.ouvrir();
-      }
-      // Pris par un autre programme (un raccourci de Cinnamon sur les mêmes touches), il ne marche pas : les réglages le disent.
-      raccourciActif = globalShortcut.register(raccourciGlobal.touches, () => fenetreDeRecherche.ouvrir());
-      app.on('will-quit', () => globalShortcut.unregisterAll());
-      // La sync tourne tant que Notes tourne, fenêtre ouverte ou non (choix d'Eloi).
+      ouvrirFenetrePrincipale();
       sync.demarrer();
 
-      // Mise à jour locale : l'AppImage remplacée par `npm run installer`. Fenêtre fermée, Notes se relance
-      // aussitôt sur la nouvelle version ; ouverte, la barre de titre propose de relancer.
+      // Mise à jour locale : l'AppImage remplacée par `npm run installer`. La barre de titre propose de relancer.
       const appImage = process.env['APPIMAGE'];
       if (appImage !== undefined && appImage !== '') {
         const surveillance = new UpdateWatcher(appImage, () => {
           miseAJourInstallee = true;
-          if (fenetre === null) {
-            quitterNotes(true);
-          } else {
-            fenetre.webContents.send(evenements.miseAJourInstallee);
-          }
+          fenetre?.webContents.send(evenements.miseAJourInstallee);
         });
         void surveillance.demarrer().catch(() => undefined);
         app.on('will-quit', () => surveillance.arreter());
       }
     });
 
+    // Fermer la fenêtre quitte Notes (choix d'Eloi, 2026-10-12) ; la sync s'arrête proprement avant (`before-quit`).
     app.on('window-all-closed', () => app.quit());
   }
 }

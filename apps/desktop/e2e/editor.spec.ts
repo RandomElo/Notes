@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, lireVault, ouvrirPage, preparer, preparerCoursesClassique } from './app';
+import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, lireVault, ouvrirPage, preparer, preparerCoursesClassique, titreDePage } from './app';
 
 // Critère de sortie de J2 : aller-retour Markdown sans perte, vérifié dans l'application réelle.
 
@@ -121,7 +121,8 @@ test('les raccourcis de saisie Markdown produisent les bons blocs et le bon fich
     [
       '# Titre un',
       '##### Titre cinq',
-      "Du **gras**, de l'*italique*, du ~~barré~~, du `code`, du \\==surlignage\\== et (**entre parenthèses**).",
+      // La parenthèse se ferme seule, avec une espace de chaque côté ; la taper ensuite saute « ) ».
+      "Du **gras**, de l'*italique*, du ~~barré~~, du `code`, du \\==surlignage\\== et ( **entre parenthèses** ).",
       '- puce\n- autre puce',
       '1. premier\n2. second',
       '- [ ] à faire\n- [ ] encore',
@@ -279,5 +280,54 @@ test('un surlignage déjà écrit dans un fichier est affiché et reste intact',
   const corps = await lireCorps(prepare.vault, 'Courses');
   expect(corps).toContain('- [ ] Pâtes ==fraîches==\n');
   expect(corps).toContain('Un ==mot surligné== ailleurs. Ajout.\n');
+  await fermer(session);
+});
+
+test('parenthèses, crochets et guillemets se ferment seuls, curseur au milieu', async () => {
+  const session = await lancer(await preparer());
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Bienvenue');
+  await editeur(page).locator('p', { hasText: 'Cette page rassemble' }).click();
+  await page.keyboard.press('End');
+  // « ( » pose « (  ) » et « « » pose « «  » » (espaces insécables), curseur au milieu.
+  await page.keyboard.type(' (voir «notes', { delay: 15 });
+  await page.keyboard.press('End');
+  await page.keyboard.type(' et [', { delay: 15 });
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type(' fin) l’arbre.', { delay: 15 });
+  await attendreEnregistrement(page);
+  expect(await lireCorps(vault, 'Bienvenue')).toContain("tests d'aller-retour. ( voir «\u00a0notes\u00a0» ) et  fin) l’arbre.\n");
+  await fermer(session);
+});
+
+test('une page montre ses sous-pages en blocs sous son titre, sans rien écrire dans son fichier', async () => {
+  const session = await lancer(await preparer());
+  const { page, vault } = session;
+  const avant = await readFile(join(vault, 'Projets', 'page.md'), 'utf8');
+  await ouvrirPage(page, 'Projets');
+  const bloc = page.getByRole('navigation', { name: 'Sous-pages' });
+  await expect(bloc.getByRole('button')).toHaveText(['Site perso', 'Refonte du NAS', '+Nouvelle sous-page']);
+  await bloc.getByRole('button', { name: 'Refonte du NAS' }).click();
+  await expect(titreDePage(page)).toHaveText('Refonte du NAS');
+  // Une page sans sous-page n'a pas de bloc.
+  await expect(page.getByRole('navigation', { name: 'Sous-pages' })).toHaveCount(0);
+  expect(await readFile(join(vault, 'Projets', 'page.md'), 'utf8')).toBe(avant);
+  await fermer(session);
+});
+
+test('cocher une tâche coche ses sous-tâches à tous les niveaux, décocher ne décoche qu’elle', async () => {
+  const prepare = await preparerCoursesClassique();
+  const fichier = join(prepare.vault, 'Courses', 'page.md');
+  const avant = await readFile(fichier, 'utf8');
+  await writeFile(fichier, avant.replace('- [ ] Pâtes', '- [ ] React\n  - [ ] HTML\n    - [ ] head\n- [ ] Pâtes'));
+  const session = await lancer(prepare);
+  const { page } = session;
+  await ouvrirPage(page, 'Courses');
+  await editeur(page).locator('li', { hasText: 'React' }).first().locator('input[type=checkbox]').first().check();
+  await attendreEnregistrement(page);
+  expect(await lireCorps(prepare.vault, 'Courses')).toContain('- [x] React\n  - [x] HTML\n    - [x] head\n');
+  await editeur(page).locator('li', { hasText: 'React' }).first().locator('input[type=checkbox]').first().uncheck();
+  await attendreEnregistrement(page);
+  expect(await lireCorps(prepare.vault, 'Courses')).toContain('- [ ] React\n  - [x] HTML\n    - [x] head\n');
   await fermer(session);
 });

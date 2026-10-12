@@ -3,10 +3,8 @@ import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { afterEach, describe, expect, it } from 'vitest';
 import { AiError, lignesDuFlux } from './chat';
-import { discuterAvecLitellm, estModeleDeTexte, listerModelesLitellm } from './litellm-client';
 import { decrireModeleOllama, discuterAvecOllama, listerModelesOllama, occupationOllama } from './ollama-client';
-import { coutEnDollars, tarifDuModele } from './openai-prices';
-import { compterEntree, tokensOpenAi } from './token-count';
+import { compterEntree, compterSortie } from './token-count';
 
 type Traitement = (requete: IncomingMessage, corps: string, reponse: ServerResponse) => void;
 
@@ -75,9 +73,20 @@ describe('Ollama', () => {
     });
     const morceaux: string[] = [];
     const resultat = await discuterAvecOllama(adresse, { ...demande(), contexte: 8192, surMorceau: (texte) => morceaux.push(texte) });
-    expect(resultat).toEqual({ texte: 'Bonjour.', entree: 42, sortie: 7 });
+    expect(resultat).toEqual({ texte: 'Bonjour.', entree: 42, sortie: 7, coupee: false });
     expect(morceaux).toEqual(['Bon', 'Bonjour.']);
     expect(recu).toMatchObject({ model: 'm', stream: true, think: false, options: { num_ctx: 8192 } });
+  });
+
+  it('borne la longueur de la réponse et dit quand elle a été coupée', async () => {
+    let recu: Record<string, unknown> = {};
+    const adresse = await servir((_, corps, reponse) => {
+      recu = JSON.parse(corps) as Record<string, unknown>;
+      reponse.end(`${JSON.stringify({ message: { content: 'Suite de couches' }, done: true, done_reason: 'length', eval_count: 4 })}\n`);
+    });
+    const resultat = await discuterAvecOllama(adresse, { ...demande(), sortieMax: 4 });
+    expect(resultat.coupee).toBe(true);
+    expect(recu).toMatchObject({ options: { num_predict: 4 } });
   });
 
   it('redemande sans `think` à un modèle qui ne réfléchit pas', async () => {
@@ -110,87 +119,6 @@ describe('Ollama', () => {
   });
 });
 
-describe('LiteLLM', () => {
-  const evenement = (donnees: unknown): string => `data: ${JSON.stringify(donnees)}\n\n`;
-
-  it('lit la réponse en flux et l’usage final, avec la clé dans l’en-tête', async () => {
-    let autorisation = '';
-    let recu: Record<string, unknown> = {};
-    const adresse = await servir((requete, corps, reponse) => {
-      autorisation = requete.headers.authorization ?? '';
-      recu = JSON.parse(corps) as Record<string, unknown>;
-      reponse.write(evenement({ choices: [{ delta: { content: 'Bon' } }] }));
-      reponse.write(evenement({ choices: [{ delta: { content: 'jour.' } }] }));
-      reponse.write(evenement({ choices: [], usage: { prompt_tokens: 30, completion_tokens: 3 } }));
-      reponse.end('data: [DONE]\n\n');
-    });
-    expect(await discuterAvecLitellm(adresse, 'sk-test', { ...demande(), modele: 'gpt-5.6-luna' })).toEqual({ texte: 'Bonjour.', entree: 30, sortie: 3 });
-    expect(autorisation).toBe('Bearer sk-test');
-    expect(recu).toMatchObject({ model: 'gpt-5.6-luna', stream: true, stream_options: { include_usage: true }, reasoning_effort: 'none' });
-  });
-
-  it('demande le moins de raisonnement que le modèle accepte, et s’en passe s’il le refuse', async () => {
-    const efforts: unknown[] = [];
-    const adresse = await servir((_, corps, reponse) => {
-      const { model, reasoning_effort: effort } = JSON.parse(corps) as { model: string; reasoning_effort?: unknown };
-      efforts.push(effort);
-      const refuse = model === 'raisonne' ? effort === 'none' : effort !== undefined;
-      if (refuse) {
-        reponse.statusCode = 400;
-        reponse.end(JSON.stringify({ error: { message: `UnsupportedParamsError: reasoning_effort=${String(effort)}` } }));
-        return;
-      }
-      reponse.end(`${evenement({ choices: [], usage: { prompt_tokens: 1, completion_tokens: 1 } })}data: [DONE]\n\n`);
-    });
-    await discuterAvecLitellm(adresse, 'sk-test', { ...demande(), modele: 'raisonne' });
-    await discuterAvecLitellm(adresse, 'sk-test', { ...demande(), modele: 'raisonne' });
-    await discuterAvecLitellm(adresse, 'sk-test', { ...demande(), modele: 'classique' });
-    expect(efforts).toEqual(['none', 'minimal', 'minimal', 'none', 'minimal', 'low', undefined]);
-  });
-
-  it('traduit les erreurs sans jamais montrer la clé', async () => {
-    const statuts: Array<[number, unknown, string]> = [
-      [401, { error: { message: 'Authentication Error, Invalid proxy server token passed. key=sk-secret' } }, 'cle'],
-      [429, { error: { message: 'Budget has been exceeded' } }, 'quota'],
-      [400, { error: { message: 'Invalid model name passed in model=inconnu' } }, 'modele_absent'],
-      [400, { error: { code: 'context_length_exceeded' } }, 'trop_long'],
-    ];
-    for (const [statut, corps, code] of statuts) {
-      const adresse = await servir((_, __, reponse) => {
-        reponse.statusCode = statut;
-        reponse.end(JSON.stringify(corps));
-      });
-      const erreur = (await discuterAvecLitellm(adresse, 'sk-secret', { ...demande(), modele: 'gpt-4.1' }).catch((e: unknown) => e)) as AiError;
-      expect(erreur.code).toBe(code);
-      expect(erreur.message).not.toContain('sk-secret');
-    }
-  });
-
-  it('liste les modèles de conversation avec le tarif que donne LiteLLM', async () => {
-    const adresse = await servir((requete, _, reponse) => {
-      if (requete.url === '/model/info') {
-        reponse.end(
-          JSON.stringify({
-            data: [
-              { model_name: 'gpt-5.6-luna', model_info: { input_cost_per_token: 2e-7, output_cost_per_token: 1.2e-6, mode: 'chat' } },
-              { model_name: 'nomic', model_info: { mode: 'embedding' } },
-            ],
-          }),
-        );
-        return;
-      }
-      reponse.end(JSON.stringify({ data: [{ id: 'gpt-5.6-luna' }, { id: 'nomic' }, { id: 'whisper-1' }, { id: 'mon-alias' }] }));
-    });
-    const modeles = await listerModelesLitellm(adresse, 'sk-test');
-    expect(modeles?.map((modele) => modele.nom)).toEqual(['gpt-5.6-luna', 'mon-alias']);
-    expect(modeles?.[0]?.tarif?.entree).toBeCloseTo(0.2);
-    expect(modeles?.[0]?.tarif?.sortie).toBeCloseTo(1.2);
-    expect(modeles?.[1]?.tarif).toBeNull();
-    expect(await listerModelesLitellm('http://127.0.0.1:1', 'sk-test')).toBeNull();
-    expect(estModeleDeTexte('text-embedding-3-small')).toBe(false);
-  });
-});
-
 describe('Ollama : modèles et mémoire vidéo', () => {
   it('lit la taille, les paramètres, l’architecture et la place en mémoire vidéo', async () => {
     const adresse = await servir((requete, _, reponse) => {
@@ -208,20 +136,9 @@ describe('Ollama : modèles et mémoire vidéo', () => {
   });
 });
 
-describe('tarifs et comptage', () => {
-  it('prend le tarif saisi, puis celui de LiteLLM, puis celui de Notes (nom préfixé ou daté compris)', () => {
-    const luna = { entree: 0.2, sortie: 1.2 };
-    expect(tarifDuModele('gpt-5.6-luna', {})).toEqual({ tarif: luna, source: 'notes' });
-    expect(tarifDuModele('openai/gpt-5.4-mini-2026-03-17', {})).toEqual({ tarif: { entree: 0.75, sortie: 4.5 }, source: 'notes' });
-    expect(tarifDuModele('mon-alias', {}, luna)).toEqual({ tarif: luna, source: 'litellm' });
-    expect(tarifDuModele('mon-alias', { 'mon-alias': { entree: 1, sortie: 2 } }, luna)).toEqual({ tarif: { entree: 1, sortie: 2 }, source: 'reglages' });
-    expect(tarifDuModele('gpt-inconnu', {})).toBeNull();
-    expect(coutEnDollars({ entree: 0.75, sortie: 4.5 }, 2000, 1000)).toBeCloseTo(0.006);
-  });
-
-  it('compte les tokens des modèles d’OpenAI localement, enveloppe comprise', async () => {
-    expect(await tokensOpenAi('Bonjour, voici une phrase en français à compter.')).toBe(10);
-    expect(await compterEntree('litellm', 'Consigne.', 'Texte.')).toBe((await tokensOpenAi('Consigne.')) + (await tokensOpenAi('Texte.')) + 11);
-    expect(await compterEntree('ollama', 'x'.repeat(36), 'y'.repeat(36))).toBe(20 + 11);
+describe('comptage', () => {
+  it('compte les tokens d’après la longueur du texte, enveloppe comprise', () => {
+    expect(compterEntree('x'.repeat(36), 'y'.repeat(36))).toBe(20 + 11);
+    expect(compterSortie('z'.repeat(36))).toBe(10);
   });
 });

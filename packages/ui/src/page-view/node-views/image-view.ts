@@ -8,6 +8,8 @@ export interface ImageViewOptions {
   resoudre: (src: string) => string | null;
   /** Ouvre l'image en grand (double-clic). Absent : pas de visionneuse. */
   agrandir?: (attributs: ImageAttributes, adresse: string) => void;
+  /** Texte montré quand « resoudre » ne donne pas d'adresse. Absent ou null : « Image non affichée ». */
+  absence?: (src: string) => string | null;
 }
 
 /**
@@ -66,7 +68,8 @@ class ImageNodeView implements NodeView {
     this.legende.hidden = title === null || title === '';
     const adresse = this.options.resoudre(src);
     if (adresse === null) {
-      this.montrerAbsence(/^https?:/i.test(src) ? `Image d'Internet non affichée : ${src}` : `Image non affichée : ${src}`);
+      const texte = this.options.absence?.(src) ?? null;
+      this.montrerAbsence(texte ?? (/^https?:/i.test(src) ? `Image d'Internet non affichée : ${src}` : `Image non affichée : ${src}`));
       this.image.removeAttribute('src');
       return;
     }

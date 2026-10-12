@@ -1,5 +1,5 @@
-import type { MemoAcceptance, MemoConversion, MemosState, MemoTranscription, WhisperState } from './memos-contract';
-import type { AiProgress, AiRequest, AiEstimateResult, AiRunResult, AiState, AiUsageView } from './ai-contract';
+import type { MemoAcceptance, MemoConversion, MemoEstimate, MemosState, MemoTranscription, WhisperState } from './memos-contract';
+import type { AiProgress, AiPromptResult, AiRequest, AiEstimateResult, AiRunResult, AiState, AiUsageView } from './ai-contract';
 import type { AiSettings, BrokenMention, ConflictVersions, IgnoredRemark, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, PageMode, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, VaultErrorCode } from '@notes/core';
 
 /**
@@ -44,15 +44,10 @@ export const canaux = {
   quitterPage: 'sync:quitter-page',
   montrerFichier: 'sync:montrer-fichier',
   pagesEnAttente: 'sync:pages-en-attente',
-  etatDuFond: 'fond:etat',
-  definirDemarrageAuto: 'fond:demarrage-auto',
-  quitterNotes: 'fond:quitter',
+  quitterNotes: 'lancement:quitter',
+  prendrePageDemandee: 'lancement:prendre-page',
   relancerNotes: 'maj:relancer',
   miseAJourEnAttente: 'maj:en-attente',
-  choisirDepuisLaRecherche: 'recherche:choisir',
-  fermerLaRecherche: 'recherche:fermer',
-  ajusterLaRecherche: 'recherche:ajuster',
-  prendrePageDemandee: 'recherche:prendre-page',
   choisirImages: 'images:choisir',
   ajouterImage: 'images:ajouter',
   telechargerImage: 'images:telecharger',
@@ -91,8 +86,7 @@ export const canaux = {
   ignorerRemarque: 'correction:ignorer',
   etatIa: 'ia:etat',
   enregistrerReglagesIa: 'ia:enregistrer-reglages',
-  enregistrerCleLitellm: 'ia:enregistrer-cle',
-  oublierCleLitellm: 'ia:oublier-cle',
+  consigneIa: 'ia:consigne',
   estimerIa: 'ia:estimer',
   lancerIa: 'ia:lancer',
   annulerIa: 'ia:annuler',
@@ -105,6 +99,8 @@ export const canaux = {
   ecarterMemo: 'memos:ecarter',
   convertirMemo: 'memos:convertir',
   ouvrirDossierMemos: 'memos:ouvrir-dossier',
+  estimerMemos: 'memos:estimer',
+  estimerMiseEnFormeMemo: 'memos:estimer-mise-en-forme',
   installerModeleWhisper: 'memos:installer-modele',
   annulerInstallationWhisper: 'memos:annuler-installation',
 } as const;
@@ -126,12 +122,8 @@ export const evenements = {
   fermetureDemandee: 'fenetre:fermeture-demandee',
   /** L'état de la sync a changé (début ou fin d'un cycle, NAS injoignable). Porte le nouvel état. */
   etatSyncModifie: 'sync:etat-modifie',
-  /** Une page a été choisie dans la fenêtre de recherche du raccourci global : la fenêtre principale la prend et l'ouvre. */
-  pageDemandee: 'recherche:page-demandee',
-  /** La petite fenêtre de recherche vient d'être montrée : la liste des pages est à relire. */
-  rechercheMontree: 'recherche:montree',
-  /** La petite fenêtre de recherche vient d'être cachée : la page repart de zéro. */
-  rechercheCachee: 'recherche:cachee',
+  /** Une page a été demandée par `--page=<id>` (barre de recherche du poste) : la fenêtre la prend et l'ouvre. */
+  pageDemandee: 'lancement:page-demandee',
   /** Une nouvelle version de l'AppImage vient d'être installée : la barre de titre propose de relancer. */
   miseAJourInstallee: 'maj:installee',
   /** L'installation ou le serveur de la correction orthographique a changé d'état. Porte le nouvel état. */
@@ -200,22 +192,6 @@ export interface SpellIssue {
   /** Orthographe : souligné rouge ; grammaire, style et le reste : bleu. */
   nature: 'orthographe' | 'grammaire';
   suggestions: string[];
-}
-
-/** Notes gardée en fond pour le raccourci global (README §7). */
-export interface BackgroundState {
-  /** Touches du raccourci global, telles qu'affichées. */
-  raccourci: string;
-  /** Faux si un autre programme a déjà pris ces touches (raccourci de Cinnamon, par exemple). */
-  raccourciActif: boolean;
-  /** Notes démarre avec la session. null hors de l'AppImage : rien à régler. */
-  demarrageAuto: boolean | null;
-}
-
-/** Page choisie dans la fenêtre de recherche du raccourci global, à ouvrir dans la fenêtre principale. */
-export interface PageRequest {
-  id: string;
-  nouvelOnglet: boolean;
 }
 
 /** Verrou d'une page vu du renderer : « inconnu » quand la sync est coupée ou le NAS injoignable. */
@@ -439,28 +415,16 @@ export interface NotesApi {
   /** Parmi ces pages, celles que le NAS n'a pas encore dans leur dernière version. Aucune si la sync n'est pas réglée. Ne contacte pas le NAS. */
   pagesEnAttente(demande: { chemins: string[] }): Promise<string[]>;
 
-  /** Raccourci global et application gardée en fond : état affiché dans les réglages. */
-  etatDuFond(): Promise<BackgroundState>;
-  /** Lance Notes en fond à l'ouverture de session, ou plus. Rend l'état à jour. */
-  definirDemarrageAuto(actif: boolean): Promise<BackgroundState>;
-  /** Quitte Notes pour de bon : la fenêtre enregistre et se ferme, la recherche n'est plus prête. */
+  /** Quitte Notes : la fenêtre enregistre et se ferme, la sync s'arrête. */
   quitterNotes(): Promise<void>;
+  /** La page demandée par `--page=<id>`, une seule fois, null s'il n'y en a pas. */
+  prendrePageDemandee(): Promise<string | null>;
+  surPageDemandee(ecouteur: () => void): () => void;
   /** Vrai si une nouvelle version a été installée depuis le lancement (`npm run installer`). */
   miseAJourEnAttente(): Promise<boolean>;
   surMiseAJourInstallee(ecouteur: () => void): () => void;
   /** Enregistre, quitte et relance Notes sur la nouvelle version installée. */
   relancerNotes(): Promise<void>;
-  /** Fenêtre de recherche du raccourci global : ouvre la page dans la fenêtre principale, qui revient devant, et se cache. */
-  choisirDepuisLaRecherche(demande: PageRequest): Promise<void>;
-  /** Fenêtre de recherche : se cache sans choix. */
-  fermerLaRecherche(): Promise<void>;
-  surRechercheMontree(ecouteur: () => void): () => void;
-  surRechercheCachee(ecouteur: () => void): () => void;
-  /** Fenêtre de recherche : prend la hauteur de son contenu. */
-  ajusterLaRecherche(demande: { hauteur: number }): Promise<void>;
-  /** Fenêtre principale : la page choisie dans la fenêtre de recherche, une seule fois, null s'il n'y en a pas. */
-  prendrePageDemandee(): Promise<PageRequest | null>;
-  surPageDemandee(ecouteur: () => void): () => void;
 
   /** Ouvre le sélecteur de fichiers et rend les images choisies, sans les copier. Aucune si l'utilisateur annule. */
   choisirImages(): Promise<ImagesReceivedResult>;
@@ -528,13 +492,12 @@ export interface NotesApi {
   /** Écarte une remarque pour toujours et partout. Rend la liste à jour. */
   ignorerRemarque(demande: IgnoredRemark): Promise<IgnoredRemark[]>;
 
-  /** Fonctions IA de ce poste : carte graphique, Ollama et ses modèles, LiteLLM et les siens, clé, dépense. Contacte Ollama (et LiteLLM si une clé est enregistrée). */
+  /** Fonctions IA de ce poste : carte graphique, Ollama et ses modèles. Contacte Ollama. */
   etatIa(): Promise<AiState>;
   /** Enregistre les réglages IA du poste (revérifiés par le main). */
   enregistrerReglagesIa(reglages: AiSettings): Promise<AiState>;
-  /** Enregistre la clé de LiteLLM, chiffrée par le trousseau du système. Elle ne revient jamais au renderer. */
-  enregistrerCleLitellm(demande: { cle: string }): Promise<AiState>;
-  oublierCleLitellm(): Promise<AiState>;
+  /** La consigne de la fonction suivie du texte de la page, à copier dans un autre outil. Ne contacte aucun modèle. */
+  consigneIa(demande: AiRequest): Promise<AiPromptResult>;
   /** Taille, durée et coût estimés d'un appel, avant de le lancer. Ne contacte aucun modèle. */
   estimerIa(demande: AiRequest): Promise<AiEstimateResult>;
   /** Lance un appel et rend la proposition nettoyée. Rien n'est écrit dans la page. L'avancement arrive par surAvancementIa. */
@@ -561,6 +524,10 @@ export interface NotesApi {
   convertirMemo(demande: { chemin: string }): Promise<MemoConversion>;
   /** Ouvre le dossier où arrivent les mémos (`.notes/memos/`) dans le gestionnaire de fichiers. */
   ouvrirDossierMemos(): Promise<{ ok: true } | { ok: false; message: string }>;
+  /** Durées estimées de la transcription et de la mise en forme de ces mémos, dans l'ordre donné. */
+  estimerMemos(demande: { chemins: string[] }): Promise<MemoEstimate>;
+  /** Durée estimée de la mise en forme d'une transcription de cette longueur ; null si on ne peut pas l'estimer. */
+  estimerMiseEnFormeMemo(demande: { caracteres: number }): Promise<number | null>;
   /** Télécharge le modèle de transcription (574 Mo). L'avancement arrive par surEtatWhisper. */
   installerModeleWhisper(): Promise<WhisperState>;
   annulerInstallationWhisper(): Promise<void>;

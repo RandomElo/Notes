@@ -1,25 +1,16 @@
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { lireHistoriqueIa } from '@notes/core';
 import type { AiSettings } from '@notes/core';
 import { contexteDeTest, MemoryLocalFs } from '@notes/core/testing';
 import { describe, expect, it, vi } from 'vitest';
-import { consignesParDefaut } from '../../shared/ai-contract';
-import { SecretStore } from '../secrets/secret-store';
 import { SettingsStore } from '../settings/settings-store';
-import { AiService, cleLitellm, cleValide, ollamaSurLePoste } from './ai-service';
+import { AiService, consigneACopier, ollamaSurLePoste } from './ai-service';
 import { AiError } from './chat';
 import type { ChatRequest, ChatResult } from './chat';
 import type { GpuInfo } from './hardware';
 import type { InstalledModel } from './ollama-client';
-import { compterEntree } from './token-count';
-
-const chiffre = {
-  disponible: () => true,
-  chiffrer: (texte: string) => Buffer.from(texte, 'utf8').reverse(),
-  dechiffrer: (donnees: Buffer) => Buffer.from(donnees).reverse().toString('utf8'),
-};
 
 type Discussion = (requete: ChatRequest) => Promise<ChatResult>;
 
@@ -33,9 +24,8 @@ const architecture = { 'general.architecture': 'qwen3', 'qwen3.block_count': 36,
 interface Montage {
   ia?: Partial<AiSettings>;
   ollama?: Discussion;
-  litellm?: Discussion;
   cartes?: GpuInfo[];
-  /** Part du modèle chargée en mémoire vidéo après un appel (1 : tout). */
+  /** Part du modèle chargée en mémoire vidéo pendant l'appel (1 : tout). */
   partEnVram?: number;
 }
 
@@ -44,7 +34,6 @@ async function monter(options: Montage = {}) {
   const reglages = new SettingsStore(join(dossier, 'settings.json'));
   const actuels = await reglages.lire();
   await reglages.ecrire({ ...actuels, ia: { ...actuels.ia, ...options.ia } });
-  const secrets = new SecretStore(join(dossier, 'secrets.enc'), chiffre);
   const fs = MemoryLocalFs.depuis({ 'Page/page.md': '' });
   let horloge = new Date(2026, 9, 5, 10, 0).getTime();
   const contexte = contexteDeTest(fs);
@@ -54,7 +43,6 @@ async function monter(options: Montage = {}) {
   const vide: Discussion = async () => ({ texte: '', entree: 0, sortie: 0 });
   const service = new AiService({
     reglages,
-    secrets,
     contexte: () => contexte,
     enSerie: (tache) => tache(),
     surAvancement: ({ texte }) => avancements.push(texte),
@@ -71,25 +59,32 @@ async function monter(options: Montage = {}) {
         return (options.ollama ?? vide)(requete);
       },
     },
-    litellm: {
-      lister: async () => [{ nom: 'gpt-5.6-luna', tarif: { entree: 0.2, sortie: 1.2 } }, { nom: 'sans-tarif', tarif: null }],
-      discuter: async (_adresse, _cle, requete) => (options.litellm ?? vide)(requete),
-    },
   });
-  return { service, secrets, dossier, contexte, avancements, envoyes, surHistorique };
+  return { service, contexte, avancements, envoyes, surHistorique };
 }
 
 const page = { fonction: 'relecture' as const, markdown: 'Un texte a relire.\n\n```js\nconst x = 1;\n```\n', titre: 'Page' };
-const parLitellm = (modele = 'gpt-5.6-luna'): Partial<AiSettings> => ({
-  adresseLitellm: 'http://192.0.2.10:4000',
-  modeles: { relecture: { fournisseur: 'litellm', modele }, 'mise-au-propre': { fournisseur: 'ollama', modele: '' }, memo: { fournisseur: 'ollama', modele: '' } },
-});
 const relu: Discussion = async () => ({ texte: 'Un texte à relire.\n\n[[BLOC-1]]\n', entree: 50, sortie: 20 });
 
 describe('AiService : modèle local', () => {
+  it('estime la durée d’un texte dont on ne connaît que la longueur, une fois le modèle déjà utilisé', async () => {
+    const { service } = await monter({ ollama: relu });
+    expect(await service.dureeEstimee('relecture', 1000)).toBeNull();
+    await service.lancer(page);
+    const court = await service.dureeEstimee('relecture', 1000);
+    const long = await service.dureeEstimee('relecture', 10_000);
+    expect(court).toBeGreaterThan(0);
+    expect(long).toBeGreaterThan(court!);
+  });
+
+  it('n’estime rien sans IA locale', async () => {
+    const { service } = await monter({ ollama: relu, cartes: [] });
+    expect(await service.dureeEstimee('memo', 1000)).toBeNull();
+  });
+
   it('choisit seul le modèle qui tient dans la carte, avec un contexte qui y tient aussi', async () => {
     const { service, envoyes } = await monter({ ollama: relu });
-    expect(await service.estimer(page)).toMatchObject({ ok: true, fournisseur: 'ollama', modele: 'qwen3:8b', automatique: true, coutUsd: null, dureeMs: null });
+    expect(await service.estimer(page)).toMatchObject({ ok: true, modele: 'qwen3:8b', automatique: true, dureeMs: null });
     await service.lancer(page);
     expect(envoyes).toEqual([{ modele: 'qwen3:8b', contexte: 4096 }]);
     const etat = await service.etat();
@@ -107,7 +102,7 @@ describe('AiService : modèle local', () => {
   });
 
   it('refuse un modèle choisi à la main qui ne tient pas', async () => {
-    const { service } = await monter({ ia: { modeles: { relecture: { fournisseur: 'ollama', modele: 'gemma3:12b' }, 'mise-au-propre': { fournisseur: 'ollama', modele: '' }, memo: { fournisseur: 'ollama', modele: '' } } } });
+    const { service } = await monter({ ia: { modeles: { relecture: { modele: 'gemma3:12b' }, 'mise-au-propre': { modele: '' }, memo: { modele: '' } } } });
     expect(await service.estimer(page)).toEqual({ ok: false, message: 'gemma3:12b : Trop gros pour les 8 Go de la carte.' });
   });
 
@@ -116,12 +111,43 @@ describe('AiService : modèle local', () => {
     expect(await service.estimer(page)).toMatchObject({ ok: false, message: expect.stringContaining('carte intégrée') });
   });
 
-  it('écarte un modèle qui a débordé de la mémoire vidéo, et le dit', async () => {
-    const { service } = await monter({ ollama: relu, partEnVram: 0.7 });
+  it('abandonne un appel dont le modèle déborde de la mémoire vidéo, avec un message, sans l’écarter', async () => {
+    const { service, contexte } = await monter({
+      partEnVram: 0.7,
+      ollama: async (requete) => {
+        requete.surMorceau?.('Un début');
+        // Le flux attend la suite ; c'est l'arrêt de Notes qui l'interrompt.
+        await new Promise((resoudre) => requete.signal.addEventListener('abort', resoudre));
+        throw new AiError('annule', 'Demande annulée.');
+      },
+    });
     const resultat = await service.lancer(page);
-    expect(resultat.ok && resultat.avertissements).toEqual([expect.stringContaining('a débordé de la mémoire vidéo')]);
-    // gemma3:12b ne tient pas non plus : plus rien de local.
-    expect(await service.estimer(page)).toMatchObject({ ok: false });
+    expect(resultat).toMatchObject({ ok: false, annule: false, message: expect.stringContaining('ne tient pas entièrement dans la mémoire de la carte graphique') });
+    expect(await lireHistoriqueIa(contexte)).toEqual([expect.objectContaining({ annule: true })]);
+    // Le modèle reste proposé : la carte sera peut-être libre au prochain essai.
+    expect(await service.estimer(page)).toMatchObject({ ok: true, modele: 'qwen3:8b' });
+  });
+
+  it('va au bout quand le modèle tient en mémoire vidéo', async () => {
+    const { service } = await monter({
+      ollama: async (requete) => {
+        requete.surMorceau?.('Un texte');
+        await new Promise((resoudre) => setTimeout(resoudre, 10));
+        return { texte: 'Un texte à relire.\n\n[[BLOC-1]]\n', entree: 50, sortie: 20 };
+      },
+    });
+    expect(await service.lancer(page)).toMatchObject({ ok: true, avertissements: [] });
+  });
+
+  it('garde une demande annulée dans l’historique, sortie comptée par Notes', async () => {
+    const { service, contexte } = await monter({
+      ollama: async (requete) => {
+        requete.surMorceau?.('Un début de réponse');
+        throw new AiError('annule', 'Demande annulée.');
+      },
+    });
+    expect(await service.lancer(page)).toEqual({ ok: false, annule: true, message: 'Demande annulée.' });
+    expect(await lireHistoriqueIa(contexte)).toEqual([expect.objectContaining({ annule: true, sortie: 6 })]);
   });
 
   it('refuse une page trop longue pour la mémoire vidéo', async () => {
@@ -146,6 +172,32 @@ describe('AiService : modèle local', () => {
     expect(await lireHistoriqueIa(contexte)).toEqual([expect.objectContaining({ fournisseur: 'ollama', modele: 'qwen3:8b', entree: 50, sortie: 20, coutUsd: null, annule: false })]);
   });
 
+  it('met au propre section par section : titres gardés et corrigés à part, lignes mises en liste, réponse qui invente écartée', async () => {
+    const recus: Array<{ texte: string; sortieMax?: number }> = [];
+    const { service, avancements, contexte } = await monter({
+      ollama: async (requete) => {
+        recus.push({ texte: requete.texte, ...(requete.sortieMax === undefined ? {} : { sortieMax: requete.sortieMax }) });
+        if (requete.systeme.startsWith('Tu es correcteur')) {
+          return { texte: '1. Agents\n2. Réseau\n3. Le vide absolu', entree: 10, sortie: 6 };
+        }
+        if (requete.texte.includes('Suite de')) {
+          return { texte: '- Un réseau multicouche empile des couches denses, entraînées par descente de gradient.', entree: 30, sortie: 20 };
+        }
+        requete.surMorceau?.('- OpenClaw');
+        return { texte: '## Agents\n\n- OpenClaw\n- Hermes Agent', entree: 40, sortie: 8 };
+      },
+    });
+    const resultat = await service.lancer({ fonction: 'mise-au-propre', titre: 'Cours', markdown: '## Agents\nOpenClaw\nHermes agent\n\n### Resau\nSuite de\n\n### Vide\n' });
+    expect(recus).toEqual([
+      { texte: 'Titre de la section : Agents\nNotes :\n- OpenClaw\n- Hermes agent', sortieMax: 51 },
+      { texte: 'Titre de la section : Resau\nNotes :\nSuite de', sortieMax: 44 },
+      { texte: '1. Agents\n2. Resau\n3. Vide', sortieMax: 52 },
+    ]);
+    expect(resultat).toMatchObject({ ok: true, markdown: '## Agents\n\n- OpenClaw\n- Hermes Agent\n\n### Réseau\n\nSuite de\n\n### Vide\n' });
+    expect(avancements).toEqual(['## Agents\n\n- OpenClaw']);
+    expect(await lireHistoriqueIa(contexte)).toEqual([expect.objectContaining({ fonction: 'mise-au-propre', entree: 80, sortie: 34 })]);
+  });
+
   it('dit Ollama sur le poste ou ailleurs', () => {
     expect(ollamaSurLePoste('http://localhost:11434')).toBe(true);
     expect(ollamaSurLePoste('http://127.0.0.1:11434')).toBe(true);
@@ -153,69 +205,29 @@ describe('AiService : modèle local', () => {
   });
 });
 
-describe('AiService : LiteLLM', () => {
-  it('chiffre un appel au tarif donné par LiteLLM : estimation, coût réel, dépense du jour', async () => {
-    const { service, secrets, contexte } = await monter({ ia: parLitellm(), litellm: async () => ({ texte: 'Un texte à relire.\n\n[[BLOC-1]]', entree: 1000, sortie: 400 }) });
-    expect(await service.lancer(page)).toEqual({ ok: false, annule: false, message: 'Aucune clé LiteLLM n’est enregistrée sur ce poste.' });
-    await service.enregistrerCle('sk-litellm-cle-virtuelle');
-    expect(await secrets.lire(cleLitellm)).toBe('sk-litellm-cle-virtuelle');
-    const estimation = await service.estimer(page);
-    expect(estimation.ok && estimation.coutUsd).toBeCloseTo((estimation.ok ? estimation.entree * 0.2 + estimation.sortie * 1.2 : 0) / 1e6);
-    const resultat = await service.lancer(page);
-    expect(resultat.ok && resultat.appel.coutUsd).toBeCloseTo((1000 * 0.2 + 400 * 1.2) / 1e6);
-    const [appel] = await lireHistoriqueIa(contexte);
-    expect(appel!.estimation.entreeComptee).toBe(await compterEntree('litellm', consignesParDefaut.relecture, 'Un texte a relire.\n\n[[BLOC-1]]\n'));
-    expect((await service.etat()).depenseDuJourUsd).toBeCloseTo(0.00068);
-    expect((await service.lireHistorique()).litellmChoisi).toBe(true);
+describe('consigne à copier', () => {
+  it('donne la consigne puis le texte tel quel, sans la phrase sur les blocs mis de côté', async () => {
+    const { service } = await monter();
+    const resultat = await service.consigne(page);
+    expect(resultat.ok).toBe(true);
+    const texte = resultat.ok ? resultat.texte : '';
+    expect(texte.startsWith('Tu relis un texte en français')).toBe(true);
+    expect(texte).not.toContain('[[BLOC');
+    expect(texte).toContain('Ne résume pas');
+    expect(texte.endsWith('Voici le texte :\n\nUn texte a relire.\n\n```js\nconst x = 1;\n```\n')).toBe(true);
+    expect(await service.consigne({ ...page, markdown: '  ' })).toEqual({ ok: false, message: 'La page n’a pas de texte.' });
   });
 
-  it('montre les modèles de LiteLLM avec leur tarif et d’où il vient', async () => {
-    const { service } = await monter({ ia: { ...parLitellm(), tarifs: { 'sans-tarif': { entree: 1, sortie: 2 } } } });
-    expect((await service.etat()).modelesLitellm).toBeNull();
-    await service.enregistrerCle('sk-litellm-cle-virtuelle');
-    expect((await service.etat()).modelesLitellm).toEqual([
-      { nom: 'gpt-5.6-luna', tarif: { entree: 0.2, sortie: 1.2 }, source: 'litellm' },
-      { nom: 'sans-tarif', tarif: { entree: 1, sortie: 2 }, source: 'reglages' },
-    ]);
+  it('dit à l’autre outil qu’il reçoit la page entière, exemple de la consigne intact', async () => {
+    const { service } = await monter();
+    const resultat = await service.consigne({ ...page, fonction: 'mise-au-propre' });
+    const texte = resultat.ok ? resultat.texte : '';
+    expect(texte).toContain('- Présents :\n  - Paul');
+    expect(texte).toContain('- Garde les liens et les URL tels quels.\n\nExemple');
+    expect(texte).toContain('Tu reçois ici la page entière');
   });
 
-  it('garde une demande annulée dans l’historique, sortie comptée par Notes', async () => {
-    const { service, contexte } = await monter({
-      ia: parLitellm(),
-      litellm: async (requete) => {
-        requete.surMorceau?.('Un début de réponse');
-        throw new AiError('annule', 'Demande annulée.');
-      },
-    });
-    await service.enregistrerCle('sk-litellm-cle-virtuelle');
-    expect(await service.lancer(page)).toEqual({ ok: false, annule: true, message: 'Demande annulée.' });
-    expect(await lireHistoriqueIa(contexte)).toEqual([expect.objectContaining({ annule: true, sortie: 4 })]);
-  });
-
-  it('prévient quand le seuil du mois serait dépassé, et quand un tarif manque', async () => {
-    const avecSeuil = await monter({ ia: { ...parLitellm(), seuilMensuelUsd: 0 } });
-    await avecSeuil.service.enregistrerCle('sk-litellm-cle-virtuelle');
-    expect(await avecSeuil.service.estimer(page)).toMatchObject({ ok: true, seuilMensuelUsd: 0, seuilDepasse: true });
-    const sansTarif = await monter({ ia: parLitellm('sans-tarif') });
-    await sansTarif.service.enregistrerCle('sk-litellm-cle-virtuelle');
-    expect(await sansTarif.service.estimer(page)).toMatchObject({ ok: true, coutUsd: null, tarifInconnu: true });
-  });
-
-  it('n’accepte qu’une clé plausible, et ne l’écrit jamais en clair', async () => {
-    const { service, dossier } = await monter();
-    expect(cleValide('sk-litellm-cle-virtuelle')).toBe(true);
-    expect(cleValide('mot de passe')).toBe(false);
-    await service.enregistrerCle('sk-litellm-cle-virtuelle');
-    expect(await readFile(join(dossier, 'secrets.enc'), 'utf8')).not.toContain('sk-litellm');
-    expect(JSON.stringify(await service.etat())).not.toContain('sk-litellm');
-    expect((await service.oublierCle()).cleLitellm).toBe('absent');
-  });
-
-  it('cache la dépense quand aucune fonction ne passe par LiteLLM', async () => {
-    const { service, surHistorique } = await monter();
-    expect((await service.lireHistorique()).litellmChoisi).toBe(false);
-    await service.enregistrerReglages({ ...(await service.etat()).reglages, ...parLitellm() });
-    expect(surHistorique).toHaveBeenCalled();
-    expect((await service.lireHistorique()).litellmChoisi).toBe(true);
+  it('retire seulement la phrase sur les repères', () => {
+    expect(consigneACopier('Relis. Les lignes [[BLOC-1]] restent telles quelles. Sans emoji.', 'Texte')).toBe('Relis. Sans emoji.\n\nVoici le texte :\n\nTexte\n');
   });
 });

@@ -1,7 +1,6 @@
 /**
- * Ce que les deux fournisseurs (Ollama, LiteLLM) ont en commun : une demande
- * (consigne et texte), une réponse lue en flux, annulable, et des erreurs
- * dites en français, sans rien de secret dedans.
+ * Une conversation avec un modèle : une demande (consigne et texte), une
+ * réponse lue en flux, annulable, et des erreurs dites en français.
  */
 
 export interface ChatRequest {
@@ -12,6 +11,8 @@ export interface ChatRequest {
   texte: string;
   /** Taille de contexte à demander à un modèle local, en tokens. */
   contexte?: number;
+  /** Longueur maximale de la réponse, en tokens (un modèle qui s'emballe s'arrête là). */
+  sortieMax?: number;
   signal: AbortSignal;
   /** Appelé à chaque morceau reçu, avec tout le texte reçu jusque-là. */
   surMorceau?: (texteRecu: string) => void;
@@ -22,6 +23,8 @@ export interface ChatResult {
   /** Tokens comptés par le fournisseur. */
   entree: number;
   sortie: number;
+  /** Réponse arrêtée par `sortieMax`. */
+  coupee?: boolean;
 }
 
 export type AiErrorCode = 'injoignable' | 'modele_absent' | 'cle' | 'quota' | 'trop_long' | 'reponse' | 'annule';

@@ -1,4 +1,5 @@
 import type { OutlineEntry } from '@notes/document';
+import { List } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { libelleDuTitre } from './useOutline';
 
@@ -29,6 +30,8 @@ interface OutlineRailProps {
   entrees: readonly OutlineEntry[];
   courant: number;
   surChoix: (entree: OutlineEntry) => void;
+  /** Ouvre le sommaire complet (icône au-dessus des traits). */
+  surSommaireComplet: () => void;
 }
 
 /**
@@ -38,7 +41,7 @@ interface OutlineRailProps {
  * ne tiennent pas, traits et liste défilent pour garder le titre en cours au
  * milieu, si bien qu'au survol son nom s'affiche à la hauteur de son trait.
  */
-export function OutlineRail({ entrees, courant, surChoix }: OutlineRailProps) {
+export function OutlineRail({ entrees, courant, surChoix, surSommaireComplet }: OutlineRailProps) {
   const [ouvert, definirOuvert] = useState(false);
   const montrees = entrees.map((entree, rang) => ({ entree, rang }));
   const allume = courant;
@@ -76,54 +79,72 @@ export function OutlineRail({ entrees, courant, surChoix }: OutlineRailProps) {
     return null;
   }
   return (
-    <nav
-      aria-label="Sommaire"
-      className="sticky top-14 -mr-4 ml-2 w-6 shrink-0 self-start"
-      onMouseEnter={() => definirOuvert(true)}
-      onMouseLeave={() => definirOuvert(false)}
-      onFocus={() => definirOuvert(true)}
-      onBlur={(evenement) => {
-        if (!evenement.currentTarget.contains(evenement.relatedTarget as Node | null)) {
-          definirOuvert(false);
-        }
-      }}
-    >
-      <div ref={traits} aria-hidden={ouvert} className={`relative flex flex-col items-end gap-2 overflow-hidden py-2 ${hauteurMax} ${estompage(caches)}`}
-        onScroll={relireCaches}
+    // L'icône du sommaire complet juste au-dessus des traits, alignée sur leur bord droit (demande d'Eloi), hors de la
+    // zone de survol : la liste qui s'ouvre au survol des traits ne la recouvre pas.
+    <div className="sticky top-14 -mr-4 ml-2 flex w-6 shrink-0 flex-col items-end self-start">
+      <button
+        type="button"
+        onClick={surSommaireComplet}
+        aria-label="Sommaire de la page"
+        title="Sommaire de la page"
+        className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte -mr-1 flex size-6 items-center justify-center rounded outline-0"
       >
-        {montrees.map(({ entree, rang }) => (
-          <span
-            key={entree.position}
-            data-allume={rang === allume ? true : undefined}
-            // Sans « shrink-0 », des traits trop nombreux pour la hauteur se tasseraient jusqu'à disparaître.
-            className={`h-0.5 shrink-0 rounded-full ${rang === allume ? 'bg-accent' : 'bg-texte/25'}`}
-            style={{ width: largeurDesTraits[Math.min(entree.profondeur, largeurDesTraits.length - 1)] }}
-          />
-        ))}
-      </div>
-      <ul
-        ref={liste}
-        className={`border-bordure bg-surface absolute top-0 right-0 w-64 overflow-y-auto rounded-lg border p-1.5 shadow-xl ${hauteurMax} ${ouvert ? '' : 'sr-only'}`}
+        <List className="size-4" aria-hidden="true" />
+      </button>
+      <nav
+        aria-label="Sommaire"
+        className="relative w-6"
+        onMouseEnter={() => definirOuvert(true)}
+        onMouseLeave={() => definirOuvert(false)}
+        onFocus={() => definirOuvert(true)}
+        onBlur={(evenement) => {
+          if (!evenement.currentTarget.contains(evenement.relatedTarget as Node | null)) {
+            definirOuvert(false);
+          }
+        }}
       >
-        {montrees.map(({ entree, rang }) => (
-          <li key={entree.position} data-allume={rang === allume ? true : undefined}>
-            <button
-              type="button"
-              aria-current={rang === allume ? 'location' : undefined}
-              onClick={() => {
-                definirOuvert(false);
-                surChoix(entree);
-              }}
-              style={{ paddingLeft: 8 + entree.profondeur * 12 }}
-              className={`block w-full truncate rounded-md py-1 pr-2 text-left text-xs outline-0 ${
-                rang === allume ? 'bg-accent/20 text-texte focus-visible:bg-accent/35' : 'text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte'
-              }`}
-            >
-              {libelleDuTitre(entree)}
-            </button>
-          </li>
-        ))}
-      </ul>
-    </nav>
+        <div
+          ref={traits}
+          aria-hidden={ouvert}
+          className={`relative flex flex-col items-end gap-2 overflow-hidden py-2 ${hauteurMax} ${estompage(caches)}`}
+          onScroll={relireCaches}
+        >
+          {montrees.map(({ entree, rang }) => (
+            <span
+              key={entree.position}
+              data-allume={rang === allume ? true : undefined}
+              // Sans « shrink-0 », des traits trop nombreux pour la hauteur se tasseraient jusqu'à disparaître.
+              className={`h-0.5 shrink-0 rounded-full ${rang === allume ? 'bg-accent' : 'bg-texte/25'}`}
+              style={{ width: largeurDesTraits[Math.min(entree.profondeur, largeurDesTraits.length - 1)] }}
+            />
+          ))}
+        </div>
+        <ul
+          ref={liste}
+          className={`border-bordure bg-surface absolute top-0 right-0 w-64 overflow-y-auto rounded-lg border p-1.5 shadow-xl ${hauteurMax} ${ouvert ? '' : 'sr-only'}`}
+        >
+          {montrees.map(({ entree, rang }) => (
+            <li key={entree.position} data-allume={rang === allume ? true : undefined}>
+              <button
+                type="button"
+                aria-current={rang === allume ? 'location' : undefined}
+                onClick={() => {
+                  definirOuvert(false);
+                  surChoix(entree);
+                }}
+                style={{ paddingLeft: 8 + entree.profondeur * 12 }}
+                className={`block w-full truncate rounded-md py-1 pr-2 text-left text-xs outline-0 ${
+                  rang === allume
+                    ? 'bg-accent/20 text-texte focus-visible:bg-accent/35'
+                    : 'text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte'
+                }`}
+              >
+                {libelleDuTitre(entree)}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </nav>
+    </div>
   );
 }

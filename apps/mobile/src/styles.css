@@ -1,0 +1,69 @@
+@import 'tailwindcss';
+@import '@notes/ui/styles/theme.css';
+@import '@notes/ui/styles/base.css';
+
+/* Les classes Tailwind utilisées par les composants partagés doivent aussi être générées. */
+@source '../../../packages/ui/src';
+
+html {
+  color-scheme: dark;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body {
+  background: var(--color-fond);
+  color: var(--color-texte);
+  font-family: var(--font-sans);
+  overscroll-behavior-y: none;
+}
+
+/* Les marges du système (barre d'état, barre de navigation) quand la WebView va d'un bord à l'autre. */
+.marge-haut {
+  padding-top: env(safe-area-inset-top);
+}
+
+.marge-bas {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+/* Lecture seule : pas de curseur clignotant ni de clavier qui s'ouvre au toucher. */
+.notes-page[contenteditable='false'] {
+  caret-color: transparent;
+  -webkit-user-select: text;
+  user-select: text;
+}
+
+/* Un titre atteint par le sommaire s'arrête sous la barre du haut, pas dessous. */
+.notes-page :is(h1, h2, h3, h4, h5) {
+  scroll-margin-top: calc(4rem + env(safe-area-inset-top));
+}
+
+/* Case d'une tâche centrée sur la première ligne du texte, quelle que soit la police du téléphone : la case occupe une ligne entière et s'y centre. */
+.notes-page ul[data-type='taskList'] > li > label {
+  height: 1lh;
+  margin-top: 0;
+  align-items: center;
+}
+
+/* Texte d'une tâche de la liste façon Keep : sa première ligne a le même milieu que la case (zone de 2,75rem), quelle que soit la police du téléphone. */
+.ligne-de-tache {
+  line-height: 1.4;
+  padding-block: calc((2.75rem - 1lh) / 2);
+}
+
+/* Pastilles de couleur des réglages d'un callout, comme sur le PC. */
+.callout-pastille-info {
+  background-color: var(--callout-info);
+}
+
+.callout-pastille-success {
+  background-color: var(--callout-succes);
+}
+
+.callout-pastille-warning {
+  background-color: var(--callout-alerte);
+}
+
+.callout-pastille-danger {
+  background-color: var(--callout-danger);
+}

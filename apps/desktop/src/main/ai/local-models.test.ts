@@ -13,7 +13,7 @@ const petit: LocalModel = { nom: 'llama3.2:3b', taille: 2_019_393_189, parametre
 
 describe('choix du modèle local selon la carte', () => {
   it('garde ce qui tient dans 8 Go, écarte gemma3:12b, et choisit qwen3:8b', () => {
-    const verdict = evaluerModeles([gemma, ministral, qwen, petit], radeon, true, new Set());
+    const verdict = evaluerModeles([gemma, ministral, qwen, petit], radeon, true);
     expect(verdict.disponible).toBe(true);
     expect(verdict.automatique).toBe('qwen3:8b');
     const parNom = Object.fromEntries(verdict.modeles.map((modele) => [modele.nom, modele]));
@@ -24,26 +24,20 @@ describe('choix du modèle local selon la carte', () => {
   });
 
   it('prend gemma3:12b sur une carte de 16 Go', () => {
-    expect(evaluerModeles([qwen, gemma], { ...radeon, vram: 16 * 1024 ** 3 }, true, new Set()).automatique).toBe('gemma3:12b');
-  });
-
-  it('écarte un modèle qu’Ollama a vu déborder', () => {
-    const verdict = evaluerModeles([qwen, ministral], radeon, true, new Set(['qwen3:8b']));
-    expect(verdict.automatique).toBe('ministral-3:8b');
-    expect(verdict.modeles.find((modele) => modele.nom === 'qwen3:8b')?.raison).toBe('Déborde de la mémoire vidéo (vu par Ollama) : trop lent.');
+    expect(evaluerModeles([qwen, gemma], { ...radeon, vram: 16 * 1024 ** 3 }, true).automatique).toBe('gemma3:12b');
   });
 
   it('bloque l’IA locale sans carte dédiée, ou quand rien ne convient', () => {
-    expect(evaluerModeles([qwen], null, true, new Set())).toMatchObject({ disponible: false, automatique: null });
-    expect(evaluerModeles([qwen], { fabricant: 'amd', nom: 'AMD Radeon Graphics', vram: 512 * 1024 ** 2, dediee: false }, true, new Set()).raison).toBe(
-      'AMD Radeon Graphics est une carte intégrée, trop faible pour un modèle local : pas d’IA locale ici. LiteLLM reste possible.',
+    expect(evaluerModeles([qwen], null, true)).toMatchObject({ disponible: false, automatique: null });
+    expect(evaluerModeles([qwen], { fabricant: 'amd', nom: 'AMD Radeon Graphics', vram: 512 * 1024 ** 2, dediee: false }, true).raison).toBe(
+      'AMD Radeon Graphics est une carte intégrée, trop faible pour un modèle local : pas d’IA locale ici.',
     );
-    expect(evaluerModeles([gemma, petit], radeon, true, new Set())).toMatchObject({ disponible: false, raison: 'Aucun modèle installé ne tient dans les 8 Go de la carte avec une qualité correcte.' });
-    expect(evaluerModeles([], radeon, true, new Set())).toMatchObject({ disponible: false, raison: 'Aucun modèle n’est installé dans Ollama.' });
+    expect(evaluerModeles([gemma, petit], radeon, true)).toMatchObject({ disponible: false, raison: 'Aucun modèle installé ne tient dans les 8 Go de la carte avec une qualité correcte.' });
+    expect(evaluerModeles([], radeon, true)).toMatchObject({ disponible: false, raison: 'Aucun modèle n’est installé dans Ollama.' });
   });
 
   it('sans mémoire connue (NVIDIA sans nvidia-smi, Ollama ailleurs) : décide sur la taille du modèle, vérifie après', () => {
-    const verdict = evaluerModeles([qwen, gemma], null, false, new Set());
+    const verdict = evaluerModeles([qwen, gemma], null, false);
     expect(verdict.disponible).toBe(true);
     expect(verdict.automatique).toBe('gemma3:12b');
     expect(verdict.modeles.every((modele) => modele.tient === null)).toBe(true);

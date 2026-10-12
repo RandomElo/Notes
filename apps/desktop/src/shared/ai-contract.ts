@@ -1,4 +1,4 @@
-import type { AiPageFunction, AiProvider, AiRun, AiSettings, UsageBucket, UsagePeriod } from '@notes/core';
+import type { AiPageFunction, AiRun, AiSettings, UsageBucket, UsagePeriod } from '@notes/core';
 
 /**
  * Fonctions IA (README §12) : ce que le main et le renderer s'échangent.
@@ -20,12 +20,44 @@ export const consignesParDefaut: Record<AiPageFunction, string> = {
     'Les lignes de la forme [[BLOC-1]] remplacent des blocs mis de côté : recopie-les telles quelles, à leur place.',
     'Réponds uniquement par le texte relu, en Markdown, sans phrase d’introduction ni de conclusion, sans emoji et sans gras ajouté.',
   ].join('\n'),
+  // Essais du 2026-10-12 (README §12) : Notes envoie une section à la fois, lignes déjà mises en liste, titres gardés à part.
   'mise-au-propre': [
-    'Tu reçois des notes en vrac, en français, écrites en Markdown.',
-    'Transforme-les en un document structuré et rédigé : des titres (# pour le premier niveau), des paragraphes complets, des listes quand elles s’y prêtent.',
-    'Développe les abréviations et les phrases télégraphiques. Ce n’est pas un résumé : tout ce que disent les notes doit rester. N’invente aucun fait.',
-    'Garde les liens tels quels. Les lignes de la forme [[BLOC-1]] remplacent des blocs mis de côté : recopie-les telles quelles, à l’endroit qui convient.',
-    'Réponds uniquement par le document, en Markdown, sans phrase d’introduction ni de conclusion, sans emoji et sans gras ajouté.',
+    'Tu reçois les notes d’une section, prises en vrac (cours, réunion, lecture), en français, en Markdown, avec le titre de la section pour le contexte. Remets-les au propre pour qu’elles se relisent facilement des mois plus tard.',
+    '',
+    'Forme :',
+    '- Tout ce qui s’énumère s’écrit en liste à puces « - », une idée par puce : exemples, étapes, outils, caractéristiques, faits courts mis bout à bout. Plusieurs lignes courtes à la suite forment une liste.',
+    '- Une liste en puces reste une liste en puces : garde chaque puce, dans le même ordre. Une précision sur une puce va en sous-puce, décalée de deux espaces.',
+    '- Une ligne qui n’est qu’un nom ou quelques mots reste une puce avec ces seuls mots, corrigés.',
+    '- Une explication suivie (définition, raisonnement, comparaison) s’écrit en paragraphe de phrases complètes.',
+    '- N’écris pas de titre : le titre de la section est déjà en place.',
+    '',
+    'Rédaction :',
+    '- Corrige l’orthographe, la grammaire, les accords et les fautes de frappe, y compris dans les noms d’outils connus.',
+    '- Complète les phrases télégraphiques ou en langage parlé pour qu’elles se lisent seules, sans changer le sens des mots : une expression familière garde son sens.',
+    '- Ce n’est pas un résumé : chaque information reste, avec ses exemples et ses citations.',
+    '- N’ajoute rien qui ne soit pas dans les notes : ni définition, ni exemple, ni explication, ni développement d’un sigle, ni phrase de synthèse, ni connaissance générale sur le sujet. Ne répète pas une information sous deux formes.',
+    '- Une phrase inachevée reste telle quelle : ne la complète pas.',
+    '- Le texte entre accents graves est une note pour plus tard : recopie-le tel quel, accents graves compris, sans en ajouter d’autres.',
+    '- Garde les liens et les URL tels quels. Les lignes de la forme [[BLOC-1]] remplacent des blocs mis de côté : recopie-les telles quelles.',
+    '',
+    'Exemple :',
+    'Titre de la section : Réunion',
+    'Notes :',
+    '- bilan T3 ok',
+    '- Problème : livraisons en retard, fournisseur change en janvier',
+    '- présents : Paul, Léa, moi',
+    '- on revoit le budget',
+    '',
+    'Réponse :',
+    '- Le bilan du troisième trimestre est bon.',
+    '- Problème : les livraisons sont en retard. Le fournisseur change en janvier.',
+    '- Présents :',
+    '  - Paul',
+    '  - Léa',
+    '  - moi',
+    '- Le budget sera revu.',
+    '',
+    'Réponds uniquement par les notes remises au propre, en Markdown, sans titre, sans phrase d’introduction ni de conclusion, sans emoji et sans gras ajouté.',
   ].join('\n'),
   memo: [
     'Tu reçois la transcription brute d’un mémo vocal en français : la ponctuation et certains mots peuvent être faux.',
@@ -46,13 +78,6 @@ export interface AiLocalModelView {
   raison: string | null;
 }
 
-/** Un modèle de LiteLLM et son tarif en dollars par million de tokens, avec d'où il vient. */
-export interface AiApiModelView {
-  nom: string;
-  tarif: { entree: number; sortie: number } | null;
-  source: 'reglages' | 'litellm' | 'notes' | null;
-}
-
 /** Ce que les réglages montrent des fonctions IA de ce poste. */
 export interface AiState {
   reglages: AiSettings;
@@ -69,14 +94,6 @@ export interface AiState {
     /** Modèle à installer, quand aucun ne convient et que la carte le permet. */
     conseil: string | null;
   };
-  /** Clé de LiteLLM : enregistrée chiffrée, gardée pour la session (pas de trousseau), ou absente. */
-  cleLitellm: 'absent' | 'enregistre' | 'session';
-  /** Modèles de LiteLLM, null sans adresse, sans clé, ou si LiteLLM ne répond pas. */
-  modelesLitellm: AiApiModelView[] | null;
-  /** Date du relevé des tarifs connus de Notes (dernier recours). */
-  dateDesTarifs: string;
-  depenseDuJourUsd: number;
-  depenseDuMoisUsd: number;
 }
 
 export interface AiRequest {
@@ -90,25 +107,15 @@ export interface AiRequest {
 export type AiEstimateResult =
   | {
       ok: true;
-      fournisseur: AiProvider;
       modele: string;
       /** Modèle choisi par Notes d'après la carte graphique. */
       automatique: boolean;
       entree: number;
       sortie: number;
-      /** null pour un modèle local, ou un modèle de LiteLLM sans tarif connu. */
-      coutUsd: number | null;
-      /** Vrai pour un modèle de LiteLLM sans tarif connu. */
-      tarifInconnu: boolean;
       /** null tant qu'aucun appel de ce modèle n'est connu. */
       dureeMs: number | null;
       /** Appels passés sur lesquels repose l'estimation de la sortie. */
       appelsConnus: number;
-      depenseDuJourUsd: number;
-      depenseDuMoisUsd: number;
-      /** Seuil d'alerte du mois, et vrai s'il est déjà atteint ou le serait par cet appel. */
-      seuilMensuelUsd: number | null;
-      seuilDepasse: boolean;
     }
   | { ok: false; message: string };
 
@@ -130,14 +137,15 @@ export type AiRunResult =
     }
   | { ok: false; annule: boolean; message: string };
 
+/** Ajouté à la consigne de la mise au propre copiée pour un autre outil, qui reçoit la page entière et non une section. */
+export const pageEntiereACopier = 'Tu reçois ici la page entière, et non une section : garde ses titres tels quels, à leur place, et remets au propre les notes sous chacun.';
+
+/** La consigne d'une fonction suivie du texte de la page, à coller dans un autre outil. */
+export type AiPromptResult = { ok: true; texte: string } | { ok: false; message: string };
+
 export interface AiUsageView {
   appels: AiRun[];
-  /** Une fonction au moins passe par LiteLLM : la dépense du jour s'affiche dans la barre de statut. */
-  litellmChoisi: boolean;
   totaux: Record<UsagePeriod, UsageBucket[]>;
-  depenseDuJourUsd: number;
-  depenseDuMoisUsd: number;
-  seuilMensuelUsd: number | null;
 }
 
 /** Nombre de périodes montrées par graphique. */

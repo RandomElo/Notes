@@ -46,3 +46,14 @@ export type MemoTranscription = { ok: true; texte: string; dureeMs: number } | {
 export type MemoConversion = { ok: true; wav: Uint8Array; duree: number } | { ok: false; message: string };
 
 export type MemoAcceptance = { ok: true; chemin: string; id: string } | { ok: false; message: string };
+
+/**
+ * Durées estimées avant de transcrire (README §13) : par mémo, la transcription
+ * et la mise en forme ; null quand on ne peut pas l'estimer (durée de l'audio
+ * illisible, IA locale absente ou jamais utilisée sur ce poste).
+ */
+export interface MemoEstimate {
+  /** Démarrage du serveur de transcription, compté dans le premier mémo s'il est arrêté. */
+  demarrageMs: number;
+  memos: { chemin: string; audioMs: number | null; transcriptionMs: number | null; miseEnFormeMs: number | null }[];
+}

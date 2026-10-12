@@ -110,16 +110,17 @@ export function kvParTokenDe(infos: Record<string, unknown>): number | null {
 
 /**
  * Ce que la carte permet. `carte` est null quand Ollama tourne sur une autre
- * machine ou qu'aucune carte n'est vue ; `debordants`, les modèles dont Ollama
- * a dit après un appel qu'ils ne tenaient pas entièrement en mémoire vidéo.
+ * machine ou qu'aucune carte n'est vue. Un modèle qui déborde malgré tout
+ * (carte occupée par une autre application) est arrêté pendant l'appel
+ * (`ai-service.ts`).
  */
-export function evaluerModeles(installes: LocalModel[], carte: GpuInfo | null, ollamaSurLePoste: boolean, debordants: ReadonlySet<string>): LocalVerdict {
+export function evaluerModeles(installes: LocalModel[], carte: GpuInfo | null, ollamaSurLePoste: boolean): LocalVerdict {
   const bloque = (raison: string): LocalVerdict => ({ disponible: false, raison, modeles: [], automatique: null });
   if (ollamaSurLePoste && carte === null) {
-    return bloque('Aucune carte graphique n’est visible sur ce poste : pas d’IA locale ici. LiteLLM reste possible.');
+    return bloque('Aucune carte graphique n’est visible sur ce poste : pas d’IA locale ici.');
   }
   if (ollamaSurLePoste && carte !== null && !carte.dediee) {
-    return bloque(`${carte.nom} est une carte intégrée, trop faible pour un modèle local : pas d’IA locale ici. LiteLLM reste possible.`);
+    return bloque(`${carte.nom} est une carte intégrée, trop faible pour un modèle local : pas d’IA locale ici.`);
   }
   const vram = ollamaSurLePoste ? (carte?.vram ?? null) : null;
   const budget = vram === null ? null : vram * partUtilisable;
@@ -128,12 +129,10 @@ export function evaluerModeles(installes: LocalModel[], carte: GpuInfo | null, o
   const modeles = installes.map((modele): LocalModelFit => {
     const kv = modele.kvParToken ?? kvParDefaut;
     const contexteMax = budget === null ? null : Math.floor((budget - modele.taille - tampon) / kv);
-    const tient = debordants.has(modele.nom) ? false : contexteMax === null ? null : contexteMax >= contexteMinimal;
+    const tient = contexteMax === null ? null : contexteMax >= contexteMinimal;
     const assezGros = modele.parametres === null || modele.parametres >= parametresMinimaux;
     let raison: string | null = null;
-    if (debordants.has(modele.nom)) {
-      raison = 'Déborde de la mémoire vidéo (vu par Ollama) : trop lent.';
-    } else if (tient === false) {
+    if (tient === false) {
       raison = `Trop gros pour les ${go(vram!)} de la carte.`;
     } else if (!assezGros) {
       raison = `Trop petit (${modele.parametres} milliards de paramètres) pour un résultat correct.`;

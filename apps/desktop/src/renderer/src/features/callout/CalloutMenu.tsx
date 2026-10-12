@@ -1,9 +1,8 @@
-import { iconeDuCallout } from '@notes/document';
+import { calloutDuCurseur, changerIconeDuCallout as changerIcone, changerNatureDuCallout as changerNature, iconeDuCallout, iconesProposees, naturesDeCallout, retirerCallout } from '@notes/document';
 import type { Editor } from '@tiptap/react';
 import { ChevronDown } from 'lucide-react';
 import { useState } from 'react';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
-import { calloutDuCurseur, changerIcone, changerNature, iconesProposees, naturesDeCallout, retirerCallout } from './callout-commands';
 
 /**
  * Partie « callout » de la barre d'outils, quand le curseur est dans un

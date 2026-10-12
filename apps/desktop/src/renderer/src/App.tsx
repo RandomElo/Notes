@@ -25,12 +25,9 @@ import { StatusBar } from './features/status-bar/StatusBar';
 import { AiPanel } from './features/ai/AiPanel';
 import { AiUsageScreen } from './features/ai/AiUsageScreen';
 import { useMemos } from './features/voice-memos/useMemos';
-import { GlobalShortcutPanel } from './features/search/GlobalShortcutPanel';
+import { ajouterRecente } from './features/mentions/recent-pages';
 import { SpellcheckPanel } from './features/spellcheck/SpellcheckPanel';
 import { useSpellcheck } from './features/spellcheck/useSpellcheck';
-import { demandeDeCreation } from './features/search/creation-place';
-import { ajouterRecente } from './features/search/recent-pages';
-import { SearchPalette } from './features/search/SearchPalette';
 import { TabBar } from './features/tabs/TabBar';
 import { ajouter, estEtatDOnglets, etatInitial, fermer, ongletActif, ouvrir, parNumero, remplacer, voisin } from './features/tabs/tabs-model';
 import type { TabsState } from './features/tabs/tabs-model';
@@ -82,7 +79,6 @@ export function App() {
   const [recentes, definirRecentes] = useStoredState<string[]>('notes.recentes', [], estListeDeTextes);
   const [barreVisible, definirBarreVisible] = useStoredState<boolean>('notes.barre-laterale', true, estBooleen);
   const [sommaireVisible, definirSommaireVisible] = useStoredState<boolean>('notes.sommaire', true, estBooleen);
-  const [rechercheOuverte, definirRechercheOuverte] = useState(false);
   const [listeDeplies, definirListeDeplies] = useStoredState<string[]>('notes.deplies', [], estListeDeTextes);
   const [renommage, definirRenommage] = useState<string | null>(null);
   // Choix de l'icône d'une page ouvert, depuis le haut de la page ou le menu de l'arborescence.
@@ -263,13 +259,8 @@ export function App() {
       // Ctrl+Maj+\ donne « | » sur un clavier français : la touche physique est plus sûre.
       const barreOblique = evenement.code === 'Backslash' || evenement.code === 'IntlBackslash' || touche === '\\';
       let action: (() => void) | null = null;
-      if (touche === 'k' && !evenement.shiftKey) {
-        action = () => definirRechercheOuverte(true);
-      } else if (touche === 't' && !evenement.shiftKey) {
-        action = () => {
-          changerDOnglets((etat) => ajouter(etat));
-          definirRechercheOuverte(true);
-        };
+      if (touche === 't' && !evenement.shiftKey) {
+        action = () => changerDOnglets((etat) => ajouter(etat));
       } else if (touche === 'w' && !evenement.shiftKey) {
         action = () => changerDOnglets((etat) => fermer(etat, etat.actif));
       } else if (evenement.key === 'Tab') {
@@ -298,14 +289,13 @@ export function App() {
     return () => window.removeEventListener('keydown', surTouche, true);
   }, [changerDOnglets, definirBarreVisible, definirSommaireVisible]);
 
-  // Page choisie dans la petite fenêtre du raccourci global : elle s'ouvre ici, comme depuis Ctrl+K.
+  // Page demandée par la barre de recherche du poste (`--page=<id>`), au lancement ou Notes déjà ouverte.
   useEffect(() => {
     const prendre = (): void => {
-      void api.prendrePageDemandee().then((demande) => {
-        if (demande !== null) {
-          definirRechercheOuverte(false);
-          selectionner(demande.id, demande.nouvelOnglet);
-          definirAEcrire(demande.id);
+      void api.prendrePageDemandee().then((id) => {
+        if (id !== null) {
+          selectionner(id);
+          definirAEcrire(id);
         }
       });
     };
@@ -313,7 +303,7 @@ export function App() {
     return api.surPageDemandee(prendre);
   }, [selectionner]);
 
-  // Pages récentes de la recherche : chaque page ouverte passe en tête.
+  // Pages récentes, proposées d'abord par les mentions : chaque page ouverte passe en tête.
   useEffect(() => {
     if (selection !== null && trouverParCle(vault.arbre, selection)?.importe === true) {
       definirRecentes((liste) => (liste[0] === selection ? liste : ajouterRecente(liste, selection)));
@@ -405,10 +395,7 @@ export function App() {
         actif={onglets.actif}
         surActivation={(id) => changerDOnglets((etat) => ({ ...etat, actif: id }))}
         surFermeture={(id) => changerDOnglets((etat) => fermer(etat, id))}
-        surNouveau={() => {
-          changerDOnglets((etat) => ajouter(etat));
-          definirRechercheOuverte(true);
-        }}
+        surNouveau={() => changerDOnglets((etat) => ajouter(etat))}
       />
     );
 
@@ -482,7 +469,6 @@ export function App() {
               <div className="mx-auto max-w-2xl space-y-10 py-4">
                 <ThemeSummary theme={theme} surOuverture={() => definirThemeOuvert(true)} />
                 <NasConnectionPanel />
-                <GlobalShortcutPanel />
                 <SpellcheckPanel />
                 <AiPanel surHistorique={ouvrirHistoriqueIa} />
                 <WebpConversion />
@@ -544,7 +530,7 @@ export function App() {
           )}
         </main>
       </div>
-      <StatusBar surResolution={ouvrirConflit} surHistoriqueIa={ouvrirHistoriqueIa} />
+      <StatusBar surResolution={ouvrirConflit} />
       {noeudAExporter !== null && <ExportDialog noeud={noeudAExporter} theme={theme.theme} surFermeture={() => definirExportDe(null)} />}
       {choixDIcone !== null && (
         <IconPicker
@@ -553,30 +539,6 @@ export function App() {
           y={choixDIcone.y}
           surChoix={(choix) => vault.changerIcone(choixDIcone.chemin, choix.genre === 'image' ? { octets: choix.octets } : { icone: choix.icone })}
           surFermeture={fermerChoixDIcone}
-        />
-      )}
-      {rechercheOuverte && vault.etat?.dossier != null && (
-        <SearchPalette
-          arbre={vault.arbre}
-          recentes={recentes}
-          pageOuverte={reglagesOuverts ? null : noeudSelectionne}
-          surChoix={(id, nouvelOnglet) => {
-            definirRechercheOuverte(false);
-            selectionner(id, nouvelOnglet);
-            definirAEcrire(id);
-          }}
-          surCreation={async (titre, ou) => {
-            const resultat = await api.creerPage({ ...demandeDeCreation(vault.arbre, reglagesOuverts ? null : noeudSelectionne, ou), titre });
-            if (!resultat.ok) {
-              return resultat.erreur.message;
-            }
-            await vault.recharger();
-            definirRechercheOuverte(false);
-            selectionner(resultat.page.id);
-            definirAEcrire(resultat.page.id);
-            return null;
-          }}
-          surFermeture={() => definirRechercheOuverte(false)}
         />
       )}
       {!reglagesOuverts && (

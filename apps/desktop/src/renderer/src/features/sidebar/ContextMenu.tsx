@@ -15,10 +15,12 @@ interface ContextMenuProps {
   y: number;
   elements: MenuItem[];
   surFermeture: () => void;
+  /** Fermé par Échap ou Tab, sans choix : le focus peut revenir à ce qui a ouvert le menu. */
+  surAnnulation?: () => void;
 }
 
 /** Menu contextuel : se ferme sur Échap, sur un clic ailleurs ou après un choix. Navigable aux flèches. */
-export function ContextMenu({ x, y, elements, surFermeture }: ContextMenuProps) {
+export function ContextMenu({ x, y, elements, surFermeture, surAnnulation }: ContextMenuProps) {
   const menu = useRef<HTMLDivElement>(null);
   const [position, definirPosition] = useState({ gauche: x, haut: y });
 
@@ -54,6 +56,7 @@ export function ContextMenu({ x, y, elements, surFermeture }: ContextMenuProps) 
     if (evenement.key === 'Escape' || evenement.key === 'Tab') {
       evenement.preventDefault();
       surFermeture();
+      surAnnulation?.();
     } else if (evenement.key === 'ArrowDown' || evenement.key === 'ArrowUp') {
       evenement.preventDefault();
       const pas = evenement.key === 'ArrowDown' ? 1 : -1;

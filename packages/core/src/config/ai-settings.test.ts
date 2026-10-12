@@ -10,18 +10,24 @@ describe('réglages IA du poste', () => {
   it('garde des réglages valides', () => {
     const reglages = {
       adresseOllama: 'http://192.0.2.10:11434/',
-      adresseLitellm: 'http://192.0.2.10:4000',
-      modeles: { relecture: { fournisseur: 'litellm', modele: 'gpt-5.6-luna' }, 'mise-au-propre': { fournisseur: 'ollama', modele: 'ministral-3:8b' }, memo: { fournisseur: 'ollama', modele: '' } },
+      modeles: { relecture: { modele: 'qwen3:8b' }, 'mise-au-propre': { modele: 'ministral-3:8b' }, memo: { modele: '' } },
       consignes: { relecture: 'Relis.', 'mise-au-propre': '', memo: null },
-      seuilMensuelUsd: 5,
-      tarifs: { 'gpt-5.6-luna': { entree: 0.2, sortie: 1.2 }, 'mauvais nom': { entree: 1, sortie: 1 }, autre: { entree: 'x' } },
     };
     expect(lireReglagesIa(reglages)).toEqual({
       ...reglages,
       adresseOllama: 'http://192.0.2.10:11434',
       consignes: { relecture: 'Relis.', 'mise-au-propre': null, memo: null },
-      tarifs: { 'gpt-5.6-luna': { entree: 0.2, sortie: 1.2 } },
     });
+  });
+
+  it('oublie les réglages de LiteLLM des versions 0.12.x : son modèle revient au choix automatique', () => {
+    const anciens = {
+      adresseLitellm: 'http://192.0.2.10:4000',
+      modeles: { relecture: { fournisseur: 'litellm', modele: 'gpt-5.6-luna' }, 'mise-au-propre': { fournisseur: 'ollama', modele: 'qwen3:8b' } },
+      seuilMensuelUsd: 5,
+      tarifs: { 'gpt-5.6-luna': { entree: 0.2, sortie: 1.2 } },
+    };
+    expect(lireReglagesIa(anciens)).toEqual({ ...reglagesIaParDefaut, modeles: { relecture: { modele: '' }, 'mise-au-propre': { modele: 'qwen3:8b' }, memo: { modele: '' } } });
   });
 
   it('refuse une adresse avec identifiant, requête ou autre protocole', () => {
@@ -34,7 +40,7 @@ describe('réglages IA du poste', () => {
     expect(adresseDeServiceValide('file:///etc/passwd')).toBeNull();
   });
 
-  it('accepte les noms de modèles d’Ollama et de LiteLLM', () => {
+  it('accepte les noms de modèles d’Ollama', () => {
     expect(nomDeModeleValide('qwen3:8b')).toBe(true);
     expect(nomDeModeleValide('hf.co/bartowski/Ministral-8B-GGUF:Q4_K_M')).toBe(true);
     expect(nomDeModeleValide('gpt-5.4-mini')).toBe(true);

@@ -2,14 +2,14 @@ import { natureDIcone } from '@notes/core';
 import type { PageMode, TreeNode } from '@notes/core';
 import { convertirEnListe, ouvrirNouvelleTache, ecrireMarkdown, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
 import type { ImageAttributes, OutlineEntry } from '@notes/document';
-import { classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
+import { SubpagesBlock, classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
 import { Node as NoeudTiptap } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions';
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import type { MentionedPage, Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { Download, FileText, List, ListChecks, Lock, Sparkles, X } from 'lucide-react';
+import { Download, EllipsisVertical, FileText, List, ListChecks, Lock, Sparkles, X } from 'lucide-react';
 import { Selection, TextSelection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -41,6 +41,8 @@ import { annuaireDesPages } from '../mentions/pages-directory';
 import { inscrireEditeurOuvert } from '../mentions/rename-follow';
 import { PageHeaderIcon } from '../page-icon/PageHeaderIcon';
 import { PageIcon } from '../page-icon/PageIcon';
+import { ContextMenu } from '../sidebar/ContextMenu';
+import type { MenuItem } from '../sidebar/ContextMenu';
 import { SlashMenu } from '../slash-menu/SlashMenu';
 import { SpellcheckDecorations } from '../spellcheck/spellcheck-extension';
 import { SpellPopover } from '../spellcheck/SpellPopover';
@@ -168,6 +170,9 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   const sommaire = useOutline(editeur);
   const [sommaireOuvert, definirSommaireOuvert] = useState(false);
   const [iaOuverte, definirIaOuverte] = useState(false);
+  // Menu « ⋮ » du haut de la page, ouvert sous son bouton.
+  const [menu, definirMenu] = useState<{ x: number; y: number } | null>(null);
+  const boutonMenu = useRef<HTMLButtonElement>(null);
   const modeListe = noeud.mode === 'todo';
   const [erreurDeMode, definirErreurDeMode] = useState<string | null>(null);
   // Activer le mode écrit `mode: todo`, puis convertit la page en tâches dans l'éditeur : une étape d'annulation,
@@ -228,44 +233,22 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           <div className="flex shrink-0 items-center gap-2">
             {chargement.etat === 'pret' && <SaveIndicator etat={enregistrement} />}
             <button
+              ref={boutonMenu}
               type="button"
-              onClick={() => definirSommaireOuvert(true)}
-              aria-label="Sommaire de la page"
-              title="Sommaire de la page"
-              className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0"
+              // Menu ouvert : le clic sur ce bouton le referme, sans que le menu se ferme d'abord puis se rouvre.
+              onMouseDown={(evenement) => menu !== null && evenement.stopPropagation()}
+              onClick={(evenement) => {
+                const boite = evenement.currentTarget.getBoundingClientRect();
+                // Aligné à droite sous le bouton (le menu fait au moins 12 rem de large).
+                definirMenu(menu === null ? { x: boite.right - 224, y: boite.bottom + 4 } : null);
+              }}
+              aria-label="Actions de la page"
+              aria-haspopup="menu"
+              aria-expanded={menu !== null}
+              title="Sommaire, mode liste, fonctions IA, export"
+              className={`flex size-6 items-center justify-center rounded outline-0 ${menu === null ? 'text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte' : 'bg-texte/20 text-texte'}`}
             >
-              <List className="size-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => void basculerModeListe()}
-              disabled={lectureSeule || chargement.etat !== 'pret'}
-              aria-pressed={modeListe}
-              aria-label="Mode liste de tâches"
-              title={modeListe ? 'Quitter le mode liste : la page redevient classique, les tâches restent' : 'Passer en liste de tâches : paragraphes et puces deviennent des tâches'}
-              className={`flex size-6 items-center justify-center rounded outline-0 disabled:opacity-40 ${modeListe ? 'bg-accent/20 text-accent hover:bg-accent/30 focus-visible:bg-accent/40' : 'text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte'}`}
-            >
-              <ListChecks className="size-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={() => definirIaOuverte(true)}
-              aria-disabled={lectureSeule || chargement.etat !== 'pret'}
-              disabled={lectureSeule || chargement.etat !== 'pret'}
-              aria-label="Fonctions IA"
-              title={lectureSeule ? 'Fonctions IA : la page est en lecture seule' : 'Fonctions IA : relecture, mise au propre'}
-              className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0 disabled:opacity-40"
-            >
-              <Sparkles className="size-4" aria-hidden="true" />
-            </button>
-            <button
-              type="button"
-              onClick={surExport}
-              aria-label="Exporter la page"
-              title="Exporter la page"
-              className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte flex size-6 items-center justify-center rounded outline-0"
-            >
-              <Download className="size-4" aria-hidden="true" />
+              <EllipsisVertical className="size-4" aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -275,6 +258,15 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} lectureSeule={lectureSeule} />
         </div>
 
+        <SubpagesBlock
+          pages={noeud.enfants.filter((enfant) => enfant.id !== null).map((enfant) => ({ cle: enfant.id!, titre: enfant.titre }))}
+          icone={(page) => {
+            const enfant = noeud.enfants.find((autre) => autre.id === page.cle);
+            return enfant === undefined ? null : <PageIcon icone={enfant.icone} chemin={enfant.chemin} defaut={enfant.mode === 'todo' ? <ListChecks className="size-[1em]" /> : <FileText className="size-[1em]" />} className="text-discret" />;
+          }}
+          ouvrir={(page, evenement) => surOuvrirPage(page.cle, evenement.ctrlKey || evenement.metaKey || evenement.button === 1)}
+          {...(lectureSeule ? {} : { creer: surSousPage })}
+        />
         {verrou.verrou.etat === 'autre' && <LockNotice nom={verrou.verrou.nom} surForcage={verrou.forcer} />}
         <ConflictNotice conflits={conflits} surResolution={surConflit} />
         {memos !== null && <MemoList etat={memos} surEtat={surMemos} />}
@@ -312,7 +304,27 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           />
         )}
       </article>
-      {sommaireVisible && <OutlineRail entrees={sommaire.entrees} courant={sommaire.courant} surChoix={allerA} />}
+      {menu !== null && (
+        <ContextMenu
+          x={menu.x}
+          y={menu.y}
+          elements={[
+            { libelle: 'Sommaire de la page', icone: List, action: () => definirSommaireOuvert(true) },
+            // Ce qui modifie la page n'est pas proposé en lecture seule ni avant qu'elle soit chargée.
+            ...(lectureSeule || chargement.etat !== 'pret'
+              ? []
+              : ([
+                  { libelle: modeListe ? 'Quitter le mode liste' : 'Passer en liste de tâches', icone: ListChecks, action: () => void basculerModeListe() },
+                  { libelle: 'Fonctions IA', icone: Sparkles, action: () => definirIaOuverte(true) },
+                ] satisfies MenuItem[])),
+            { libelle: 'Exporter la page', icone: Download, action: surExport },
+          ]}
+          surFermeture={() => definirMenu(null)}
+          // Après un choix, le focus va à ce que l'action ouvre (fenêtre, contenu) : seul Échap le rend au bouton.
+          surAnnulation={() => boutonMenu.current?.focus()}
+        />
+      )}
+      {sommaireVisible && <OutlineRail entrees={sommaire.entrees} courant={sommaire.courant} surChoix={allerA} surSommaireComplet={() => definirSommaireOuvert(true)} />}
       {iaOuverte && editeur !== null && (
         <AiDialog
           titre={noeud.titre}
@@ -535,8 +547,8 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
   }, [descentes, editeur]);
 
   // Après l'arborescence, qui reprend le focus à la fin du renommage : les effets d'un même rendu vont dans l'ordre de l'arbre.
-  // Une recherche ouverte entre-temps (Ctrl+K juste après avoir choisi la page) garde le focus. Sans délai :
-  // la commande `focus` de TipTap attend l'image suivante, et prendrait le focus à une recherche ouverte d'ici là.
+  // Une fenêtre ouverte entre-temps garde le focus. Sans délai : la commande `focus` de TipTap attend
+  // l'image suivante, et prendrait le focus à une fenêtre ouverte d'ici là.
   useEffect(() => {
     if (entrer) {
       if (document.querySelector('[aria-modal="true"]') === null && !editeur.isDestroyed) {

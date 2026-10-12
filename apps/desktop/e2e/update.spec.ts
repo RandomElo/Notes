@@ -2,7 +2,7 @@ import { chmod, mkdtemp, readFile, rename, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { _electron as electron, expect, test } from '@playwright/test';
-import { argumentsDeLancement, dossierApplication, editeur, fenetres, lireCorps, ouvrirPage, preparer } from './app';
+import { argumentsDeLancement, dossierApplication, editeur, lireCorps, ouvrirPage, preparer } from './app';
 
 // Mise à jour locale (`npm run installer`) : l'AppImage remplacée, Notes propose de relancer, puis relance la nouvelle.
 // Une fausse AppImage tient lieu de programme : un script qui note ses arguments.
@@ -26,10 +26,10 @@ test('fenêtre ouverte : la barre de titre propose de relancer, la page est enre
     cwd: dossierApplication,
     env: { ...process.env, APPIMAGE: appImage },
   });
-  let page = application.windows().find((fenetre) => fenetre.url().startsWith('file:') && !fenetre.url().endsWith('#recherche'));
+  let page = application.windows().find((fenetre) => fenetre.url().startsWith('file:'));
   while (page === undefined) {
     await new Promise((resoudre) => setTimeout(resoudre, 20));
-    page = application.windows().find((fenetre) => fenetre.url().startsWith('file:') && !fenetre.url().endsWith('#recherche'));
+    page = application.windows().find((fenetre) => fenetre.url().startsWith('file:'));
   }
   await page.getByRole('tree').waitFor();
   await expect(page.getByRole('button', { name: /Relancer/ })).toHaveCount(0);
@@ -49,24 +49,6 @@ test('fenêtre ouverte : la barre de titre propose de relancer, la page est enre
   await bouton.click();
   await fin;
   expect(await lireCorps(preparation.vault, 'Courses')).toContain('avant la relance');
-  // Relancée avec les mêmes arguments (le profil), sans « --fond » : la fenêtre était ouverte.
+  // Relancée avec les mêmes arguments (le profil).
   await expect.poll(() => readFile(trace, 'utf8').catch(() => ''), { timeout: 10_000 }).toBe(`relancée --user-data-dir=${preparation.profil}\n`);
-});
-
-test('fenêtre fermée : la nouvelle version démarre aussitôt, en fond', async () => {
-  const preparation = await preparer();
-  const dossier = await mkdtemp(join(tmpdir(), 'notes-installation-'));
-  const trace = join(dossier, 'trace.txt');
-  const appImage = await installerFausseAppImage(dossier, trace);
-  const application = await electron.launch({
-    args: argumentsDeLancement(preparation.profil, ['--fond']),
-    cwd: dossierApplication,
-    env: { ...process.env, APPIMAGE: appImage },
-  });
-  await expect.poll(() => fenetres(application)).toEqual([{ titre: 'Notes, recherche', visible: false }]);
-
-  const fin = application.waitForEvent('close');
-  await installerFausseAppImage(dossier, trace);
-  await fin;
-  await expect.poll(() => readFile(trace, 'utf8').catch(() => ''), { timeout: 10_000 }).toBe(`relancée --user-data-dir=${preparation.profil} --fond\n`);
 });

@@ -27,23 +27,19 @@ export interface IpcDependencies {
   correction: ReturnType<typeof creerHandlersCorrection>;
   ia: AiService;
   memos: ReturnType<typeof creerHandlersMemos>;
-  recherche: {
-    etatDuFond: () => unknown;
-    definirDemarrageAuto: (actif: unknown) => unknown;
+  /** Quitter, relancer sur une nouvelle version, page demandée par `--page=<id>`. */
+  lancement: {
     quitter: () => void;
     relancer: () => void;
     miseAJourEnAttente: () => boolean;
-    choisir: (demande: unknown) => void;
-    fermer: () => void;
-    ajuster: (demande: unknown) => void;
-    prendrePage: () => unknown;
+    prendrePage: () => string | null;
   };
   /** Vrai si l'appel vient bien de la page de l'application. */
   expediteurAutorise: (evenement: IpcMainInvokeEvent) => boolean;
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, memos, recherche, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, memos, lancement, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -100,15 +96,10 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.montrerFichier, (demande) => sync.montrerFichier(demande));
   brancher(canaux.pagesEnAttente, (demande) => sync.pagesEnAttente(demande));
 
-  brancher(canaux.etatDuFond, () => recherche.etatDuFond());
-  brancher(canaux.definirDemarrageAuto, (actif) => recherche.definirDemarrageAuto(actif));
-  brancher(canaux.quitterNotes, () => recherche.quitter());
-  brancher(canaux.relancerNotes, () => recherche.relancer());
-  brancher(canaux.miseAJourEnAttente, () => recherche.miseAJourEnAttente());
-  brancher(canaux.choisirDepuisLaRecherche, (demande) => recherche.choisir(demande));
-  brancher(canaux.fermerLaRecherche, () => recherche.fermer());
-  brancher(canaux.ajusterLaRecherche, (demande) => recherche.ajuster(demande));
-  brancher(canaux.prendrePageDemandee, () => recherche.prendrePage());
+  brancher(canaux.quitterNotes, () => lancement.quitter());
+  brancher(canaux.relancerNotes, () => lancement.relancer());
+  brancher(canaux.miseAJourEnAttente, () => lancement.miseAJourEnAttente());
+  brancher(canaux.prendrePageDemandee, () => lancement.prendrePage());
 
   brancher(canaux.choisirImages, () => images.choisir());
   brancher(canaux.ajouterImage, (demande) => images.ajouter(demande));
@@ -148,8 +139,7 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
 
   brancher(canaux.etatIa, () => ia.etat());
   brancher(canaux.enregistrerReglagesIa, (reglages) => ia.enregistrerReglages(reglages));
-  brancher(canaux.enregistrerCleLitellm, (demande) => ia.enregistrerCle(typeof demande === 'object' && demande !== null ? (demande as { cle?: unknown }).cle : undefined));
-  brancher(canaux.oublierCleLitellm, () => ia.oublierCle());
+  brancher(canaux.consigneIa, (demande) => ia.consigne(demande));
   brancher(canaux.estimerIa, (demande) => ia.estimer(demande));
   brancher(canaux.lancerIa, (demande) => ia.lancer(demande));
   brancher(canaux.annulerIa, () => ia.annuler());
@@ -163,6 +153,8 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.ecarterMemo, (demande) => memos.ecarter(demande));
   brancher(canaux.convertirMemo, (demande) => memos.convertir(demande));
   brancher(canaux.ouvrirDossierMemos, () => memos.ouvrirDossier());
+  brancher(canaux.estimerMemos, (demande) => memos.estimer(demande));
+  brancher(canaux.estimerMiseEnFormeMemo, (demande) => memos.estimerMiseEnForme(demande));
   brancher(canaux.installerModeleWhisper, () => memos.installerModele());
   brancher(canaux.annulerInstallationWhisper, () => memos.annulerInstallation());
 }

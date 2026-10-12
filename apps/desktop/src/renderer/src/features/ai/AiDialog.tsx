@@ -1,5 +1,5 @@
 import type { AiPageFunction } from '@notes/core';
-import { Check, Columns2, LoaderCircle, Rows2, Sparkles, TriangleAlert, X } from 'lucide-react';
+import { Check, ClipboardCopy, Columns2, LoaderCircle, Rows2, Sparkles, TriangleAlert, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import { libellesDesFonctions } from '../../../../shared/ai-contract';
 import type { AiEstimateResult, AiRunResult } from '../../../../shared/ai-contract';
@@ -7,7 +7,7 @@ import { api } from '../../lib/ipc';
 import { useStoredState } from '../../state/useStoredState';
 import { AiComparison, estModeDeComparaison } from './AiComparison';
 import type { ComparisonMode } from './AiComparison';
-import { libelleDEcart, libelleDeDollars, libelleDeDuree, libelleDeTokens } from './ai-labels';
+import { libelleDEcart, libelleDeDuree, libelleDeTempsRestant, libelleDeTokens, tempsRestantDeLIa } from './ai-labels';
 
 const boutonSecondaire =
   'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-medium outline-0';
@@ -36,7 +36,7 @@ interface AiDialogProps {
   surFermeture: () => void;
 }
 
-/** Ce qu'on sait de l'appel avant de le lancer : modèle, tailles, durée, coût, dépense. */
+/** Ce qu'on sait de l'appel avant de le lancer : modèle, tailles, durée. */
 function Estimation({ estimation }: { estimation: AiEstimateResult | null }) {
   if (estimation === null) {
     return (
@@ -53,36 +53,21 @@ function Estimation({ estimation }: { estimation: AiEstimateResult | null }) {
       </p>
     );
   }
-  const local = estimation.fournisseur === 'ollama';
   const lignes: Array<[string, string]> = [
-    ['Modèle', `${estimation.modele} (${local ? (estimation.automatique ? 'sur ce poste, choisi par Notes' : 'sur ce poste') : 'LiteLLM'})`],
+    ['Modèle', `${estimation.modele} (${estimation.automatique ? 'sur ce poste, choisi par Notes' : 'sur ce poste'})`],
     ['Envoyé', libelleDeTokens(estimation.entree)],
     ['Réponse attendue', `${libelleDeTokens(estimation.sortie)}${estimation.appelsConnus === 0 ? ', estimée sans historique' : ''}`],
     ['Durée', estimation.dureeMs === null ? 'inconnue avant un premier essai de ce modèle' : libelleDeDuree(estimation.dureeMs)],
   ];
-  if (!local) {
-    lignes.push(
-      ['Coût estimé', estimation.coutUsd === null ? 'tarif inconnu, à saisir dans les réglages' : libelleDeDollars(estimation.coutUsd)],
-      ['Dépensé aujourd’hui', libelleDeDollars(estimation.depenseDuJourUsd)],
-    );
-  }
   return (
-    <div className="space-y-2">
-      <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-        {lignes.map(([terme, valeur]) => (
-          <div key={terme} className="contents">
-            <dt className="text-discret">{terme}</dt>
-            <dd className="min-w-0 break-words">{valeur}</dd>
-          </div>
-        ))}
-      </dl>
-      {estimation.seuilDepasse && estimation.seuilMensuelUsd !== null && (
-        <p role="alert" className="bg-alerte/15 flex items-start gap-2 rounded-md p-2 text-sm">
-          <TriangleAlert className="text-alerte mt-0.5 size-4 shrink-0" aria-hidden="true" />
-          Ce mois-ci, {libelleDeDollars(estimation.depenseDuMoisUsd)} dépensés : cet appel dépasserait le seuil de {libelleDeDollars(estimation.seuilMensuelUsd)}.
-        </p>
-      )}
-    </div>
+    <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+      {lignes.map(([terme, valeur]) => (
+        <div key={terme} className="contents">
+          <dt className="text-discret">{terme}</dt>
+          <dd className="min-w-0 break-words">{valeur}</dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 
@@ -94,9 +79,6 @@ function Bilan({ resultat }: { resultat: Extract<AiRunResult, { ok: true }> }) {
     `${libelleDeTokens(appel.sortie)} reçus (${libelleDEcart(appel.sortie, appel.estimation.sortie)})`,
     `en ${libelleDeDuree(appel.dureeMs).replace('environ ', '')}`,
   ];
-  if (appel.coutUsd !== null) {
-    morceaux.push(`coût ${libelleDeDollars(appel.coutUsd)}${appel.estimation.coutUsd === null ? '' : ` pour ${libelleDeDollars(appel.estimation.coutUsd)} estimés`}`);
-  }
   return <p className="text-discret text-xs">{morceaux.join(', ')}.</p>;
 }
 
@@ -113,6 +95,8 @@ export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiD
   const [recu, definirRecu] = useState({ texte: '', sortie: 0 });
   const [maintenant, definirMaintenant] = useState(() => Date.now());
   const [refus, definirRefus] = useState<string | null>(null);
+  // Résultat de « Copier le prompt » : null tant qu'on n'a pas copié.
+  const [copie, definirCopie] = useState<{ ok: boolean; message: string } | null>(null);
   const boutonLancer = useRef<HTMLButtonElement>(null);
   const boutonAccepter = useRef<HTMLButtonElement>(null);
 
@@ -177,6 +161,21 @@ export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiD
     }
   };
 
+  // Pour un autre outil (un assistant en ligne) : la consigne de la fonction, puis le texte de la page.
+  const copier = async (): Promise<void> => {
+    const resultat = await api.consigneIa({ fonction, markdown: lireCorps(), titre });
+    if (!resultat.ok) {
+      definirCopie({ ok: false, message: resultat.message });
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(resultat.texte);
+      definirCopie({ ok: true, message: 'Prompt copié : colle-le dans l’outil de ton choix.' });
+    } catch {
+      definirCopie({ ok: false, message: 'Le presse-papiers n’est pas accessible.' });
+    }
+  };
+
   const accepter = (): void => {
     if (etape.genre !== 'comparaison') {
       return;
@@ -236,7 +235,10 @@ export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiD
                   type="button"
                   role="radio"
                   aria-checked={fonction === cle}
-                  onClick={() => definirFonction(cle)}
+                  onClick={() => {
+                    definirFonction(cle);
+                    definirCopie(null);
+                  }}
                   onKeyDown={(evenement) => {
                     if (evenement.key === 'ArrowDown' || evenement.key === 'ArrowUp') {
                       evenement.preventDefault();
@@ -266,7 +268,12 @@ export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiD
             <p className="flex items-center gap-2 text-sm">
               <LoaderCircle className="text-accent size-4 animate-spin" aria-hidden="true" />
               {recu.texte === '' ? 'En attente du modèle…' : `Environ ${libelleDeTokens(recu.sortie)} reçus`}
-              <span className="text-discret">· {Math.max(0, Math.round((maintenant - etape.debut) / 1000))} s</span>
+              <span className="text-discret">
+                ·{' '}
+                {estimation?.ok === true && estimation.dureeMs !== null
+                  ? libelleDeTempsRestant(tempsRestantDeLIa(estimation.dureeMs, maintenant - etape.debut, recu.sortie, estimation.sortie))
+                  : `${Math.max(0, Math.round((maintenant - etape.debut) / 1000))} s`}
+              </span>
             </p>
             {estimation?.ok === true && (
               <div className="bg-texte/10 h-1.5 overflow-hidden rounded-full" role="progressbar" aria-label="Réponse reçue" aria-valuenow={Math.min(100, Math.round((recu.sortie / Math.max(1, estimation.sortie)) * 100))} aria-valuemin={0} aria-valuemax={100}>
@@ -303,7 +310,23 @@ export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiD
                 {refus}
               </p>
             )}
+            {copie !== null && (etape.genre === 'choix' || etape.genre === 'erreur') && (
+              <p role="status" className={`text-sm ${copie.ok ? 'text-discret' : 'text-erreur'}`}>
+                {copie.message}
+              </p>
+            )}
           </div>
+          {(etape.genre === 'choix' || etape.genre === 'erreur') && (
+            <button
+              type="button"
+              onClick={() => void copier()}
+              title="Copier la consigne de la fonction suivie du texte de la page, pour les coller dans un autre outil"
+              className={boutonSecondaire}
+            >
+              <ClipboardCopy className="size-4" aria-hidden="true" />
+              Copier le prompt
+            </button>
+          )}
           {etape.genre === 'choix' && (
             <>
               <button type="button" onClick={surFermeture} className={boutonSecondaire}>

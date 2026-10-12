@@ -237,3 +237,22 @@ body {
   content: attr(data-placeholder);
   pointer-events: none;
 }
+
+/* Mode liste, page encore vide : la ligne montre une case, à la place exacte de celle d'une tâche. */
+.notes-page p.tache-a-venir {
+  position: relative;
+  padding-left: 1.7em;
+}
+
+.notes-page p.tache-a-venir::after {
+  position: absolute;
+  top: 0.325em;
+  left: 0.1em;
+  width: 1em;
+  height: 1em;
+  box-sizing: border-box;
+  border: 1px solid var(--color-discret);
+  border-radius: 0.2em;
+  content: '';
+  pointer-events: none;
+}

@@ -6,13 +6,15 @@ import { useStoredState } from '../../state/useStoredState';
 import { AiComparison, estModeDeComparaison } from '../ai/AiComparison';
 import type { ComparisonMode } from '../ai/AiComparison';
 import { versWav16k } from './audio-convert';
+import { dureesDesMemos, dureeTotale, libelleDeLaDuree, libelleDuRestant, restantDuMemo } from './memo-timing';
+import type { MemoDurations, MemoStep } from './memo-timing';
 
 const boutonSecondaire =
   'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-medium outline-0 aria-disabled:opacity-60';
 const boutonPrincipal =
   'bg-accent text-fond hover:bg-accent/85 focus-visible:bg-accent/75 inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-4 text-sm font-semibold outline-0 aria-disabled:opacity-60';
 
-type EtapeEnCours = 'lecture' | 'transcription' | 'mise-en-forme';
+type EtapeEnCours = MemoStep;
 const libellesDesEtapes: Record<EtapeEnCours, string> = {
   lecture: 'Lecture de l’audio',
   transcription: 'Transcription',
@@ -20,7 +22,15 @@ const libellesDesEtapes: Record<EtapeEnCours, string> = {
 };
 
 type Etat =
-  | { genre: 'encours'; etape: EtapeEnCours; transcription: number | null }
+  | {
+      genre: 'encours';
+      etape: EtapeEnCours;
+      transcription: number | null;
+      /** Début de l'étape, pour le temps restant. */
+      depuis: number;
+      /** Mise en forme estimée sur le texte réellement transcrit ; undefined avant la transcription. */
+      miseEnFormeMs?: number | null;
+    }
   | {
       genre: 'comparaison';
       brut: string;
@@ -37,7 +47,7 @@ type Etat =
 const secondes = (ms: number): string => (ms < 100 ? 'moins de 0,1 s' : `${(Math.round(ms / 100) / 10).toString().replace('.', ',')} s`);
 
 /** Le travail d'un mémo : audio converti, transcrit, mis en forme. */
-async function traiter(memo: MemoView, surEtape: (etape: EtapeEnCours, transcription: number | null) => void): Promise<Etat> {
+async function traiter(memo: MemoView, surEtape: (etape: EtapeEnCours, transcription: number | null, miseEnFormeMs?: number | null) => void): Promise<Etat> {
   surEtape('lecture', null);
   const octets = await api.lireMemo({ chemin: memo.chemin });
   if (octets === null) {
@@ -62,13 +72,33 @@ async function traiter(memo: MemoView, surEtape: (etape: EtapeEnCours, transcrip
   if (transcription.texte.trim() === '') {
     return { genre: 'erreur', message: 'Rien n’a été entendu dans ce mémo.' };
   }
-  surEtape('mise-en-forme', transcription.dureeMs);
+  // Le texte est là : la mise en forme s'estime maintenant sur sa vraie longueur.
+  surEtape('mise-en-forme', transcription.dureeMs, await api.estimerMiseEnFormeMemo({ caracteres: transcription.texte.trim().length }).catch(() => null));
   const base = { genre: 'comparaison' as const, brut: transcription.texte, duree: converti.duree * 1000, transcription: transcription.dureeMs };
   const mise = await api.lancerIa({ fonction: 'memo', markdown: transcription.texte, titre: memo.titre });
   if (!mise.ok) {
     return { ...base, propre: transcription.texte, avertissements: [], sansMiseEnForme: mise.message };
   }
   return { ...base, propre: mise.markdown, avertissements: mise.avertissements, sansMiseEnForme: null };
+}
+
+/** « environ 40 s restantes », et pour « Tout transcrire » le temps de toute la série. */
+function TempsRestant({ etat, durees, maintenant, suivants }: { etat: Extract<Etat, { genre: 'encours' }>; durees: MemoDurations[] | null; maintenant: number; suivants: number }) {
+  const enCours = durees?.[0];
+  if (enCours === undefined) {
+    return null;
+  }
+  const restant = restantDuMemo({ ...enCours, miseEnFormeMs: etat.miseEnFormeMs === undefined ? enCours.miseEnFormeMs : etat.miseEnFormeMs }, etat.etape, maintenant - etat.depuis);
+  if (restant === null) {
+    return null;
+  }
+  const apres = suivants > 0 ? dureeTotale(durees!.slice(1)) : null;
+  return (
+    <p className="text-discret px-5 pb-3 text-sm">
+      {libelleDuRestant(restant)}
+      {apres !== null && ` · ${libelleDeLaDuree({ ms: restant.ms + apres.ms, complet: restant.complet && apres.complet })} pour les ${suivants + 1} mémos`}
+    </p>
+  );
 }
 
 interface MemoReviewProps {
@@ -85,7 +115,10 @@ interface MemoReviewProps {
  */
 export function MemoReview({ file, surFermeture }: MemoReviewProps) {
   const [rang, definirRang] = useState(0);
-  const [etat, definirEtat] = useState<Etat>({ genre: 'encours', etape: 'lecture', transcription: null });
+  const [etat, definirEtat] = useState<Etat>(() => ({ genre: 'encours', etape: 'lecture', transcription: null, depuis: Date.now() }));
+  /** Durées estimées du mémo en cours (le premier) et des suivants. */
+  const [durees, definirDurees] = useState<MemoDurations[] | null>(null);
+  const [maintenant, definirMaintenant] = useState(() => Date.now());
   const [mode, definirMode] = useStoredState<ComparisonMode>('notes.ia.comparaison', 'colonnes', estModeDeComparaison);
   const [enregistrement, definirEnregistrement] = useState<string | null>(null);
   const boutonAccepter = useRef<HTMLButtonElement>(null);
@@ -96,13 +129,30 @@ export function MemoReview({ file, surFermeture }: MemoReviewProps) {
       return;
     }
     let actif = true;
-    definirEtat({ genre: 'encours', etape: 'lecture', transcription: null });
+    definirEtat({ genre: 'encours', etape: 'lecture', transcription: null, depuis: Date.now() });
     definirEnregistrement(null);
-    void traiter(memo, (etape, transcription) => actif && definirEtat({ genre: 'encours', etape, transcription })).then((fin) => actif && definirEtat(fin));
+    definirDurees(null);
+    // Estimé à chaque mémo : le serveur de transcription a pu s'arrêter pendant la relecture du précédent.
+    void api
+      .estimerMemos({ chemins: file.slice(rang).map((suivant) => suivant.chemin) })
+      .then((estimation) => actif && definirDurees(dureesDesMemos(estimation)))
+      .catch(() => undefined);
+    void traiter(memo, (etape, transcription, miseEnFormeMs) => actif && definirEtat({ genre: 'encours', etape, transcription, depuis: Date.now(), ...(miseEnFormeMs === undefined ? {} : { miseEnFormeMs }) })).then(
+      (fin) => actif && definirEtat(fin),
+    );
     return () => {
       actif = false;
     };
+    // `file` ne change pas pendant la revue : le mémo suffit.
   }, [memo]);
+
+  useEffect(() => {
+    if (etat.genre !== 'encours') {
+      return;
+    }
+    const minuteur = setInterval(() => definirMaintenant(Date.now()), 500);
+    return () => clearInterval(minuteur);
+  }, [etat.genre]);
 
   useEffect(() => {
     if (etat.genre === 'comparaison') {
@@ -186,6 +236,8 @@ export function MemoReview({ file, surFermeture }: MemoReviewProps) {
             </div>
           )}
         </div>
+
+        {etat.genre === 'encours' && <TempsRestant etat={etat} durees={durees} maintenant={maintenant} suivants={file.length - rang - 1} />}
 
         {etat.genre === 'encours' && (
           <ol className="space-y-2 px-5 pb-4 text-sm" aria-live="polite">

@@ -1,10 +1,12 @@
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 import { cheminDeMemoValide, creerPageDeMemo, dossierDesMemos, dateDuNom, listerMemos, mettreMemoALaCorbeille, pageDesMemos, pageDesMemosMasquee, titreDuMemo, trouverPageDesMemos } from '@notes/core';
-import type { MemoAcceptance, MemoConversion, MemosState, MemoTranscription, WhisperState } from '../../shared/memos-contract';
+import type { MemoAcceptance, MemoConversion, MemoEstimate, MemosState, MemoTranscription, WhisperState } from '../../shared/memos-contract';
+import type { AiService } from '../ai/ai-service';
 import type { SettingsStore } from '../settings/settings-store';
 import type { VaultService } from '../vault/vault-service';
 import { estWav } from '../whisper/client';
+import { caracteresProbables, dureeDeTranscription } from '../whisper/timing';
 import type { WhisperService } from '../whisper/whisper-service';
 import { champs } from './vault';
 
@@ -13,7 +15,11 @@ export interface MemosHandlersDependencies {
   /** File des opérations du vault : les mémos, leurs pages et la corbeille sont dans le dossier des notes. */
   enSerie: <T>(tache: () => Promise<T>) => Promise<T>;
   reglages: SettingsStore;
-  whisper: Pick<WhisperService, 'etat' | 'installerModele' | 'annulerInstallation' | 'transcrire'>;
+  whisper: Pick<WhisperService, 'etat' | 'installerModele' | 'annulerInstallation' | 'transcrire' | 'calage'>;
+  /** Durée probable de la mise en forme d'un texte de cette longueur. */
+  ia: Pick<AiService, 'dureeEstimee'>;
+  /** Le ffmpeg livré avec Notes : durée d'un fichier audio (chemin absolu), null s'il ne la donne pas. */
+  dureeAudio: (fichier: string) => Promise<number | null>;
   /** Le ffmpeg livré avec Notes : un fichier audio (chemin absolu) en WAV 16 kHz mono. */
   convertir: (fichier: string) => Promise<Uint8Array>;
   /** Ouvre un dossier dans le gestionnaire de fichiers. Rend un message d'erreur, vide si c'est fait. */
@@ -28,7 +34,7 @@ const tailleMaxDUnMemo = 200 * 1024 * 1024;
  * renderer : seul un fichier audio directement dans `.notes/memos/` est
  * accepté, rien d'autre du dossier des notes n'est lu ni déplacé par ici.
  */
-export function creerHandlersMemos({ vault, enSerie, reglages, whisper, convertir, ouvrirDossier }: MemosHandlersDependencies) {
+export function creerHandlersMemos({ vault, enSerie, reglages, whisper, ia, convertir, dureeAudio, ouvrirDossier }: MemosHandlersDependencies) {
   // Le modèle se télécharge de lui-même au premier mémo (choix d'Eloi, 2026-10-08), une fois par lancement :
   // après un échec, c'est le bouton qui relance.
   let telechargementAutomatiqueFait = false;
@@ -128,6 +134,36 @@ export function creerHandlersMemos({ vault, enSerie, reglages, whisper, converti
       }
       const erreur = await ouvrirDossier(memos);
       return erreur === '' ? { ok: true } : { ok: false, message: 'Le gestionnaire de fichiers ne s’est pas ouvert.' };
+    },
+
+    /**
+     * Durées estimées avant de transcrire (README §13) : durée de chaque audio
+     * lue par ffmpeg, calage des transcriptions de ce poste, historique de l'IA.
+     */
+    estimer: async (demande: unknown): Promise<MemoEstimate> => {
+      const { chemins } = champs(demande);
+      const dossier = vault.etat().dossier;
+      const valides = Array.isArray(chemins) && dossier !== null ? chemins.filter(cheminDeMemoValide).slice(0, 500) : [];
+      const { calage, serveurArrete } = await whisper.calage();
+      const memos: MemoEstimate['memos'] = [];
+      for (const chemin of valides) {
+        const audioMs = await dureeAudio(join(dossier!, chemin));
+        memos.push({
+          chemin,
+          audioMs,
+          transcriptionMs: audioMs === null ? null : dureeDeTranscription(calage, audioMs, false),
+          miseEnFormeMs: audioMs === null ? null : await ia.dureeEstimee('memo', caracteresProbables(calage, audioMs)).catch(() => null),
+        });
+      }
+      return { demarrageMs: serveurArrete ? calage.demarrageMs : 0, memos };
+    },
+
+    estimerMiseEnForme: async (demande: unknown): Promise<number | null> => {
+      const { caracteres } = champs(demande);
+      if (typeof caracteres !== 'number' || !Number.isFinite(caracteres) || caracteres < 0) {
+        return null;
+      }
+      return ia.dureeEstimee('memo', Math.min(caracteres, 1_000_000)).catch(() => null);
     },
 
     /** Le WAV 16 kHz mono d'un mémo, converti par la page, part au serveur de transcription. */

@@ -43,6 +43,11 @@ const partageInterdit = /[\\/:*?"<>|\u0000-\u001f]/;
 // eslint-disable-next-line no-control-regex
 const controle = /[\u0000-\u001f]/;
 
+/** Nom d'hôte ou adresse IPv4, sans chemin ni préfixe SMB. */
+export function estHoteValide(valeur: string): boolean {
+  return hoteValide.test(valeur);
+}
+
 /** Valide des réglages NAS venus de l'extérieur (formulaire, fichier, IPC). */
 export function validerReglagesNas(valeur: unknown): NasSettingsValidation {
   if (typeof valeur !== 'object' || valeur === null) {

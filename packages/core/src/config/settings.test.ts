@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { reglagesIaParDefaut } from './ai-settings';
-import { lireReglages, validerReglagesNas } from './settings';
+import { estHoteValide, lireReglages, validerReglagesNas } from './settings';
 
 const valide = { hote: '192.0.2.10', partage: 'partage', utilisateur: 'utilisateur', dossierVault: 'Notes' };
+
+describe('estHoteValide', () => {
+  it('accepte une adresse IP ou un nom, refuse un chemin SMB', () => {
+    expect(estHoteValide('192.0.2.10')).toBe(true);
+    expect(estHoteValide('nas.example.ts.net')).toBe(true);
+    expect(estHoteValide('\\\\nas\\partage')).toBe(false);
+    expect(estHoteValide('')).toBe(false);
+  });
+});
 
 describe('validerReglagesNas', () => {
   it('accepte des réglages corrects et retire les espaces autour', () => {

@@ -8,10 +8,10 @@ Ce document est la référence du projet : cahier des charges, décisions techni
 
 | | |
 |---|---|
-| Dernière mise à jour | 2026-10-08 |
-| Version | 0.12.5 |
-| Avancement | J0 à J11 terminés : recette J11 validée par Eloi le 2026-10-05, retouches 0.11.1 à 0.11.4 comprises |
-| Jalon en cours | J12, J13 et J14 recettés le 2026-10-08 ; retouches 0.12.5 en vérification (`docs/recettes/retouches-0.12.5.md`) |
+| Dernière mise à jour | 2026-10-12 |
+| Version | 0.17.5 |
+| Avancement | J0 à J16 terminés : recettes J15 et J16, retouches 0.15.2 à 0.15.9 comprises, validées par Eloi le 2026-10-11 ; le desktop est complet, le téléphone consulte et modifie |
+| Jalon en cours | J17 (Android, mémos vocaux), retouches 0.17.2 après les réponses d'Eloi, recette en attente (`docs/recettes/J17.md`) ; retouches J16 de 0.17.2 à vérifier aussi (`docs/recettes/J16.md`) ; temps restant des transcriptions et de l'IA en 0.17.3 ; en 0.17.4, mise au propre par sections, recherches retirées, nouvelle icône ; en 0.17.5, fermer quitte Notes, `--page=<id>`, titres corrigés par la mise au propre |
 | Points bloquants | Aucun |
 
 Ce qui fonctionne aujourd'hui :
@@ -35,26 +35,32 @@ Ce qui fonctionne aujourd'hui :
 - l'écran de résolution des conflits : la page et la version mise de côté face à face, bloc par bloc, avec garder A, B ou les deux, poignées pour placer une version ailleurs, aperçu et validation.
 - la corbeille : une page supprimée part avec ses sous-pages et ses images dans la corbeille, sur le NAS au cycle suivant ; l'écran de la corbeille la montre, la restaure à sa place ou l'efface. Plusieurs pages se sélectionnent (`Maj+↑/↓`, `Maj+clic`) pour être déplacées ou supprimées ensemble.
 - les liens et icônes (J8) : `@` ou `/lien` pour mentionner une page, affichée avec son icône et son titre du moment ; renommer une page fait suivre ses mentions, jusque dans les fichiers des autres pages ; un lien ou une mention s'ouvre d'un clic, et son infobulle permet de le modifier, le copier ou le retirer ; une adresse collée devient une mention de site (favicon et titre du site), ou un lien si le site ne répond pas ; mentions cassées barrées et listées dans les réglages ; icône de page (emoji cherché en français, icône Lucide cherchée par un mot français, image recadrée avec « Retirer le fond » par un modèle local), au-dessus du titre, dans l'arborescence, les onglets, la recherche et les mentions ; une image copiée d'une page et collée dans une autre y est copiée.
-- la navigation (J7) : onglets dans la barre de titre, retrouvés au redémarrage, avec un point quand la page n'est pas encore sur le NAS ; recherche `Ctrl+K` floue sur les titres, sans accents, pages récentes, création d'une page quand rien ne correspond ; sommaire à droite de la page, à jour à la frappe, qui suit la lecture, et sommaire complet avec filtre par l'icône du haut de la page ; recherche globale instantanée par `Ctrl+Alt+Espace`, dans une petite fenêtre, Notes restant en fond fenêtre fermée (`Ctrl+Q` pour quitter, démarrage avec la session en option) ; `Ctrl+\` et `Ctrl+Shift+\` masquent la barre latérale et le sommaire, `Ctrl+,` ouvre les réglages.
+- la navigation (J7) : onglets dans la barre de titre, retrouvés au redémarrage, avec un point quand la page n'est pas encore sur le NAS ; sommaire à droite de la page, à jour à la frappe, qui suit la lecture, et sommaire complet avec filtre par le menu « ⋮ » du haut de la page ; plus de recherche dans Notes depuis la 0.17.4 : la barre de recherche du poste s'en charge et ouvre une page par `--page=<id>` ; fermer la fenêtre quitte Notes depuis la 0.17.5 ; `Ctrl+\` et `Ctrl+Shift+\` masquent la barre latérale et le sommaire, `Ctrl+,` ouvre les réglages.
 
-- l'export (J9) : par l'icône en haut de la page, en PDF (A4, fond blanc, couleurs du thème, marges, icônes, sauts de page soignés, pied de page avec titre et numéro), en Markdown (lisible partout : mentions en texte, callouts en paragraphes, images en mention), en HTML autonome (images et styles dedans, sommaire) ou en archive ZIP de la page et des sous-pages choisies, en pages web reliées entre elles.
+- l'export (J9) : par le menu « ⋮ » en haut de la page, en PDF (A4, fond blanc, couleurs du thème, marges, icônes, sauts de page soignés, pied de page avec titre et numéro), en Markdown (lisible partout : mentions en texte, callouts en paragraphes, images en mention), en HTML autonome (images et styles dedans, sommaire) ou en archive ZIP de la page et des sous-pages choisies, en pages web reliées entre elles.
 
 - la correction orthographique (J11) : LanguageTool s'installe d'un clic depuis les réglages, avec son Java et les n-grammes français, dans `~/Applications/LanguageTool/`, il démarre avec la session (l'extension LanguageTool du navigateur s'en sert aussi) ; les fautes de chaque bloc modifié sont soulignées une seconde après la frappe (rouge pour l'orthographe, bleu pour le reste), sans jamais ralentir l'écriture ; un clic ouvre la bulle (suggestions, « Ignorer », « Ajouter au dictionnaire ») ; le code et les adresses ne sont pas vérifiés ; le nombre de fautes est dans la barre de statut, et un clic dessus ouvre la liste des fautes pour les corriger d'affilée.
 
-- les fonctions IA (J12, en recette) : par l'icône ✨ en haut de la page, relecture stylistique ou mise au propre de toute la page, par un modèle Ollama sur le poste, choisi par Notes selon la carte graphique (ou pas d'IA locale si la machine ne suit pas), ou par LiteLLM en option ; estimation avant de lancer (taille, durée, coût), appel annulable, comparaison avant/après en deux colonnes ou en une, accepter ou rejeter, `Ctrl+Z` après acceptation ; code, callouts et images jamais montrés au modèle ; sortie nettoyée (préambule, conclusion, emojis, gras et séparateurs ajoutés, titres) ; historique avec graphiques et dépense du jour dans la barre de statut. Clé de LiteLLM chiffrée par le trousseau.
+- les fonctions IA (J12) : par le menu « ⋮ » en haut de la page, relecture stylistique ou mise au propre de toute la page, par un modèle Ollama sur le poste, choisi par Notes selon la carte graphique (ou pas d'IA locale si la machine ne suit pas) ; estimation avant de lancer (taille, durée), appel annulable et arrêté si le modèle déborde de la mémoire de la carte, prompt copiable pour un autre outil, comparaison avant/après en deux colonnes ou en une, accepter ou rejeter, `Ctrl+Z` après acceptation ; code, callouts et images jamais montrés au modèle ; sortie nettoyée (préambule, conclusion, emojis, gras et séparateurs ajoutés, titres) ; historique avec graphiques.
 
-- le mode liste de tâches (J14, en recette) : l'icône en haut de la page ou `/liste` passe la page en liste façon Keep (`mode: todo`) : une seule liste, sans titres, où tout ce qu'on écrit devient une tâche, avec du code, un tableau ou une image possibles sous une tâche ; une tâche cochée descend dans la section « Terminé », repliable, en bas de la page et du fichier ; une tâche laissée vide disparaît.
+- le mode liste de tâches (J14) : le menu « ⋮ » en haut de la page ou `/liste` passe la page en liste façon Keep (`mode: todo`) : une seule liste, sans titres, où tout ce qu'on écrit devient une tâche, avec du code, un tableau ou une image possibles sous une tâche ; une tâche cochée descend dans la section « Terminé », repliable, en bas de la page et du fichier ; une tâche laissée vide disparaît.
 
-- les mémos vocaux (J13, en recette) : un mémo déposé dans `.notes/memos/` (par le téléphone, à partir de J17) apparaît dans la page « Mémos vocaux » ; il s'écoute, se transcrit sur la carte graphique par un Whisper livré avec Notes (30 s en moins de 1,5 s chez Eloi), quel que soit son format audio, se met en forme par le modèle local, puis devient une sous-page titrée par sa date ; l'audio part à la corbeille. « Tout transcrire » les enchaîne. La page se masque de l'arborescence et revient avec le mémo suivant.
+- les mémos vocaux (J13) : un mémo déposé dans `.notes/memos/` (par le téléphone, à partir de J17) apparaît dans la page « Mémos vocaux » ; il s'écoute, se transcrit sur la carte graphique par un Whisper livré avec Notes (30 s en moins de 1,5 s chez Eloi), quel que soit son format audio, se met en forme par le modèle local, puis devient une sous-page titrée par sa date ; l'audio part à la corbeille. « Tout transcrire » les enchaîne. La page se masque de l'arborescence et revient avec le mémo suivant.
+
+- l'application Android, consultation (J15) : APK construit par `npm run android:apk` ; connexion au NAS en SMB 3.1.1 signé et chiffré (smbj), mot de passe chiffré par l'Android Keystore ; copie des pages sur le téléphone, mise à jour à l'ouverture, au retour dans l'application, toutes les 30 secondes et en tirant l'accueil ; accueil avec les listes de tâches puis les pages récentes, arborescence dans un tiroir, recherche floue par titre, lecture de toutes les pages hors ligne avec le rendu du desktop, sommaire, visionneuse d'images, mentions qui ouvrent la page ; état du NAS et date de la dernière synchronisation.
 
 Ce qui a été écarté : les citations et les séparateurs, qu'on ne peut plus créer (un fichier qui en contient les garde).
 
-Ce qui n'existe pas encore : l'application Android.
+- les modifications depuis le téléphone (J16) : cases cochées sur toutes les pages ; pages en mode liste façon Keep (texte modifié sur place, Entrée pour la tâche suivante, × pour supprimer, appui long pour glisser) ; appui long sur un paragraphe, un titre ou une puce d'une page classique (Markdown du bloc, élément ajouté après, texte copié) ; création d'une page depuis le tiroir. Chaque modification est écrite directement sur le NAS sous le verrou de la page, et refusée avec un message s'il ne répond pas ou si le PC l'édite.
+
+- les mémos vocaux du téléphone (J17, en recette) : micro en bas à droite de l'accueil ; enregistrement en AAC 16 kHz mono, qui continue écran éteint ou application quittée, avec une notification qui permet de le terminer ; le mémo part aussitôt dans `.notes/memos/` du NAS, ou attend sur le téléphone (listé sur l'accueil, où il peut être jeté) et part dès que le réseau revient, même application fermée ; le PC le transcrit comme en J13. Sur le PC, un clic droit sur « Mémos vocaux » ouvre le dossier des mémos : un fichier audio de n'importe quel nom déposé là se transcrit de même.
 
 Reste à faire :
 
-- retours d'Eloi notés pour plus tard dans `docs/retours.md` (bloc des sous-pages en haut de page), pas encore implémentés ;
-- recettes J12, J13 et J14 faites le 2026-10-08 : leurs retours sont dans la version 0.12.5, à vérifier avec `docs/recettes/retouches-0.12.5.md` (avec trois questions réexpliquées).
+- le bloc des sous-pages (0.15.8) : sous le titre d'une page qui en a, ses sous-pages en lignes (icône, titre) qui les ouvrent, et « Nouvelle sous-page », sur le PC comme sur le téléphone ;
+- retours d'Eloi notés pour plus tard dans `docs/retours.md` (callout de présentation en tête de page), pas encore implémentés ;
+- recette J17 sur le téléphone et le PC (`docs/recettes/J17.md`).
+- le projet `LogicielBarreRecherche` (barre de recherche du poste) : il cherche les pages de Notes, dont les deux recherches sont retirées (journal des décisions, 2026-10-12).
 
 Pour reprendre : `npm install`, puis `npm run dev` (la première fois, le modèle de détourage est téléchargé, 44 Mo). Un jalon se reprend avec `/jalon J<n>`. Pour installer la version construite : `npm run installer`.
 
@@ -117,13 +123,23 @@ Windows, iOS, bases de données relationnelles, vidéos embarquées, publication
 | C6 | Plusieurs appareils ouverts simultanément (postes Linux, téléphone), donc gestion des accès concurrents |
 | C7 | Identifiants SMB stockés chiffrés |
 | C8 | Design inspiré d'AppFlowy, typographie corrigée |
-| C9 | Services optionnels : LanguageTool, IA en local (avec option d'API externe), Whisper |
+| C9 | Services optionnels : LanguageTool, IA en local, Whisper |
 | C10 | Android : consultation hors ligne possible, modification uniquement avec le NAS joignable |
+
+### Matériel d'Eloi
+
+Les machines sur lesquelles Notes doit tourner, et sur lesquelles se font les recettes.
+
+| Appareil | Détail |
+|---|---|
+| PC fixe | AMD Ryzen 7 5800X, 31 Go de mémoire, carte graphique AMD Radeon RX 7600 (8 Go), Linux Mint, Cinnamon, X11 |
+| Portable (à venir) | Carte graphique NVIDIA |
+| Téléphone | Samsung Galaxy S20 FE, Android 13, One UI 5.0 |
 
 ### Périmètre fonctionnel desktop
 
 - Édition : paragraphe, titres H1 à H5, listes (puces, ordonnées, tâches), code, image, tableau, lien de page, lien externe, callout ; raccourcis Markdown ; menu `/` ; barre d'outils flottante ; gestion des blocs au clavier.
-- Organisation : arborescence réordonnable, icônes (emoji, Lucide, image), onglets multiples, recherche `Ctrl+K` et raccourci global, sommaire latéral et modal.
+- Organisation : arborescence réordonnable, icônes (emoji, Lucide, image), onglets multiples, sommaire latéral et modal (la recherche des pages est confiée à la barre de recherche du poste).
 - Persistance : Markdown avec front-matter YAML, assets par page, sync par cycle de 10 s avec verrou distant, corbeille NAS (rétention 30 jours).
 - Export : PDF (sauts de page propres), Markdown, HTML autonome, ZIP.
 - Assistance : correction FR (LanguageTool), relecture et mise au propre (modèle d'IA en local, ou API externe sur option, avec estimation de coût), mémos vocaux enregistrés sur le téléphone, transcrits et mis en forme sur le PC (Whisper et modèle local).
@@ -196,12 +212,39 @@ Pourquoi trois paquets : `core` se teste sans rien savoir de l'éditeur, `docume
 | Unitaire Go | À côté du fichier (`x_test.go`) | `go test` |
 | Intégration sur le NAS réel | `apps/smb-companion`, sous le tag `nas`, lancé à la main | `go test -tags nas` |
 | Bout en bout desktop | `apps/desktop/e2e/`, sur une copie de `fixtures/vault-demo/`, lancé par `npm run test:e2e` | Playwright |
+| Logique de l'application Android | `apps/mobile/src/`, à côté du fichier | Vitest |
+| Écrans Android dans un navigateur | `npm run dev -w @notes/mobile`, vault d'exemple en mémoire | À la main ou Playwright |
+| Application Android sur le poste | Émulateur Android 13 contre un Samba d'essai, voir plus bas | À la main, par `adb` |
 | Recette manuelle | `docs/recettes/J<n>.md` | À la main |
+
+### Essais Android sur le poste
+
+Pour essayer l'APK sans le téléphone ni le NAS : un émulateur Android sans fenêtre et un serveur Samba en Docker réglé comme le NAS. Mis en place pour J15 (choix d'Eloi, 2026-10-10).
+
+Ce qui est installé sur le poste :
+
+- Java 21 (`sudo apt install openjdk-21-jdk-headless`), exigé par Capacitor 8 pour compiler l'APK. Java 17 reste à côté.
+- Le SDK Android dans `/opt/android-sdk` (appartient à Eloi, sans sudo) : plateforme 36, build-tools 36.0.0, émulateur, image `system-images;android-33;google_apis;x86_64` (Android 13, comme le téléphone d'Eloi), environ 1,5 Go. Ajout par `sdkmanager --sdk_root=/opt/android-sdk "<paquet>"`.
+- Le téléphone virtuel `notes-essai` (Pixel 6), créé au premier démarrage dans `~/.android/avd/`.
+- Docker, piloté avec sudo : le compte d'Eloi n'est pas dans le groupe `docker`, et ne doit pas y être pour Claude (ce groupe vaut un accès root).
+
+Déroulé :
+
+1. `sudo bash scripts/samba-essai.sh demarrer` (par Eloi) : conteneur `notes-samba-essai` (Alpine 3.22, Samba), port 445 sur 127.0.0.1 seulement, partage `partage` avec une copie du vault d'exemple dans `notes`, utilisateur `utilisateur`, mot de passe tiré au hasard au premier démarrage et gardé ensuite, dans `.cache/samba-essai/acces.txt` (lisible par Eloi seul, hors du dépôt). Réglage : SMB 3.1.1 seul, signature exigée, chiffrement au choix du client, comme le NAS. `demarrer sans-chiffrement` le coupe, pour vérifier que l'application refuse la connexion. L'état des sessions (`smbstatus` : protocole, chiffrement, signature) est recopié toutes les 2 s dans `.cache/samba-essai/smbstatus.txt`.
+2. `bash scripts/android-emulateur.sh demarrer` : émulateur sans fenêtre, rien ne s'affiche sur l'écran. Depuis l'émulateur, le poste est à l'adresse `10.0.2.2`.
+3. `npm run android:apk`, puis `adb install -r apps/mobile/release/Notes-<version>.apk` et `adb shell am start -n fr.eloi.notes/.MainActivity`. L'écran se lit par `adb exec-out screencap -p`, se pilote par `adb shell input` (touchers, texte, touche Tab pour passer au champ suivant), la position des éléments par `adb shell uiautomator dump`. Réseau coupé et rendu : `adb shell svc wifi disable` et `svc data disable`.
+4. À la fin : `bash scripts/android-emulateur.sh arreter`, et `sudo bash scripts/samba-essai.sh arreter` (par Eloi), qui supprime le conteneur.
+
+Pièges :
+
+- Tant que le Samba d'essai tourne, un test du compagnon (`companion-binary.test.ts`, qui attend que rien ne réponde sur 127.0.0.1:445) échoue dans `npm run check`. Arrêter le Samba avant.
+- La WebView de l'image Android 13 est ancienne (Chrome 109) : sans `color-mix()`, les fonds en transparence de Tailwind 4 (callouts) y sont faux. Le téléphone a la WebView à jour du Play Store ; l'émulateur sert au comportement, pas aux couleurs.
+- En mode debug, Capacitor écrit dans logcat chaque appel de plugin avec ses paramètres, mot de passe compris : `loggingBehavior: 'none'` dans `capacitor.config.ts`, à ne jamais retirer. Après un essai, vérifier que le mot de passe d'essai n'apparaît pas dans `adb logcat -d`.
 
 ### Processus desktop
 
-- Main (Node) : cycle SMB, verrous distants, lecture et écriture du vault, watcher FS, raccourci global, coffre à secrets, export PDF, appels LanguageTool, IA (modèle local ou API) et Whisper.
-- Renderer (React) : éditeur, arborescence, onglets, sommaires, palette `Ctrl+K`, modales IA, réglages.
+- Main (Node) : cycle SMB, verrous distants, lecture et écriture du vault, watcher FS, coffre à secrets, export PDF, appels LanguageTool, IA (modèle local ou API) et Whisper.
+- Renderer (React) : éditeur, arborescence, onglets, sommaires, modales IA, réglages.
 
 `nodeIntegration` désactivé, `contextIsolation` activé, communication via `preload` et `contextBridge` typé.
 
@@ -209,7 +252,7 @@ Pourquoi trois paquets : `core` se teste sans rien savoir de l'éditeur, `docume
 
 `@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir §5), `yaml` (front-matter), `smol-toml` (thème), `markdown-it` et `markdown-it-mark` (lecture du Markdown), `prosemirror-markdown` (écriture, avec un sérialiseur maison), `@iarna/toml`, `lucide-react`, `emojibase-data` (noms des emojis en français), `onnxruntime-web` (moteur ONNX en WebAssembly, pour le détourage des icônes, avec le modèle silueta de rembg), `fflate` (archives ZIP de l'export, MIT, sans dépendance).
 
-Côté Android : `@capacitor/core`, `@capacitor/filesystem`, plugin SMB maison en Kotlin s'appuyant sur `smbj` 0.13 (validé par un POC le 2026-10-01).
+Côté Android : Capacitor 8 (`@capacitor/core`, `android`, `filesystem`, `network`, `app`, `app-launcher`, `splash-screen`), plugin SMB maison en Kotlin s'appuyant sur `smbj` 0.15.0 (0.13 validé par un POC le 2026-10-01, 0.15.0 vérifié contre Samba en J15), coffre du mot de passe en Kotlin sur l'Android Keystore.
 
 ---
 
@@ -391,17 +434,22 @@ Section desktop. Sur Android, le même schéma TipTap sert au rendu en lecture s
 
 Ni citation ni séparateur : Eloi n'en veut pas dans ses notes. `>` et `---` tapés restent du texte, et rien dans l'application n'en crée. Un fichier qui en contient déjà (note venue d'un autre outil) les affiche et les garde tels quels.
 
+Fermeture automatique, comme dans VS Code (demande d'Eloi, 0.15.5) : `(`, `[`, `{`, `«`, `"` et `'` posent aussi le caractère fermant, curseur au milieu. Chaque paire s'ouvre avec une espace de chaque côté du curseur, `( | )`, `[ | ]`, `{ | }`, `" | "`, `' | '`, et des espaces insécables dans les guillemets français, `« | »` (0.15.6, toutes les paires depuis 0.17.2, choix d'Eloi), sauf dans le code ; un crochet en début de ligne ou après un marqueur de liste reste collé, `[]`, pour le raccourci des tâches ; taper le fermant le saute, Retour arrière dans une paire vide efface les deux, une sélection est entourée. La paire ne s'ouvre que devant la fin de la ligne, une espace ou une ponctuation fermante, et un `"` ou une apostrophe collés à un mot restent seuls (élision : « l'arbre »). Jamais l'accent grave ni l'astérisque, qui servent aux raccourcis de mise en forme. Même règle dans les champs du téléphone.
+
 La case à cocher se tape aussi dans une puce, comme en Markdown : `- [ ] ` donne une tâche, `- [x] ` une tâche cochée. Les marques se déclenchent en début de ligne, après une espace, et aussi après une apostrophe, une parenthèse, un guillemet ou un tiret : `l'*italique*` fonctionne.
 
 ### Affichage des listes et des titres
 
 - Puces : la forme et la couleur changent à chaque niveau (disque bleu, cercle orange, carré vert), puis le cycle reprend.
+- Tâches : cocher une tâche coche aussi ses sous-tâches et leurs sous-tâches, à tous les niveaux ; décocher ne décoche qu'elle (demande d'Eloi, 0.15.9, même règle sur le téléphone). Une page dont le fichier a déjà une tâche cochée avec une sous-tâche ouverte n'est pas corrigée d'office : seule une case cochée à l'instant déclenche la règle.
 - Listes ordonnées : 1, 2, 3 au premier niveau, a, b, c au deuxième, i, ii, iii au troisième. C'est un affichage : dans le fichier, Markdown ne connaît que les nombres, les sous-listes y restent numérotées 1, 2, 3.
 - Titres : le niveau 1 est le titre de la page, affiché en haut, en grand. Dans le texte, `#` est donc le premier niveau en dessous, et il y en a cinq, chacun avec son signe : `#` en gras, `##` un peu plus petit avec un trait fin dessous, de la couleur du titre, `###` en italique, `####` gris à la taille du texte, `#####` en italique gris sans gras. Pas de filet. Couleurs : palette « Feux », choisie sur comparatif, `#` rouge, `##` orange, `###` jaune, `####` vert, `#####` gris. Les puces suivent (rouge, orange, vert) et l'accent passe au bleu `#60a5fa`. Dans le fichier, `#` reste un titre Markdown de niveau 1. Ces valeurs deviendront celles du thème par défaut en J4.
 
 ### Enregistrement
 
 Il n'y a pas de commande pour enregistrer. La page s'enregistre toute seule un peu moins d'une seconde après la dernière frappe, au changement de page et à la fermeture de la fenêtre, qui attend la fin de l'écriture. L'état (« Modifié », « Enregistrement… », « Enregistré ») s'affiche en haut de la page et y reste visible quand elle défile. Un échec s'y affiche aussi, et l'enregistrement est retenté tout seul.
+
+Une page qu'on vient de créer et dont on quitte le nom sans l'avoir changé (clic ailleurs que dans la page) est traitée comme un `Échap` : vide, elle est retirée, au lieu de rester en « Sans titre » (défaut vu par Eloi le 2026-10-09). Cliquer dans son contenu pour y écrire tout de suite la garde.
 
 Le titre affiché en haut de la page est celui du front-matter. Il se modifie sur place : on clique dedans et on tape. `Entrée` ou `↓` le valide et passe au contenu, `Échap` annule, `↑` au tout début du contenu y remonte. La page est renommée quand on quitte le titre, son dossier aussi, comme avec `F2` dans l'arborescence. Un titre refusé (vide, trop long) n'est pas enregistré : l'ancien revient et la raison s'affiche dessous.
 
@@ -486,6 +534,10 @@ text: |-
   Deuxième paragraphe.
 ```
 
+### Bloc des sous-pages
+
+Choix d'Eloi du 2026-10-11, comme sur Notion : une page qui a des sous-pages les montre sous son titre, avant son contenu, une ligne par sous-page (icône, titre), dans l'ordre de l'arborescence. Une ligne ouvre la sous-page (`Ctrl+clic` ou clic du milieu : dans un nouvel onglet), « Nouvelle sous-page » en crée une, comme « Page enfant » du menu `/`. Le bloc est seulement affiché, calculé depuis l'arborescence : rien dans `page.md`, rien à l'export. Une page sans sous-page n'a pas de bloc. Même bloc sur le téléphone (§15).
+
 ### Liens et mentions
 
 `@` ou `/lien` pour mentionner une page (icône et titre courant, suit les renommages). URL collée sur une sélection ou seule. Mentions cassées signalées et listées dans les réglages.
@@ -513,13 +565,13 @@ Emoji (recherche FR), icône Lucide (table de correspondance FR vers EN), image 
 Section desktop. L'interface Android est décrite en §15.
 
 - Barre de titre : la fenêtre n'a pas le cadre du système. L'application dessine sa propre barre, comme Firefox : nom et version à gauche, boutons réduire, agrandir et fermer à droite. Toute la barre sert à déplacer la fenêtre.
-- Disposition : onglets en haut, barre latérale (arborescence) à gauche, éditeur au centre, sommaire à droite, barre de statut en bas (sync, corrections, coût IA du jour).
+- Disposition : onglets en haut, barre latérale (arborescence) à gauche, éditeur au centre, sommaire à droite, barre de statut en bas (sync, corrections). En haut de la page, à côté de l'état de l'enregistrement, un seul bouton « ⋮ » ouvre le menu de la page : sommaire, mode liste, fonctions IA, export (demande d'Eloi, 2026-10-09 : il y avait trop d'icônes). Fonctions IA et mode liste n'y sont pas quand la page est en lecture seule.
 - Barre latérale : arborescence repliable, glisser-déposer pour réordonner et déplacer, menu contextuel (nouvelle page, renommer, icône, dupliquer, mettre à la corbeille), sélection multiple (`Maj+↑/↓`, `Maj+clic`, détail en §10), accès corbeille. Tout se fait aussi au clavier : flèches pour naviguer, `F2` pour renommer, `Alt+↑/↓` pour déplacer une page parmi ses sœurs. Pendant un glisser-déposer, un trait plat de 2 px à la couleur d'accent montre où la page tombera, un fond bleu qu'elle deviendra sous-page. `Ctrl+N` crée une page sœur de la page ouverte, juste après elle (à la racine si aucune n'est ouverte), `Ctrl+Shift+N` une page à la racine. `Échap` dans le nom d'une page encore « Sans titre » la supprime si elle n'a ni contenu, ni sous-page, ni fichier, et la page ouverte avant revient ; sinon il annule seulement le renommage. Les éléments dépliés et la page ouverte sont retenus d'un lancement à l'autre.
 - Réglages : `Échap` les ferme et rend la page ; depuis l'écran du thème, il revient d'abord aux réglages.
-- Onglets : dans la barre de titre, comme Firefox, entre le nom de l'application et les boutons de fenêtre. Multiples dans une seule fenêtre, `Ctrl+T` (onglet vide, recherche ouverte), `Ctrl+W` (le dernier onglet se vide au lieu de se fermer), `Ctrl+Tab` et `Ctrl+Shift+Tab`, `Ctrl+1` à `9`, clic du milieu pour fermer, restaurés au démarrage, point si la page n'est pas encore sur le NAS. Une page n'est ouverte que dans un onglet : un clic dans l'arborescence ramène à son onglet s'il existe, sinon elle remplace la page de l'onglet affiché. `Ctrl+clic` ou clic du milieu l'ouvre dans un nouvel onglet.
-- Recherche `Ctrl+K` : sur les titres de page uniquement (pas de full-text en v1), floue, insensible aux accents, pages récentes par défaut, proposition de création si aucun résultat : juste après la page ouverte (choisi d'office), dedans, ou à la racine, une ligne chacun, au clavier. `Entrée` ouvre la page comme un clic dans l'arborescence, `Ctrl+Entrée` dans un nouvel onglet.
-- Recherche globale : `Ctrl+Alt+Espace` ouvre instantanément, depuis n'importe où, une petite fenêtre qui ne contient que la barre de recherche, au milieu de l'écran, devant les autres fenêtres. `Entrée` ouvre la page dans la fenêtre de l'application, qui passe devant (`Ctrl+Entrée` dans un nouvel onglet) ; `Échap` ou un clic ailleurs la cache. Pour être instantanée, Notes reste lancée quand on ferme sa fenêtre : la page est enregistrée et la sync continue de tourner en fond, comme fenêtre ouverte. La petite fenêtre reste prête, cachée, et l'application capte elle-même le raccourci (`globalShortcut`, session X11 de Cinnamon). Environ 230 Mo de mémoire en fond. `Ctrl+Q` ou « Quitter Notes » dans les réglages l'arrêtent pour de bon. Les réglages proposent de la démarrer avec la session, sans fenêtre (`~/.config/autostart/notes.desktop`, argument `--fond`). Notes pas lancée, l'argument `--recherche` ouvre directement la petite fenêtre (environ 1 s depuis l'AppImage).
-- Sommaire : version latérale permanente à droite de la page (tous les niveaux de titre, réduite en traits au repos, titres en clair au survol, suivi de lecture via IntersectionObserver), à jour à chaque frappe, et version complète (titrée « Sommaire », tous les niveaux en arbre, filtre insensible aux accents) ouverte par une icône à côté de « Enregistré », sans raccourci. Le latéral fait au plus 60 % de la hauteur de la fenêtre : au-delà, traits et liste défilent pour garder le titre en cours au milieu, les traits s'estompant seulement du côté où d'autres sont cachés, et au survol son nom s'affiche à la hauteur de son trait.
+- Onglets : dans la barre de titre, comme Firefox, entre le nom de l'application et les boutons de fenêtre. Multiples dans une seule fenêtre, `Ctrl+T` (onglet vide), `Ctrl+W` (le dernier onglet se vide au lieu de se fermer), `Ctrl+Tab` et `Ctrl+Shift+Tab`, `Ctrl+1` à `9`, clic du milieu pour fermer, restaurés au démarrage, point si la page n'est pas encore sur le NAS. Une page n'est ouverte que dans un onglet : un clic dans l'arborescence ramène à son onglet s'il existe, sinon elle remplace la page de l'onglet affiché. `Ctrl+clic` ou clic du milieu l'ouvre dans un nouvel onglet.
+- Recherche : Notes n'en a plus depuis la 0.17.4 (demande d'Eloi, 2026-10-12). La palette `Ctrl+K` et la petite fenêtre de `Ctrl+Alt+Espace` sont retirées : la barre de recherche du poste (`LogicielBarreRecherche`) cherche les pages.
+- Lancement et fermeture (choix d'Eloi, 2026-10-12, 0.17.5) : fermer la fenêtre enregistre la page et quitte Notes, sync arrêtée proprement ; plus de Notes en fond ni de démarrage avec la session, qui ne servaient qu'à la recherche globale. `Ctrl+Q` quitte aussi. L'argument `--page=<id>` ouvre une page : Notes pas lancée, elle s'ouvre dessus ; déjà lancée, la seconde instance passe la page à la fenêtre ouverte, qui l'affiche dans l'onglet affiché et passe devant. C'est ainsi que la barre de recherche du poste (`../BarreRecherche`) ouvre une page, par le lanceur `notes.desktop` du menu. Un identifiant mal formé est ignoré.
+- Sommaire : version latérale permanente à droite de la page (tous les niveaux de titre, réduite en traits au repos, titres en clair au survol, suivi de lecture via IntersectionObserver), à jour à chaque frappe, et version complète (titrée « Sommaire », tous les niveaux en arbre, filtre insensible aux accents) ouverte par une icône posée juste au-dessus des traits du sommaire latéral, alignée sur leur bord droit (demande d'Eloi, 2026-10-09), ou par « Sommaire de la page » dans le menu « ⋮ », sans raccourci. Le latéral fait au plus 60 % de la hauteur de la fenêtre : au-delà, traits et liste défilent pour garder le titre en cours au milieu, les traits s'estompant seulement du côté où d'autres sont cachés, et au survol son nom s'affiche à la hauteur de son trait.
 
 ---
 
@@ -588,7 +640,7 @@ Desktop uniquement.
 - Markdown : front-matter retiré par défaut, gardé tel quel sur option, mentions de page écrites en texte simple (leur titre), images remplacées par une mention textuelle en italique (`*Image : texte alternatif, légende*`, le nom du fichier sans description), liens `notes://` mis en forme réduits à leur texte, jamais de citation : un callout s'écrit en paragraphes simples, son icône au début du premier. Une mention de site devient un lien Markdown normal.
 - HTML autonome : CSS et images inlinés en base64, coloration syntaxique précalculée, sommaire avec ancres (même règle que le PDF : six titres dont trois sous-parties ; ouvert, repliable), icône de la page à gauche du titre, aux couleurs du thème tel qu'à l'écran. Aucun script, et une politique de sécurité qui interdit tout chargement. Format recommandé pour partager en conservant l'apparence exacte.
 - ZIP : la page et ses sous-pages en pages web (choix d'Eloi, remplace la sortie Markdown), reliées par une navigation en tête de chacune ; une mention d'une page de l'archive mène à elle. À la racine de l'archive : `assets/images/` (toutes les images, une fois chacune), `assets/html/style.css` (la feuille de style commune), et le fichier de la page (`Projets.html`) ; à côté de chaque fichier, un dossier à son nom avec ses sous-pages (`Projets/Refonte.html`, `Projets/Refonte/Étape 1.html`). Dans la fenêtre d'export, la liste des pages se coche et se décoche : décocher une page décoche ses sous-pages, qu'on peut recocher une à une ; une page décochée qui garde une sous-page reste dans la navigation, sans lien.
-- Accès : l'icône en haut de la page ouverte, sans raccourci, et pas dans le menu de l'arborescence (demande d'Eloi). Une fenêtre choisit le format dans un menu déroulant (PDF, Markdown, HTML, Archive ZIP), dessiné comme le choix du type de bloc de la barre d'outils, avec une ligne d'explication et seulement les options du format choisi, puis la boîte « Enregistrer sous » du système. Le fichier écrit s'ouvre aussitôt avec le programme du système (lecteur PDF, navigateur, éditeur), pour voir le résultat.
+- Accès : « Exporter la page » dans le menu « ⋮ » en haut de la page ouverte, sans raccourci, et pas dans le menu de l'arborescence (demande d'Eloi). Une fenêtre choisit le format dans un menu déroulant (PDF, Markdown, HTML, Archive ZIP), dessiné comme le choix du type de bloc de la barre d'outils, avec une ligne d'explication et seulement les options du format choisi, puis la boîte « Enregistrer sous » du système. Le fichier écrit s'ouvre aussitôt avec le programme du système (lecteur PDF, navigateur, éditeur), pour voir le résultat.
 
 ---
 
@@ -628,24 +680,24 @@ Le téléphone n'a pas de correction. Vérification par bloc modifié (debounce 
 
 ## 12. Fonctions IA
 
-Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, servi sur le PC (choix d'Eloi, 2026-10-04), sans rien envoyer sur Internet. En option, on passe par LiteLLM, le proxy par lequel Eloi parle aux modèles payants (choix d'Eloi, 2026-10-07 : à la place d'un appel direct à OpenAI), choisi dans les réglages, fonction par fonction. Ollama est installé par Eloi avec le script officiel (service systemd, qui sert la carte par ROCm sur une Radeon et par CUDA sur une NVIDIA), hors de l'application, qui l'appelle par son API à l'adresse des réglages (`http://localhost:11434` par défaut). Le même modèle sert à la mise en forme des mémos vocaux (§13). Comme les autres services, l'IA est facultative : sans modèle joignable, ses fonctions se désactivent, l'édition n'est jamais bloquée.
+Desktop uniquement. Les fonctions IA tournent en local par défaut : Ollama, servi sur le PC (choix d'Eloi, 2026-10-04), sans rien envoyer sur Internet. L'option LiteLLM (modèles payants par le proxy d'Eloi), ajoutée le 2026-10-07, a été retirée le 2026-10-09 : les modèles locaux suffisent (choix d'Eloi). Pour passer malgré tout par un autre outil, la fenêtre d'une fonction copie sa consigne suivie du texte de la page, à coller où l'on veut. Ollama est installé par Eloi avec le script officiel (service systemd, qui sert la carte par ROCm sur une Radeon et par CUDA sur une NVIDIA), hors de l'application, qui l'appelle par son API à l'adresse des réglages (`http://localhost:11434` par défaut). Le même modèle sert à la mise en forme des mémos vocaux (§13). Comme les autres services, l'IA est facultative : sans modèle joignable, ses fonctions se désactivent, l'édition n'est jamais bloquée.
 
 ### Choix du modèle local selon la machine
 
-Notes regarde la carte graphique et décide seule (choix d'Eloi, 2026-10-07) : quel modèle d'Ollama utiliser, ou pas d'IA locale du tout si la machine ne suit pas. La carte se lit sans rien installer : une Radeon dans `/sys/class/drm` (mémoire vidéo), une NVIDIA par son pilote (`/proc/driver/nvidia`, puis `nvidia-smi` livré avec lui, s'il est là), le nom par Chromium. Pour chaque modèle installé, Notes calcule la place qu'il prend chargé (poids, plus le contexte d'après son architecture lue par `/api/show`, plus une marge) et la compare à 92 % de la mémoire vidéo. L'IA locale est bloquée, avec la raison affichée, quand il n'y a pas de carte dédiée, ou qu'aucun modèle installé d'au moins 7 milliards de paramètres ne tient entièrement en mémoire vidéo : un modèle qui déborde sur le processeur est quatre fois plus lent (mesuré : 9 tokens par seconde contre 40). Parmi ceux qui tiennent, Notes prend la plus grande classe de taille, puis, à taille égale, Qwen3, puis Gemma 3, puis les autres, Ministral en dernier (comparaison du 2026-10-05 sur des pages en français : Qwen3 corrige sans rien changer d'autre, Gemma 3 écrit le mieux mais ne tient pas dans 8 Go, Ministral réécrit trop et invente à la mise au propre). Sur le PC d'Eloi (Radeon RX 7600, 8 Go), c'est qwen3:8b. Le contexte demandé à Ollama est plafonné à ce qui tient encore en mémoire vidéo ; une page plus longue est refusée avec un message. Après chaque appel, Notes demande à Ollama (`/api/ps`) quelle part du modèle était en mémoire vidéo : un modèle qui a débordé est écarté jusqu'au lancement suivant. Un modèle peut être choisi à la main dans les réglages, parmi ceux qui conviennent. Ollama sur une autre machine ou NVIDIA sans `nvidia-smi` : la mémoire est inconnue, seul le contrôle après l'appel s'applique.
+Notes regarde la carte graphique et décide seule (choix d'Eloi, 2026-10-07) : quel modèle d'Ollama utiliser, ou pas d'IA locale du tout si la machine ne suit pas. La carte se lit sans rien installer : une Radeon dans `/sys/class/drm` (mémoire vidéo), une NVIDIA par son pilote (`/proc/driver/nvidia`, puis `nvidia-smi` livré avec lui, s'il est là), le nom par Chromium. Pour chaque modèle installé, Notes calcule la place qu'il prend chargé (poids, plus le contexte d'après son architecture lue par `/api/show`, plus une marge) et la compare à 92 % de la mémoire vidéo. L'IA locale est bloquée, avec la raison affichée, quand il n'y a pas de carte dédiée, ou qu'aucun modèle installé d'au moins 7 milliards de paramètres ne tient entièrement en mémoire vidéo : un modèle qui déborde sur le processeur est quatre fois plus lent (mesuré : 9 tokens par seconde contre 40). Parmi ceux qui tiennent, Notes prend la plus grande classe de taille, puis, à taille égale, Qwen3, puis Gemma 3, puis les autres, Ministral en dernier (comparaison du 2026-10-05 sur des pages en français : Qwen3 corrige sans rien changer d'autre, Gemma 3 écrit le mieux mais ne tient pas dans 8 Go, Ministral réécrit trop et invente à la mise au propre). Sur le PC d'Eloi (Radeon RX 7600, 8 Go), c'est qwen3:8b. Le contexte demandé à Ollama est plafonné à ce qui tient encore en mémoire vidéo ; une page plus longue est refusée avec un message. Dès le premier morceau de réponse, le modèle étant chargé, Notes demande à Ollama (`/api/ps`) quelle part du modèle est en mémoire vidéo : s'il déborde (une autre application occupe la carte), l'appel est abandonné avec un message qui dit quoi faire, plutôt que de continuer très lentement ; le modèle reste proposé, la carte sera peut-être libre au prochain essai (choix d'Eloi, 2026-10-09). Un modèle peut être choisi à la main dans les réglages, parmi ceux qui conviennent. Ollama sur une autre machine ou NVIDIA sans `nvidia-smi` : la mémoire est inconnue, seul ce contrôle pendant l'appel s'applique.
 
 ### Deux fonctions, appliquées à la page entière
 
 - Relecture stylistique : améliore fluidité et formulation sans changer la structure ni le sens.
-- Mise au propre : transforme des notes en vrac en document structuré et développé. Ce n'est pas un résumé, c'est l'inverse.
+- Mise au propre : transforme des notes en vrac en document structuré et développé. Ce n'est pas un résumé, c'est l'inverse. Depuis la 0.17.4 (demande d'Eloi, essais du 2026-10-12 sur ses notes de cours « Initiation à l'agentique »), elle se fait section par section : à qui l'on donne toute une page, qwen3:8b la recopie presque telle quelle, sans créer de listes ; sur une section seule, il suit la consigne. Les titres ne passent pas par l'appel de leur section : ils restent à leur place et à leur niveau. Depuis la 0.17.5 (demande d'Eloi), leurs fautes sont corrigées à part, tous les titres en un appel court, avec un exemple de correction dans la consigne (sans lui, qwen3:8b les recopie sans rien corriger) ; un titre dont la correction change le nombre de mots ou la longueur de plus d'un quart reste tel quel. Avant l'appel, Notes met elle-même en liste les lignes de texte qui se suivent (une ligne finie par « : » reste en tête de sa liste), parce que le modèle garde une liste mais en crée rarement une. Chaque réponse est bornée en longueur ; une réponse coupée, bien plus longue que les notes ou qui perd un bloc mis de côté laisse les notes de la section, mises en liste (vu en essai : « Suite de », seul sous son titre, devenait un cours entier sur les réseaux de neurones). Environ 30 s pour une page de 5 000 caractères sur la Radeon d'Eloi. La consigne copiée pour un autre outil dit en plus qu'il reçoit la page entière.
 
 ### Flux
 
-La fonction se lance par l'icône ✨ en haut de la page, sans raccourci. Les blocs de code, les callouts et les images ne sont jamais montrés au modèle : ils partent sous un repère `[[BLOC-n]]` et reviennent tels quels, un bloc oublié par le modèle étant remis à la fin de la page avec un avertissement. Une mention de page disparue est signalée. Jamais de remplacement direct. Sélection de la fonction, modale d'estimation (modèle, tokens d'entrée et de sortie, coût, dépense du jour), exécution annulable, vue de comparaison avant/après (diff en deux colonnes ou unifié), puis accepter ou rejeter. Une acceptation s'annule par `Ctrl+Z`.
+La fonction se lance par « Fonctions IA » dans le menu « ⋮ » en haut de la page, sans raccourci. Les blocs de code, les callouts et les images ne sont jamais montrés au modèle : ils partent sous un repère `[[BLOC-n]]` et reviennent tels quels, un bloc oublié par le modèle étant remis à la fin de la page avec un avertissement. Une mention de page disparue est signalée. Jamais de remplacement direct. Sélection de la fonction, modale d'estimation (modèle, tokens d'entrée et de sortie, durée), exécution annulable, vue de comparaison avant/après (diff en deux colonnes ou unifié), puis accepter ou rejeter. Une acceptation s'annule par `Ctrl+Z`. « Copier le prompt », dans la fenêtre avant de lancer ou après une erreur, met dans le presse-papiers la consigne de la fonction (celle des réglages) puis le texte de la page tel quel, code et callouts compris, sans la phrase sur les repères ; aucun modèle n'est appelé.
 
-### Coût
+### Estimation et historique
 
-Avec un modèle local, rien n'est facturé : l'estimation affiche la taille de la demande et la durée attendue, sans coût. Par LiteLLM : tokens d'entrée calculés localement (découpage `o200k_base` des modèles d'OpenAI), sortie estimée par ratio calibré. Le tarif de chaque modèle est lu chez LiteLLM (`/model/info`), qui le connaît ; à défaut, Notes prend le sien, relevé chez OpenAI, et un tarif saisi dans les réglages passe avant les deux. Le calage se fait sur les dix derniers appels du même modèle et de la même fonction : écart entre le compte de Notes et celui du fournisseur pour l'entrée, rapport sortie sur entrée, durée par token. Un modèle sans tarif connu n'a pas d'estimation de coût. Chaque modèle est appelé avec l'effort de raisonnement le plus bas qu'il accepte : la réflexion est facturée comme de la sortie (accord d'Eloi, tant que les sorties restent bonnes). Montants en dollars. Historique dans `.notes/ai-usage.json` (synchronisé), agrégé par jour, semaine, mois et année avec graphiques. Dépense du jour dans la barre de statut, seulement quand une fonction passe par LiteLLM (choix d'Eloi, 2026-10-07).
+Rien n'est facturé : l'estimation affiche la taille de la demande et la durée attendue. Tokens d'entrée estimés d'après la longueur du texte, sortie par un ratio. Le calage se fait sur les dix derniers appels du même modèle et de la même fonction : écart entre le compte de Notes et celui d'Ollama pour l'entrée, rapport sortie sur entrée, durée par token. Pendant l'appel, la fenêtre affiche le temps restant (demande d'Eloi, 2026-10-11) : l'estimation moins le temps écoulé tant que moins d'un cinquième de la réponse attendue est arrivé, puis la vitesse réelle de l'appel (temps écoulé rapporté à la part reçue) ; « presque fini » sous deux secondes. Sans estimation (modèle jamais utilisé), elle affiche le temps écoulé. Historique dans `.notes/ai-usage.json` (synchronisé ; les appels faits par LiteLLM avant son retrait y restent), agrégé par jour, semaine, mois et année avec graphiques des tokens et des appels.
 
 ### Nettoyage des sorties LLM
 
@@ -653,7 +705,7 @@ Systématique avant insertion : suppression des fences englobantes et de la réf
 
 ### Configuration
 
-Adresse d'Ollama, et sur option adresse et clé chiffrée de LiteLLM ; modèle par fonction (« Automatique » par défaut pour Ollama), consignes éditables (retour à celles de Notes), tarifs corrigeables, seuil d'alerte de dépense mensuelle. Tout est dans les réglages du poste (`settings.json`, la clé dans le coffre à secrets), pas synchronisé : les consignes restent dans l'application (choix d'Eloi, 2026-10-07). Une adresse de LiteLLM en http vers une autre machine est signalée : la clé y passe en clair sur le réseau local.
+Adresse d'Ollama ; modèle par fonction (« Automatique » par défaut, ou choisi à la main parmi ceux qui conviennent) ; consignes éditables (retour à celles de Notes). Tout est dans les réglages du poste (`settings.json`), pas synchronisé : les consignes restent dans l'application (choix d'Eloi, 2026-10-07). Les anciens réglages de LiteLLM sont ignorés, et la clé que la 0.12.x avait pu enregistrer est effacée du coffre au démarrage.
 
 ---
 
@@ -661,11 +713,12 @@ Adresse d'Ollama, et sur option adresse et clé chiffrée de LiteLLM ; modèle p
 
 Pas de dictée en direct dans l'application (choix d'Eloi, 2026-10-04). On enregistre un mémo sur le téléphone, le fichier part sur le NAS, et c'est le PC qui le transcrit puis le met en forme avec le modèle local.
 
-- Téléphone (J17) : un bouton enregistre un mémo (AAC en `.m4a`, mono, 16 kHz, assez pour la voix). Le fichier est écrit directement sur le NAS dans `.notes/memos/memo-<date>.m4a`. Sans NAS joignable, il reste sur le téléphone et part dès que le NAS répond : c'est la seule exception à la règle « pas de file d'attente » (§5), puisqu'un mémo n'est pas une page et ne peut pas créer de conflit. L'application montre les mémos pas encore envoyés.
+- Téléphone (J17) : un bouton enregistre un mémo (AAC en `.m4a`, mono, 16 kHz, assez pour la voix). Le fichier est écrit directement sur le NAS dans `.notes/memos/memo-<date>.m4a`. Sans NAS joignable, il reste sur le téléphone et part dès que le NAS répond : c'est la seule exception à la règle « pas de file d'attente » (§5), puisqu'un mémo n'est pas une page et ne peut pas créer de conflit. L'application montre les mémos pas encore envoyés. Choix d'Eloi (2026-10-11) : le bouton est un micro rond en bas à droite de l'accueil, et seulement là ; le toucher lance l'enregistrement, un écran montre la durée et le niveau du son, « Terminer » l'envoie aussitôt, « Annuler » le jette (pas de réécoute) ; l'enregistrement continue écran éteint ou application quittée, avec une notification Android « Enregistrement en cours » qui permet de le terminer ; pas de raccourci sur l'icône de l'application.
+- Fait en J17 : le mémo s'enregistre dans le stockage privé de l'application (`memos-en-cours/`, puis `memos/` une fois terminé ; un enregistrement coupé net, application tuée, est illisible et jeté au suivant). Il part sur le NAS aussitôt terminé si le NAS répond, sinon au début de chaque synchronisation qui le joint (ouverture, retour dans l'application, réseau retrouvé, toutes les 30 s), un mémo à la fois, du plus ancien au plus récent, et n'est retiré du téléphone qu'une fois écrit. Le nom d'un mémo est sa date à la seconde : un fichier de ce nom déjà sur le NAS est un mémo déjà envoyé, ni renvoyé ni écrasé. Application fermée, une tâche Android (WorkManager) l'envoie dès qu'il y a du réseau, et réessaie plus tard si le NAS ne répond pas (30 s, puis de plus en plus espacé) ; elle se sert des réglages enregistrés par l'application et du mot de passe du Keystore. Sur l'écran d'enregistrement, Retour revient à l'accueil sans l'arrêter : une barre en bas de l'accueil montre la durée, la rouvre et a son « Terminer ». Toucher un mémo pas encore envoyé propose de le jeter. Le micro est demandé au premier mémo, avec les notifications ; refusé, un message dit où l'autoriser. L'accueil liste les mémos pas encore envoyés (date, taille). Code : `core/memos/memo-upload.ts`, `apps/mobile/src/features/voice-memos/`, plugin Kotlin `memos/`.
 - Le dossier `.notes/memos/` fait partie du dossier des notes : la sync l'amène sur le PC comme le reste. Il n'apparaît pas dans l'arborescence.
-- PC (J13) : les mémos en attente sont listés en tête d'une page « Mémos vocaux », créée à l'arrivée du premier mémo et reconnue par son en-tête (`role: memos`), même renommée. Chaque mémo s'écoute, se transcrit, ou part à la corbeille sans être transcrit ; « Tout transcrire » les enchaîne, chacun à valider (choix d'Eloi, 2026-10-07). « Transcrire » fait tout d'un coup : l'audio, quel que soit son format, est converti en WAV 16 kHz mono par le décodeur de la page (AAC d'un `.m4a`, MP3, Ogg, Opus, FLAC, WAV), ou à défaut par le ffmpeg livré avec Notes (AMR et 3GP des enregistreurs Android, WMA, AIFF, CAF, APE, et le son d'une vidéo), transcrit par Whisper, puis mis en forme par le modèle de la fonction « Mise en forme des mémos » (§12, réglable comme les deux autres, avec sa consigne). La comparaison montre la transcription brute face à la mise en forme, jamais d'insertion directe ; si la mise en forme est impossible (aucun modèle), la transcription brute peut être gardée. Chaque mémo accepté devient une sous-page de « Mémos vocaux », titrée par la date seule (« Mémo du 7 octobre 2026 à 16 h 24 », choix d'Eloi), qu'on déplace ensuite où on veut. L'audio part alors à la corbeille (§10), récupérable 30 jours, d'où il revient dans `.notes/memos/`. Un mémo rejeté reste en attente.
+- PC (J13) : les mémos en attente sont listés en tête d'une page « Mémos vocaux », créée à l'arrivée du premier mémo et reconnue par son en-tête (`role: memos`), même renommée. Chaque mémo s'écoute, se transcrit, ou part à la corbeille sans être transcrit ; « Tout transcrire » les enchaîne, chacun à valider (choix d'Eloi, 2026-10-07). « Transcrire » fait tout d'un coup : l'audio, quel que soit son format, est converti en WAV 16 kHz mono par le décodeur de la page (AAC d'un `.m4a`, MP3, Ogg, Opus, FLAC, WAV), ou à défaut par le ffmpeg livré avec Notes (AMR et 3GP des enregistreurs Android, WMA, AIFF, CAF, APE, et le son d'une vidéo), transcrit par Whisper, puis mis en forme par le modèle de la fonction « Mise en forme des mémos » (§12, réglable comme les deux autres, avec sa consigne). La comparaison montre la transcription brute face à la mise en forme, jamais d'insertion directe ; si la mise en forme est impossible (aucun modèle), la transcription brute peut être gardée. Chaque mémo accepté devient une sous-page de « Mémos vocaux », titrée par la date seule (« Mémo du 7 octobre 2026 à 16 h 24 », choix d'Eloi), qu'on déplace ensuite où on veut. L'audio part alors à la corbeille (§10), récupérable 30 jours, d'où il revient dans `.notes/memos/`. Un mémo rejeté reste en attente. Temps restant (demande d'Eloi, 2026-10-11) : pendant le traitement d'un mémo, une ligne dit le temps restant pour la transcription et la mise en forme ensemble (« environ 40 s restantes »), et avec « Tout transcrire », celui de toute la série (« environ 3 min pour les 4 mémos », sans compter le temps passé à relire) ; à côté du bouton « Tout transcrire », la durée estimée de tous les mémos en attente. La durée de chaque audio est lue dans son en-tête par le ffmpeg livré, sans le décoder. La transcription est calée sur les dix dernières de ce poste (vitesse par seconde d'audio, démarrage du serveur quand il est arrêté, caractères par seconde d'audio), gardées dans `transcriptions.json` à côté des réglages, pas dans le dossier des notes, puisque la vitesse dépend de la carte ; avant toute mesure, 1/15 de la durée de l'audio avec une carte dédiée, la moitié sans. La mise en forme est estimée comme une fonction IA (§12), sur la longueur probable du texte, puis sur sa vraie longueur une fois transcrit. Un modèle jamais utilisé pour la mise en forme : le temps affiché ajoute « plus la mise en forme ».
 - Tous les formats audio courants sont acceptés (choix d'Eloi, 2026-10-08). Ce que Chromium ne lit pas passe par ffmpeg 9.0.2, compilé à la construction de Notes (`scripts/build-ffmpeg.sh`, `npm run build:ffmpeg`) avec ses seuls décodeurs audio, sans réseau ni assembleur, et livré dans l'AppImage (8 Mo) : rien à installer. L'écoute se replie de même sur un WAV décodé par ffmpeg.
-- Une icône de dossier en tête de la page « Mémos vocaux » ouvre `.notes/memos/` dans le gestionnaire de fichiers (créé s'il manque) : un fichier audio déposé là devient un mémo en attente.
+- Une icône de dossier en tête de la page « Mémos vocaux », ou « Ouvrir le dossier des mémos » dans son menu du clic droit (0.17.2), ouvre `.notes/memos/` dans le gestionnaire de fichiers (créé s'il manque) : un fichier audio déposé là, sous n'importe quel nom, devient un mémo en attente, même Notes ouverte ; sans date dans son nom, il prend celle du fichier.
 - La page « Mémos vocaux » peut être masquée de l'arborescence (« Masquer de l'arborescence » dans son menu, réglage propre à ce poste qui retient les mémos présents à ce moment). Elle réapparaît d'elle-même quand un nouveau mémo arrive, et un clic droit dans une zone vide des pages de la barre latérale propose de la réafficher.
 - Whisper : Notes s'occupe de tout, rien n'est à installer à la main (choix d'Eloi, 2026-10-07). Le serveur whisper.cpp est compilé à la construction de Notes (`scripts/build-whisper.sh`, `npm run build:whisper`) et livré dans l'AppImage : version 1.9.5, calcul sur la carte graphique par Vulkan (Radeon comme NVIDIA), et une variante du calcul processeur par famille de processeur, choisie au lancement. Les binaires de l'image Docker officielle ne conviennent pas : compilés pour un processeur avec AVX-512, ils plantent sur le Ryzen 7 5800X. Le modèle se télécharge une fois, de lui-même à l'arrivée du premier mémo (choix d'Eloi, 2026-10-08 ; après un échec, un bouton le relance), dans `~/Applications/Whisper/` à côté de l'AppImage, vérifié par son empreinte : `large-v3-turbo` quantifié en 5 bits (574 Mo, environ 0,8 Go de mémoire vidéo, il tient à côté du modèle d'Ollama sur une carte de 8 Go), plus un modèle de détection de la voix (Silero, 885 Ko) qui ne laisse passer que les passages parlés : sans lui, Whisper invente du texte sur la musique ou le silence (« Sous-titrage Société Radio-Canada », vu en essai). Langue française imposée. Le serveur se lance à la première transcription, sur 127.0.0.1 et un port libre, sans les variables du poste, et s'arrête après 2 minutes sans demande pour rendre la carte à Ollama (3 minutes à l'origine, réduit à la demande d'Eloi). Sans carte dédiée, la transcription se fait sur le processeur, plus lentement. Mesuré le 2026-10-07 sur le PC d'Eloi : 30 s de parole française transcrites en 1,2 à 1,4 s.
 - Repli : modèle pas encore téléchargé ou serveur absent, « Transcrire » est désactivé avec un message explicite ; un mémo sans voix dit « Rien n'a été entendu » ; les mémos attendent, rien n'est perdu.
@@ -678,10 +731,10 @@ Un mode dédié par page, façon Google Keep, distinct des cases à cocher norma
 
 Les cases à cocher classiques (§6) restent un bloc parmi d'autres, inséré via `/tache` ou `[] `, mélangé librement avec du texte et des titres. Leur comportement ne change pas.
 
-Le mode liste s'active page par page, par un bouton dans l'en-tête ou le menu `/`, ce qui écrit `mode: todo` dans le front-matter. Une page en liste n'est qu'une liste, comme une note Keep (choix d'Eloi, 2026-10-08) :
+Le mode liste s'active page par page, par « Passer en liste de tâches » dans le menu « ⋮ » du haut de la page ou par le menu `/`, ce qui écrit `mode: todo` dans le front-matter. Une page en liste n'est qu'une liste, comme une note Keep (choix d'Eloi, 2026-10-08) :
 
 - Une seule liste de tâches par page, sans titres. Activer le mode convertit la page : paragraphes, titres et items de puces ou numérotés (sous-items compris) deviennent des tâches ; un autre bloc (code, tableau, image, callout) passe sous la tâche qui le précède, ou sous une tâche vide s'il est en tête. Une étape d'annulation. Le curseur est aussitôt dans une tâche vide, prête à écrire.
-- Pas de champ d'ajout : tout ce qu'on écrit devient une tâche. `Entrée` en fin de tâche crée la suivante ; `Entrée` sur une tâche vide ne fait rien. Un clic sous la liste ouvre une tâche vide juste avant « Terminé ». Une tâche laissée vide disparaît quand on la quitte. La tâche vide du curseur montre l'invite « Nouvelle tâche ».
+- Pas de champ d'ajout : tout ce qu'on écrit devient une tâche. Une page en liste encore vide montre sa case, avec l'invite « Nouvelle tâche » ; elle ne va dans le fichier qu'une fois quelque chose écrit. `Entrée` en fin de tâche crée la suivante ; `Entrée` sur une tâche vide ne fait rien. Un clic sous la liste ouvre une tâche vide juste avant « Terminé ». Une tâche laissée vide disparaît quand on la quitte. La tâche vide du curseur montre l'invite « Nouvelle tâche ».
 - La règle est rétablie à chaque modification : un titre tapé (`#`, barre d'outils) redevient du texte, un paragraphe rejoint la liste, le curseur reste où il était.
 - Sous une tâche, des blocs plus riches sont possibles (choix d'Eloi) : dans le menu `/` d'une page en liste, code, tableau, image, callout et « Texte sous la tâche » se rangent sous la tâche du curseur (sous la tâche d'avant si on vient de faire `Entrée`). Le menu n'y propose ni titres ni listes. `Tab` fait toujours une sous-tâche.
 - Les tâches cochées passent en style barré et atténué, et descendent dans une section « Terminé » repliable en bas de la liste, dans le fichier aussi : la section est la suite de tâches cochées qui termine la liste. Cochée, une tâche y va en tête avec ses sous-tâches ; décochée, elle remonte après les tâches à faire. Une sous-tâche cochée ne bouge pas. Le titre « Terminé (n) » et son repli ne sont que de l'affichage ; le repli est retenu page par page sur le poste.
@@ -699,9 +752,8 @@ Compagnon de consultation, pas un second éditeur. Construite avec Capacitor à 
 
 ### Consultation
 
-- Écran d'accueil : les pages en mode liste d'abord, puis les pages récentes.
-- Arborescence dans un tiroir latéral, repliable, en lecture seule (pas de déplacement de pages).
-- Recherche par titre, floue et insensible aux accents, comme `Ctrl+K`.
+- Écran d'accueil : l'arborescence des pages, repliable (pas de déplacement de pages). Choix d'Eloi, 0.15.7 : elle remplace l'accueil « Listes » et « Récentes » et le tiroir latéral ; les pages récentes restent dans la recherche vide. Au-dessus (choix d'Eloi, 0.17.2), les 10 pages modifiées le plus récemment sur le NAS, par le PC ou le téléphone, en cartes comme sur Notion (icône, titre, page parente, « il y a 2 h »), qui défilent à l'horizontale ; jusqu'à la première réponse du NAS au lancement, des cartes d'attente tiennent la place, pour que rien ne bouge sous le doigt. La date est celle du fichier sur le NAS, relevée par la synchronisation.
+- Recherche par titre, floue et insensible aux accents.
 - Lecture de toutes les pages avec le rendu complet : titres, code coloré, tableaux (défilement horizontal), images (visionneuse plein écran), callouts, mentions cliquables.
 - Sommaire en version modale.
 - Tout cela fonctionne hors ligne sur le cache local. Un indicateur donne l'état du NAS et la date de la dernière synchronisation.
@@ -710,25 +762,50 @@ Compagnon de consultation, pas un second éditeur. Construite avec Capacitor à 
 
 | Action | Où |
 |---|---|
-| Enregistrer un mémo vocal (envoyé sur le NAS, gardé sur le téléphone tant qu'il ne répond pas) | Partout |
+| Enregistrer un mémo vocal (envoyé sur le NAS, gardé sur le téléphone tant qu'il ne répond pas) | Accueil |
 | Cocher, décocher une tâche | Toutes les pages |
-| Ajouter une tâche (champ d'ajout rapide) | Pages en mode liste |
+| Ajouter une tâche (en écrivant dans la liste, comme sur le PC ; une liste vide montre sa case) | Pages en mode liste |
 | Modifier le texte, supprimer, réordonner une tâche | Pages en mode liste |
 | Compléter une liste à puces (ajouter un item) | Toutes les pages |
 | Retoucher un paragraphe ou un titre, en Markdown brut | Toutes les pages |
 | Créer une page simple (titre, parent, classique ou mode liste) | Arborescence |
 
-Toute modification exige une connexion SMB directe au NAS au moment où elle est faite (déroulé en §5). Seule exception, le mémo vocal (§13). Quand le NAS est injoignable, les cases, champs et boutons de modification sont désactivés et un bandeau l'indique. Il n'y a pas de file d'attente de modifications.
+Toute modification exige une connexion SMB directe au NAS au moment où elle est faite (déroulé en §5). Deux exceptions voulues par Eloi : le mémo vocal (§13) et la création d'une page (0.15.5), qui attend sur le téléphone et part dès que le NAS répond. Quand le NAS est injoignable, les cases, champs et boutons de modification sont désactivés et un bandeau l'indique. Il n'y a pas de file d'attente de modifications.
 
-Techniquement, le téléphone n'embarque pas l'éditeur complet : la page est rendue par TipTap en lecture seule, et chaque modification est une opération ciblée de `packages/document` (basculer une tâche, insérer un item, remplacer le texte d'un bloc) suivie de la même sérialisation Markdown que sur le desktop.
+Techniquement, une page classique est un éditeur TipTap avec le schéma et les raccourcis de saisie du PC, sans le menu `/`, la gestion des blocs ni la barre flottante ; la page est réécrite comme sur le PC (seuls les blocs modifiés changent dans le fichier). Une page en liste reste une liste façon Keep, dont chaque modification est une opération ciblée de `packages/document` (basculer une tâche, insérer un item), suivie de la même sérialisation Markdown que sur le desktop.
+
+Fait en J15 : le cache garde le texte de toutes les pages, l'ordre et le thème, copiés à chaque synchronisation ; les images (et favicons) ne descendent que lorsqu'une page les affiche, et restent ensuite sur le téléphone : une image jamais affichée n'est pas lisible hors ligne, mais sa place dans la page le dit (« Image pas encore copiée sur le téléphone »). Une image changée ou retirée sur le NAS est oubliée du cache au cycle suivant. Si le NAS ne montre plus aucun fichier alors que le cache en a (mauvais dossier, partage vide), rien n'est retiré du téléphone. Un refus du NAS (identifiants, partage, chiffrement) arrête les essais automatiques ; toucher la pastille d'état ou tirer l'accueil réessaie. Les cases des tâches sont visibles mais ne se cochent pas encore (J16).
+
+Fait en J16 (choix d'Eloi du 2026-10-10) :
+
+- Une modification s'affiche tout de suite, puis part sur le NAS en arrière-plan, dans l'ordre (retour d'Eloi, 0.15.5 : il fallait attendre chaque écriture, et deux modifications rapides se marchaient dessus). Rien n'est gardé sur le téléphone : chaque écriture remplace sur le NAS le corps qu'elle a vu par le nouveau ; si le NAS a autre chose (page changée sur le PC) ou ne répond plus, elle est refusée, l'écran revient à la version du NAS avec un message, et les suivantes sont abandonnées.
+- Chaque écriture passe par `core/sync/direct-write.ts` : NAS joignable (session ouverte ou rouverte), verrou de la page (refus si le PC l'édite : « « pc-fixe » modifie cette page en ce moment »), relecture de `page.md` sur le NAS, refus si la page a changé depuis son affichage (le cache prend la nouvelle version, il suffit de recommencer), opération de `packages/document` appliquée au corps, date `updated` changée, écriture, copie dans le cache, verrou retiré. Le téléphone tient le verrou sous son propre identifiant, tiré au hasard au premier lancement, et sous le nom « téléphone ».
+- Case d'une tâche : un toucher la coche ou la décoche, sur toute page ; en mode liste, elle est ensuite rangée comme sur le PC.
+- Page en mode liste, façon Keep : toucher le texte d'une tâche l'édite sur place (Markdown de ligne : `**gras**` reste du gras), Entrée l'enregistre et ouvre la tâche suivante juste en dessous, × la supprime, un texte vidé la supprime aussi. Le texte se centre sur la case quelle que soit la police du téléphone. L'enregistrement se fait en quittant la ligne (toucher ailleurs, Entrée) ; le verrou est tenu pendant la saisie et rendu 1,5 s après, ou après une minute sans frappe. Un appui long sur une tâche à faire la fait glisser : en hauteur parmi ses sœurs, sous-tâches comprises, qui la suivent ; de côté, comme dans Keep (0.17.2), vers la droite pour la ranger sous la tâche du dessus, vers la gauche pour la remonter d'un niveau. Les tâches de « Terminé » et leurs sous-tâches ne glissent pas et se replient avec la section. Une liste vide, ou toute cochée, montre sa case : la toucher ouvre une tâche en tête. Les tâches cochées sont dans « Terminé », repliable. Les blocs posés sous une tâche s'affichent en lecture seule.
+- Page classique (retours d'Eloi, 0.15.5 puis 0.15.6) : elle se modifie directement. Toucher le texte y met le curseur ; une barre courte s'affiche au-dessus du clavier : texte, titre (1, 2, 3 en touchant de nouveau), puces, tâches, callout, gras, italique ; les raccourcis de saisie du PC marchent (`- `, `# `, `[] `, `1. `). Toucher sous le dernier bloc met le curseur en fin de page. Une page vide montre « Écrire… » sous son titre. La page part sur le NAS 0,6 s après la dernière frappe et en quittant le texte ; le verrou est pris sans faire attendre la saisie, gardé tant que le curseur est dans la page, rendu 1,5 s après. Si le PC édite la page, elle repasse en lecture avec un message. Une case se coche d'un toucher sans ouvrir le clavier. Un lien ou une image s'ouvrent toujours d'un toucher. Appui long : la sélection et le copier-coller d'Android.
+- Sommaire : chaque titre avec ses `#` en petit et en gris, et une taille qui suit son niveau.
+- Barre au-dessus du clavier (0.15.7) : texte, titre, puces, tâches, callout, « Markdown » ; à droite, à part, « Fermer le clavier ». Gras et italique en sont retirés (raccourcis `**` et `*`). Dans un callout, son bouton ouvre ses réglages, comme sur le PC : couleur (Info, Succès, Attention, Danger), icône parmi celles du PC, ou le retirer. « Markdown » ouvre le Markdown du bloc du curseur dans une feuille haute (ce que faisait l'appui long) : vidé, le bloc est retiré ; une ligne vide le coupe en plusieurs.
+- Tâches sur plusieurs niveaux (0.15.8) : dans la liste façon Keep, une tâche en saisie a deux boutons, « Ranger sous la tâche du dessus » et « Remonter d'un niveau » (« React » contient « HTML » qui contient « head »), autant de niveaux qu'on veut ; une tâche emmène ses sous-tâches. Une ligne neuve (après Entrée) se décale de la même façon avant d'être écrite, et la suivante se tape au même niveau.
+- Cocher une tâche coche ses sous-tâches, à tous les niveaux (0.15.9, §6).
+- Le PC a priorité (choix d'Eloi, 0.17.2) : quand on commence à écrire sur le téléphone, la page est relue sur le NAS sans faire attendre la frappe ; si le PC l'a changée depuis la dernière synchronisation, sa version s'affiche avant la première écriture. Une modification préparée sur l'ancienne version reste refusée.
+- Callout (0.15.8) : toucher son icône ouvre sa couleur et son icône, sans ouvrir le clavier.
+- Icône de page (0.15.7) : toucher l'icône, ou « Ajouter une icône » sous le chemin, ouvre le choix d'un emoji, cherché en français, ou « Retirer ». Pas d'image ni de détourage sur le téléphone. L'icône part dans l'en-tête de la page sur le NAS (clé `icon`).
+- Lancement (0.15.7) : l'arborescence et le thème de la dernière fois s'affichent tout de suite (copie dans `arborescence.json`, hors du cache), le cache se relit derrière ; l'éditeur, la liste des emojis et les icônes Lucide ne se chargent qu'à leur premier usage. Code chargé au lancement : 416 Ko au lieu de 2,4 Mo ; sur l'émulateur, premier contenu à 125 ms au lieu de 270 ms après le début de la page.
+- Création : « + » en haut du tiroir (racine) et sur chaque page du tiroir (page enfant). Titre, puis « Page classique » ou « Liste de tâches » ; la page s'ouvre tout de suite et se crée sur le NAS en arrière-plan, avec les mêmes règles que sur le PC (nom du dossier, ordre du parent) ; elle s'écrit dès qu'elle y est (0.15.6 : le NAS n'est plus interrogé que pour le parent, les noms pris et l'ordre ; les pages sœurs se lisent dans le cache). Sans NAS (choix d'Eloi, 0.15.5), elle est gardée sur le téléphone (`pages-en-attente.json`, hors du cache), montrée dans le tiroir avec un nuage, et créée sur le NAS au début de la synchronisation suivante. Elle s'écrit tout de suite (choix d'Eloi, 0.17.2) : ce qu'on y tape attend avec elle et part avec la page, sans conflit possible puisqu'elle n'existe pas encore sur le NAS ; ce qui est tapé pendant sa création suit comme une modification ordinaire. Si sa page parente a disparu entre-temps, elle va à la racine.
+- Sans NAS : bandeau « Le NAS ne répond pas : lecture seule. » en tête de page, cases et champs sans effet avec un message. Les contrôles ne sont grisés que lorsque le NAS est su injoignable ; avant la première synchronisation, on essaie. Un NAS qui ne répond plus au moment d'écrire : rien n'est modifié, message, pastille passée à « injoignable ».
+- Une note `.md` venue d'un autre outil reste en lecture seule.
+
+Pas de verrouillage par empreinte ou code à l'ouverture de l'application (choix d'Eloi, 2026-10-09) : le verrouillage du téléphone suffit. Icône : la même que sur le PC.
 
 ### Hors périmètre Android
 
-Menu `/`, gestion des blocs, barre d'outils, édition de tableaux, insertion d'images, renommage, déplacement et suppression de pages, corbeille, export, onglets, correction orthographique, IA, transcription des mémos, réglage du thème, synchronisation en arrière-plan, widget.
+Menu `/`, gestion des blocs au clavier, barre d'outils flottante du PC, édition de tableaux, insertion d'images, renommage, déplacement et suppression de pages, corbeille, export, onglets, correction orthographique, IA, transcription des mémos, réglage du thème, synchronisation en arrière-plan, widget.
 
 ### Réseau
 
-Le téléphone est sur Tailscale, lancé au démarrage. L'adresse du NAS configurée dans l'app est son adresse Tailscale (nom MagicDNS ou IP `100.x`) : la même au domicile et à l'extérieur, donc consultation et modification possibles partout où le tailnet est joignable. L'app ne pilote pas Tailscale, elle constate seulement que le NAS répond ou non. Le chiffrement SMB 3 reste activé même à travers le tunnel.
+L'app connaît deux adresses du NAS : celle du réseau de la maison, essayée d'abord, et, si elle est réglée, son adresse Tailscale (nom MagicDNS ou IP `100.x`). L'adresse locale a 1,5 s pour répondre sur le port 445 ; sinon l'app passe à l'adresse Tailscale (4 s). Si aucune ne répond, la pastille dit « NAS injoignable, même par Tailscale : est-il activé ? ». Quand le réseau du téléphone change, la session est refaite par l'adresse qui répond. L'app ne pilote pas Tailscale, elle constate seulement que le NAS répond ou non. Le chiffrement SMB 3 reste imposé sur les deux chemins.
+
+Hors de la maison, l'adresse locale peut désigner une autre machine d'un autre réseau. Pour ne pas lui envoyer les identifiants, l'app retient l'identité SMB du NAS (GUID de serveur, annoncé avant l'authentification) vue à l'adresse locale : une machine qui répond là avec une autre identité est ignorée et l'app passe à Tailscale. Seule la toute première connexion, faute d'identité connue, ne peut pas faire ce contrôle : la faire à la maison. Si le NAS est réinstallé, son identité change et l'adresse locale est ignorée jusqu'à un effacement des données de l'app.
 
 ---
 
@@ -736,7 +813,7 @@ Le téléphone est sur Tailscale, lancé au démarrage. L'adresse du NAS configu
 
 ### Secrets
 
-Règle : aucun identifiant n'est écrit en clair sur le disque, ni dans le vault, ni dans les réglages, ni dans les journaux. Concerne le mot de passe SMB, la clé de l'API d'IA externe, et les identifiants LanguageTool et Whisper le cas échéant. Les secrets sont stockés hors du vault et jamais synchronisés.
+Règle : aucun identifiant n'est écrit en clair sur le disque, ni dans le vault, ni dans les réglages, ni dans les journaux. Concerne le mot de passe SMB, et les identifiants LanguageTool et Whisper le cas échéant (plus de clé d'API d'IA externe depuis le retrait de LiteLLM). Les secrets sont stockés hors du vault et jamais synchronisés.
 
 - Desktop : `safeStorage` d'Electron, qui s'appuie sur le trousseau du système (`libsecret`, KWallet). Sans trousseau disponible, Electron retomberait sur un stockage non chiffré (backend `basic_text`) : l'app le détecte, refuse d'enregistrer le secret, le garde en mémoire le temps de la session et le redemande au lancement suivant.
 - Android : clé générée dans l'Android Keystore, qui chiffre le mot de passe SMB stocké dans le stockage privé de l'app. Seul ce secret est concerné.
@@ -780,9 +857,9 @@ Sur Android, cache des pages, index et réglages vivent dans le stockage privé 
 
 ## 17. Packaging et distribution
 
-- Linux : AppImage via electron-builder (`Notes.AppImage`), aucune installation requise et aucune dépendance à un paquet du système : le client SMB, whisper.cpp et ffmpeg sont dans l'AppImage. Icône de Notes (un carnet blanc sur un carré bleu arrondi, fournie par Eloi le 2026-10-08) dans `apps/desktop/resources/icon/`, de 16 à 1024 px, détourée sur fond transparent : icône de l'AppImage, de la fenêtre et de la barre de titre. Build x86_64 uniquement, pour le PC fixe et le portable (Linux Mint, Cinnamon, X11). `.deb` possible en complément.
+- Linux : AppImage via electron-builder (`Notes.AppImage`), aucune installation requise et aucune dépendance à un paquet du système : le client SMB, whisper.cpp et ffmpeg sont dans l'AppImage. Icône de Notes (depuis la 0.17.4, à la demande d'Eloi : l'icône `book-open-text` de Lucide, en blanc, au centre d'un carré bleu arrondi ; elle remplace le carnet fourni par Eloi le 2026-10-08, sur le PC comme sur le téléphone, écran de démarrage compris) dans `apps/desktop/resources/icon/`, de 16 à 1024 px, détourée sur fond transparent : icône de l'AppImage, de la fenêtre et de la barre de titre. Build x86_64 uniquement, pour le PC fixe et le portable (Linux Mint, Cinnamon, X11). `.deb` possible en complément.
 - Android : APK construit avec Gradle, signé avec une clé locale, installé à la main (transfert du fichier ou `adb install`). Pas de Play Store.
-- AppImage au nom fixe `Notes.AppImage`. `npm run installer` la construit et la met dans `~/Applications` (ou le dossier `NOTES_DOSSIER_INSTALLATION` de `.env`), par renommage. Notes se met à jour d'elle-même : fenêtre fermée, elle se relance aussitôt sur la nouvelle version ; ouverte, la barre de titre propose « Relancer ». Pas de serveur de mises à jour : projet privé. Numéro de version dans la barre de titre.
+- AppImage au nom fixe `Notes.AppImage`. `npm run installer` la construit et la met dans `~/Applications` (ou le dossier `NOTES_DOSSIER_INSTALLATION` de `.env`), par renommage. Notes ouverte voit la nouvelle version et la barre de titre propose « Relancer » ; fermée, le prochain lancement prend la nouvelle version. Pas de serveur de mises à jour : projet privé. Numéro de version dans la barre de titre.
 - La clé de signature Android reste hors du dépôt. La perdre oblige à désinstaller l'app avant de réinstaller une version signée autrement.
 
 ---
@@ -807,12 +884,12 @@ Vérification par Eloi : chaque jalon livré a sa recette `docs/recettes/J<n>.md
 | J9 | Export | 20 pages en PDF sans coupure incorrecte | Fait |
 | J10 | Corbeille, sélection multiple | Page supprimée restaurée intégralement ; plusieurs pages sélectionnées dans l'arborescence, déplacées ou supprimées ensemble | Fait |
 | J11 | Correction orthographique | Aucune latence perceptible à la frappe | Fait |
-| J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | En cours (recette en attente) |
-| J13 | Mémos vocaux, côté PC | Un mémo déposé dans `.notes/memos/` devient une page transcrite et mise en forme ; 30 s transcrites en moins de 5 s | En cours (recette en attente) |
-| J14 | Mode liste de tâches, finition desktop | L'outil remplace AppFlowy au quotidien | En cours (recette en attente) |
-| J15 | Android, consultation | APK installé, toutes les pages lisibles hors ligne, cache à jour après passage sur le wifi | À faire |
-| J16 | Android, modification légère | Tâche cochée sur le téléphone visible sur le desktop au cycle suivant, modification refusée proprement sans NAS | À faire |
-| J17 | Android, mémos vocaux | Mémo enregistré sans réseau envoyé sur le NAS au retour du réseau, puis transcrit sur le PC | À faire |
+| J12 | Fonctions IA | Coût réel égal au coût estimé, sortie propre | Fait |
+| J13 | Mémos vocaux, côté PC | Un mémo déposé dans `.notes/memos/` devient une page transcrite et mise en forme ; 30 s transcrites en moins de 5 s | Fait |
+| J14 | Mode liste de tâches, finition desktop | L'outil remplace AppFlowy au quotidien | Fait |
+| J15 | Android, consultation | APK installé, toutes les pages lisibles hors ligne, cache à jour après passage sur le wifi | Fait |
+| J16 | Android, modification légère | Tâche cochée sur le téléphone visible sur le desktop au cycle suivant, modification refusée proprement sans NAS | Fait |
+| J17 | Android, mémos vocaux | Mémo enregistré sans réseau envoyé sur le NAS au retour du réseau, puis transcrit sur le PC | En cours (recette en attente) |
 
 Android arrive en dernier, mais deux choses se préparent dès le début pour ne pas tout reprendre en J15 : `packages/core` reste sans dépendance Node (J1), et les opérations ciblées sur une page (basculer une tâche, insérer un item) sont écrites dans `packages/document` au moment du mode liste (J14).
 
@@ -822,9 +899,7 @@ Android arrive en dernier, mais deux choses se préparent dès le début pour ne
 
 Une question ouverte s'ajoute ici avec sa référence (P3, P4…) et le jalon qui en dépend.
 
-| Réf. | Question | Jalon |
-|---|---|---|
-| P3 | Sur le desktop, le champ d'ajout rapide du mode liste a été retiré (on écrit directement des tâches). Le téléphone garde-t-il un champ d'ajout (§15), ou fait-il pareil ? | J16 |
+Aucun pour l'instant.
 
 ---
 
@@ -832,6 +907,29 @@ Une question ouverte s'ajoute ici avec sa référence (P3, P4…) et le jalon qu
 
 | Date | Décision |
 |---|---|
+| 2026-10-12 | Version 0.17.5, réponses d'Eloi aux questions de la 0.17.4. Fermer la fenêtre quitte Notes : plus de Notes en fond ni de démarrage avec la session (réglages « Notes en fond » retirés), sa préférence d'origine (2026-10-04) revient sans la recherche globale. Notes reconnaît `--page=<id>`, l'argument par lequel sa barre de recherche ouvre une page. La mise au propre corrige aussi les fautes des titres, à part (§12). Vérifié dans l'application construite, sous Xvfb, avec le vrai Ollama sur une copie de sa page « Initiation à l'agentique » : 38 s, tout en listes, « Apprentisages » corrigé. |
+| 2026-10-12 | Version 0.17.4, demandes d'Eloi. Mise au propre section par section, lignes mises en liste par Notes avant l'appel, titres gardés à part, réponse bornée et écartée si elle invente (§12) ; essais sur ses notes de cours : ministral-3:8b organise mieux mais invente (un faux sens pour MCP), le mode réflexion de qwen3 est plus lent sans être meilleur. Les deux recherches de Notes sont retirées (`Ctrl+K` et `Ctrl+Alt+Espace`) : sa barre de recherche maison les remplace ; Notes reste en fond fenêtre fermée (sync), à confirmer par lui puisque c'était pour la recherche qu'il l'avait accepté (2026-10-04). Nouvelle icône : `book-open-text` de Lucide, blanche, centrée sur un carré bleu (`#2F80ED`). Lanceur du menu de Cinnamon créé sur son poste (`~/.local/share/applications/notes.desktop`), et les Notes autocollantes de Mint, qui portent aussi le nom « Notes », masquées de son menu à sa demande : Cinnamon ajoutait sinon « (Notes.AppImage) » au nom. |
+| 2026-10-11 | Version 0.17.3, demande d'Eloi : temps restant affiché pendant une fonction IA, pendant la transcription et la mise en forme d'un mémo (pour les deux étapes ensemble, et pour toute la série avec « Tout transcrire »), et durée estimée de tous les mémos à côté de « Tout transcrire ». Transcription calée sur les dix dernières du poste (`transcriptions.json` à côté des réglages, la vitesse dépendant de la carte), durée de l'audio lue par le ffmpeg livré. |
+| 2026-10-11 | Suite des réponses d'Eloi. Le PC a priorité : une saisie du téléphone sur une page changée par le PC reste refusée, mais le téléphone relit la page au moment où l'on commence à écrire, sans bloquer la frappe. Espace automatique dans toutes les paires : ( ), « », [ ], { }, " ", ' '. Pages récentes : les 10 dernières modifiées, en cartes qui défilent à l'horizontale. Une page créée sans NAS s'écrit aussitôt : son contenu attend sur le téléphone et part avec elle (exception à la règle 4, sans risque de conflit puisque la page n'existe pas encore sur le NAS). Décalage des tâches par glissement comme dans Keep, les deux boutons restent. Un mémo part seul, application fermée : tâche Android en arrière-plan à la fin de l'enregistrement et au retour du réseau. Pas de suffixe `-2` pour un mémo : les noms sont à la seconde. |
+| 2026-10-11 | Réponses d'Eloi aux questions des recettes J16 et J17. Gardés : verrou rendu 1,5 s après la saisie (une minute sans frappe dans une liste) ; case « Tout est coché » ; texte d'une tâche sans mise en forme hors saisie ; icône de page en emoji sur le téléphone ; décocher une tâche ne décoche qu'elle ; notification d'enregistrement d'importance normale sans son. À faire : les sous-tâches se réordonnent aussi par glisser (pas les tâches de « Terminé ») ; décaler une tâche en la glissant vers la droite ou la gauche, comme dans Keep ; une page créée sans NAS s'écrit tout de suite ; pages récentes en cartes en haut de l'accueil, comme sur Notion, avec des cartes d'attente pendant le chargement ; sur l'écran d'enregistrement, Retour revient à l'accueil et l'enregistrement continue ; un mémo en attente peut être jeté ; un mémo part tout seul, même application fermée. |
+| 2026-10-11 | Version 0.17.1, J17 écrit, choix faits en codant, à confirmer dans la recette : la notification d'enregistrement est d'importance normale mais sans son (en « silencieuse », Android la repliait et cachait « Terminer ») ; sur l'écran d'enregistrement, Retour ne fait rien (terminer ou annuler, jamais par mégarde) ; un mémo terminé depuis la notification, application fermée, part au prochain passage dans l'application (pas de synchronisation en arrière-plan, §15) ; un mémo en attente ne se supprime pas depuis le téléphone ; un autre fichier du même nom sur le NAS donne un suffixe `-2` plutôt qu'un écrasement. |
+| 2026-10-11 | Choix d'Eloi pour J17 (mémos vocaux du téléphone) : bouton micro sur l'accueil seulement ; toucher lance, « Terminer » envoie aussitôt, « Annuler » jette, pas de réécoute ; l'enregistrement continue écran éteint ou application quittée (service Android de premier plan, notification avec « Terminer ») ; pas de raccourci sur l'icône. |
+| 2026-10-11 | Recettes J15 et J16 rapportées OK par Eloi, retouches 0.15.2 à 0.15.9 comprises : J15 passe à « Fait » (0.16.0), J16 aussi (0.17.0). Les onze questions de la recette J16 lui sont reposées, réponses à reporter ici. J17 commence. |
+| 2026-10-11 | Demande d'Eloi après la 0.15.8 (le reste de J16 lui « semble bon ») : cocher une tâche coche aussi ses sous-tâches et leurs sous-tâches, à tous les niveaux, sur le téléphone et le PC (fait en 0.15.9 : `basculerTache` et l'extension `SousTachesCochees` de `document`, pour les cases cochées dans un éditeur) ; décocher une tâche ne décoche qu'elle (choix fait en codant, à confirmer). |
+| 2026-10-11 | Version 0.15.8, retours d'Eloi. Bloc des sous-pages sous le titre de la page, sur le PC et le téléphone : seulement affiché (rien dans le fichier, rien à l'export), ouvre la sous-page, « Nouvelle sous-page » ; absent d'une page sans sous-page (retour noté le 2026-10-08, ses questions tranchées). Tâches sur plusieurs niveaux dans la liste du téléphone, par deux boutons de décalage (opérations `decalerADroite`, `decalerAGauche` de `document`). Toucher l'icône d'un callout ouvre ses réglages. |
+| 2026-10-11 | Version 0.15.7, retours d'Eloi. L'accueil du téléphone devient l'arborescence (plus de tiroir, plus de « Listes » ni « Récentes »). Barre au-dessus du clavier sans gras ni italique, avec « Markdown » (Markdown du bloc du curseur) et « Fermer le clavier » à droite ; dans un callout, couleur et icône comme sur le PC. Icône de page en emoji seulement. Lancement plus rapide : copie de l'arborescence, éditeur, emojis et icônes Lucide chargés à la demande. Les commandes de callout passent du desktop à `packages/document`, la recherche d'emojis à `packages/ui` (`@notes/ui/emoji`), pour servir aux deux applications. |
+| 2026-10-10 | Version 0.15.6, retours d'Eloi : pas d'ajout de bloc par menu, on écrit directement dans la page. Une page classique devient un éditeur TipTap (même schéma, mêmes raccourcis de saisie que le PC) avec une barre courte au-dessus du clavier ; l'appui long rend la main à la sélection d'Android ; le menu de bloc et l'éditeur de bloc sont retirés. Création de page : ouverte tout de suite, créée en arrière-plan, et le NAS n'est plus interrogé page sœur par page sœur (ordre lu dans le cache). Parenthèses ouvertes avec une espace de chaque côté, guillemets français avec des espaces insécables, hors du code. |
+| 2026-10-10 | Version 0.15.5, retours d'Eloi sur J16. Les modifications s'affichent tout de suite et partent sur le NAS en arrière-plan, dans l'ordre (chaque écriture remplace le corps qu'elle a vu, refusée si le NAS a autre chose) : deux modifications rapides ne se gênent plus. Le Markdown brut est remplacé par un petit éditeur visuel d'un bloc (même schéma que le PC, barre courte : texte, titre, puces, tâches, callout, gras, italique) ; le menu de l'appui long devient « Modifier », « Ajouter un bloc au-dessus / en dessous », « Copier le texte », et toucher sous le dernier bloc en ajoute un. La saisie n'attend plus le verrou. Création de page sans NAS : elle attend sur le téléphone et part au retour du NAS, deuxième exception à la règle 4 après les mémos vocaux. Fermeture automatique des parenthèses, crochets, accolades et guillemets, sur le PC et le téléphone. Sommaire du téléphone avec les `#` et une taille par niveau. Texte des tâches centré sur la case. La page ne défile plus derrière une feuille. |
+| 2026-10-10 | Version 0.15.4, J16 écrit, choix faits en codant, à confirmer dans la recette : une modification préparée sur une page qui a changé sur le NAS depuis son affichage est refusée (la page se met à jour, on recommence) plutôt que rejouée ; le verrou d'une saisie dans une liste est rendu 1,5 s après la fin de la saisie, ou après une minute sans frappe ; une liste toute cochée montre aussi sa case vide pour ajouter une tâche ; le glissement ne concerne que les tâches à faire de premier niveau ; sur une page qui se modifie, l'appui long remplace la sélection de texte d'Android (« Copier le texte » copie le bloc entier) ; créer une page ne prend pas de verrou (l'ordre du parent, s'il change aussi sur le PC, passe par la sauvegarde de conflit habituelle) ; une page en liste est d'abord créée classique puis passée en liste (deux écritures). |
+| 2026-10-10 | J16 commence avant la recette de J15, à la demande d'Eloi (il la fera plus tard). Ses choix pour les modifications sur le téléphone : en mode liste, comme Keep (toucher le texte d'une tâche l'édite sur place, Entrée crée la suivante, × la supprime, enregistrement en quittant la ligne) et réordonnancement par appui long puis glisser ; sur une page classique, appui long sur un bloc pour un menu « Modifier » (Markdown brut du bloc) et, sur une puce, « Ajouter un élément après » ; création de page par un « + » dans le tiroir (racine, ou sous une page). |
+| 2026-10-10 | Réponses d'Eloi aux questions de la recette J15 (0.15.3). Images toujours copiées à la demande, mais une image pas encore sur le téléphone montre sa place avec « Image pas encore copiée sur le téléphone. Elle s’affichera quand le NAS répondra. » (« Téléchargement de l’image… » pendant qu'elle descend). APK signé par la clé de débogage du poste, d'accord. Cases en lecture seule jusqu'à J16, d'accord. Couleurs des callouts normales sur son téléphone. |
+| 2026-10-10 | La recherche globale (`Ctrl+Alt+Espace`, petite fenêtre) sortira de Notes pour devenir un projet à part, `LogicielBarreRecherche` (`../LogicielBarreRecherche`), qui cherche aussi les fichiers, applications, marque-pages et projets du poste. Dans Notes, `Ctrl+K` ouvrira cette barre filtrée sur les pages, et la palette interne restera si la barre est absente ; Notes recevra en argument l'identifiant d'une page à ouvrir. Fait au jalon J7 de ce projet, avant la fin de J15. |
+| 2026-10-10 | Retours d'Eloi sur J15 (0.15.2). Deux adresses du NAS au lieu de la seule adresse Tailscale : la locale d'abord, Tailscale si elle ne répond pas en 1,5 s, message « est-il activé ? » si aucune ne répond (§15 Réseau), avec contrôle de l'identité SMB du NAS à l'adresse locale. Icône Android : le carnet réduit sur le fond bleu, entier dans un masque rond. L'écran de démarrage reste jusqu'au premier affichage (plus de fond noir puis gris). Premier téléchargement au milieu de l'écran, avec une barre d'avancement. Icône du sommaire reprise du PC. Case des tâches centrée sur la ligne. Cocher une case reste pour J16 (écriture directe sur le NAS, sous verrou). |
+| 2026-10-10 | J15, choix faits en codant, à confirmer dans la recette. Capacitor 8, qui exige Java 21 (installé par Eloi). `smbj` 0.15.0 au lieu de 0.13 ; le plugin n'accepte que SMB 3.1.1, exige la signature et impose le chiffrement, et refuse la connexion sinon (vérifié contre un Samba sans chiffrement). Les métadonnées d'un fichier se lisent dans la liste de son dossier : l'ouverture du fichier pour ses attributs prenait 15 s sur Samba. Le téléphone garde le texte de toutes les pages, les images à la demande. L'APK est signé par la clé de débogage du poste (`~/.android/debug.keystore`) : une mise à jour doit venir du même poste. Pas de sauvegarde Android des données de l'application (le cache se retélécharge, le mot de passe se ressaisit). Journal des appels de Capacitor coupé : il écrivait le mot de passe en clair dans logcat. Les icônes Android reprennent celle du PC (aplat bleu en fond, carnet au premier plan). Essais sur le poste avec un émulateur et un Samba en Docker (§3), d'accord d'Eloi. |
+| 2026-10-10 | Retouches 0.14.1 validées par Eloi : J14 passe à « Fait » (0.15.0). J15 commence. |
+| 2026-10-09 | Réponses d'Eloi avant Android. Les recettes des retouches 0.12.5 à 0.12.7 sont OK ; le style de qwen3 lui va (J12 Q5) ; arrêt du serveur de transcription à 2 minutes d'accord ; pas de raccourci pour un bloc sous une tâche. J12 et J13 passent à « Fait » (0.13.0, 0.14.0). P3 tranché : sur le téléphone non plus, pas de champ d'ajout, une liste vide montre sa case. Pas de verrouillage de l'application Android ; même icône que sur le PC. Son téléphone : Samsung Galaxy S20 FE, Android 13, One UI 5.0. Version 0.14.1 : icône du sommaire complet au-dessus des traits du sommaire latéral ; case visible sur une page en liste encore vide ; une page neuve quittée sans nom ni contenu n'est plus gardée en « Sans titre ». Les écrans noirs qu'il a vus venaient de `npm run dev`, qui relance l'application à chaque modification du code faite pendant qu'il s'en sert. |
+| 2026-10-09 | Version 0.12.7, demandes d'Eloi : le bouton « Copier la consigne et le texte » devient « Copier le prompt » ; les quatre icônes du haut de la page (sommaire, mode liste, fonctions IA, export) sont regroupées dans un menu ouvert par un bouton « ⋮ ». |
+| 2026-10-09 | Version 0.12.6, choix d'Eloi. LiteLLM est abandonné : les modèles locaux suffisent. Retirés : son client, ses réglages (adresse, clé, tarifs, alerte de dépense), le choix du fournisseur par fonction, la dépense dans la barre de statut et dans l'historique, le découpage `js-tiktoken`. La clé éventuellement enregistrée est effacée du coffre au démarrage, les anciens réglages ignorés, l'historique garde ses anciens appels. À la place, « Copier la consigne et le texte » dans la fenêtre d'une fonction IA. Un modèle qui déborde de la mémoire de la carte arrête l'appel avec un message (réponse à J12 Q2), au lieu d'être remplacé par un plus petit. Nouvelle icône fournie par Eloi, aplat bleu clair, détourée comme la précédente. |
 | 2026-10-08 | Réponses d'Eloi aux questions réexpliquées. J12, question 2 : un modèle qui déborde de la mémoire vidéo fait abandonner l'appel avec un message, plus de repli sur un modèle plus petit (à coder, `docs/retours.md`). J13, question 4 : la transcription brute peut être gardée quand la mise en forme est impossible, comme aujourd'hui. Il fournit une nouvelle icône, à reprendre. |
 | 2026-10-08 | Version 0.12.5, réponses d'Eloi aux recettes J12, J13 et J14 (le reste des recettes est OK ; LiteLLM non essayé mais noté OK par lui). J12 : modèle d'au moins 7 milliards de paramètres d'accord ; choix manuel du modèle gardé ; adresse http de LiteLLM signalée sans refus d'accord ; la question du modèle écarté après débordement est réexpliquée ; la question 5 (style de qwen3) reste sans réponse. J13 : whisper.cpp livré d'accord ; le modèle se télécharge de lui-même au premier mémo ; arrêt du serveur réduit de 3 à 2 minutes ; la transcription brute sans mise en forme est réexpliquée ; consigne propre et mémo rejeté en attente d'accord. Nouveau : tous les formats audio, par un ffmpeg réduit à l'audio livré dans l'AppImage ; icône de dossier sur la page « Mémos vocaux ». J14 : le champ d'ajout est retiré, on écrit directement des tâches comme dans Keep ; une seule liste par page, sans titres ; des blocs (code, tableau, image, callout, texte) possibles sous une tâche ; repli retenu sur le poste, rangement à la modification et tâches gardées en l'état en quittant le mode, d'accord. Icône du logiciel fournie par Eloi. |
 | 2026-10-08 | Version 0.12.4, J14 écrit, choix faits en codant, à confirmer dans la recette : le champ d'ajout rapide met la tâche en tête de la dernière liste ; en mode liste, une ligne tapée devient une tâche sauf si elle commence par `#`, `/`, `` ` `` ou `|` ; une seule section « Terminé », à la fin de la dernière liste de la page ; son repli est retenu sur le poste ; le rangement se fait à la modification, pas à l'ouverture d'une page changée ailleurs ; quitter le mode ne décoche ni ne déplace rien. Sync toutes les 5 s. |
@@ -1006,19 +1104,12 @@ Une question ouverte s'ajoute ici avec sa référence (P3, P4…) et le jalon qu
 
 ## Annexe : raccourcis
 
-Desktop uniquement. La liste complète, contexte par contexte (arborescence, recherche, titre, code, conflits) et la création du raccourci global dans Cinnamon : [`docs/raccourcis.md`](docs/raccourcis.md).
-
-### Global
-
-| Raccourci | Action |
-|---|---|
-| `Ctrl+Alt+Espace` | Recherche globale, dans une petite fenêtre (Notes lancée, même fenêtre fermée) |
+Desktop uniquement : le téléphone n'a pas de raccourci clavier, ses champs reprennent seulement la saisie Markdown et la fermeture des paires (§6). La liste complète, contexte par contexte (arborescence, titre, code, fenêtres, conflits) : [`docs/raccourcis.md`](docs/raccourcis.md).
 
 ### Application
 
 | Raccourci | Action |
 |---|---|
-| `Ctrl+K` | Palette de recherche |
 | `Ctrl+N` | Nouvelle page juste après la page ouverte, au même niveau (à la racine si aucune page n'est ouverte) |
 | `Ctrl+Shift+N` | Nouvelle page à la racine |
 | `Échap` (nom d'une page « Sans titre ») | Supprimer la page si elle est vide, sinon annuler le renommage |
@@ -1026,6 +1117,7 @@ Desktop uniquement. La liste complète, contexte par contexte (arborescence, rec
 | `Échap` (corbeille) | Revenir à la page |
 | `Maj+↑/↓`, `Maj+clic` (arborescence) | Sélectionner plusieurs pages |
 | `Suppr` (arborescence) | Mettre à la corbeille les pages sélectionnées, ou la page du focus |
+| Touche Menu, clic droit (arborescence) | Menu de la page ; sur « Mémos vocaux », « Ouvrir le dossier des mémos » |
 | `Ctrl+T` / `Ctrl+W` | Nouvel onglet / fermer |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Onglet suivant / précédent |
 | `Ctrl+clic`, clic du milieu | Ouvrir la page dans un nouvel onglet (arborescence) ; le clic du milieu ferme un onglet |
@@ -1034,7 +1126,7 @@ Desktop uniquement. La liste complète, contexte par contexte (arborescence, rec
 | `Ctrl+\` | Afficher/masquer la barre latérale |
 | `Ctrl+Shift+\` | Afficher/masquer le sommaire |
 | `Ctrl+,` | Réglages |
-| `Ctrl+Q` | Quitter Notes pour de bon (fermer la fenêtre la garde en fond) |
+| `Ctrl+Q` | Quitter Notes (comme fermer la fenêtre) |
 
 ### Édition
 
@@ -1049,6 +1141,9 @@ Desktop uniquement. La liste complète, contexte par contexte (arborescence, rec
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Annuler / rétablir |
 | `/` | Menu de commandes |
 | `@` | Mentionner une page |
+| `Ctrl+Z` après « Accepter » (fonctions IA) | Revenir à la page d'avant |
+| `Entrée` sur la dernière ligne vide d'un callout | Sortir du callout |
+| `Retour arrière` au début d'un callout | Retirer le callout, le texte reste |
 
 ### Blocs
 
@@ -1073,6 +1168,14 @@ Desktop uniquement. La liste complète, contexte par contexte (arborescence, rec
 | `Ctrl+←/→` (long) | Cellule précédente / suivante |
 | `Entrée` | Cellule du dessous, nouvelle ligne sous la dernière |
 | `↓` (dernière ligne) | Sortie du tableau |
+
+### Fenêtres et listes
+
+| Raccourci | Action |
+|---|---|
+| `↑` / `↓`, `Entrée`, `Échap` | Recherche, sommaire complet, menu `/`, mentions, choix de l'icône, format d'export, fonctions IA : choisir, valider, fermer |
+| `↑` / `↓` (liste des fautes) | Faute précédente / suivante |
+| `Échap` | Fermer la fenêtre ouverte (visionneuse, export, bulle d'une faute, relecture d'un mémo) ; pendant un appel IA, l'annuler |
 
 ---
 
@@ -1162,3 +1265,25 @@ Une ligne par étape, la plus récente en bas. Rien n'est jamais retiré de cett
 | 2026-10-08 | 0.12.3 | J13 : mémos, en recette |
 | 2026-10-08 | 0.12.4 | J14 : mode liste, en recette |
 | 2026-10-08 | 0.12.5 | Retours J13, J14, icône |
+| 2026-10-09 | 0.12.6 | LiteLLM retiré, consigne copiable |
+| 2026-10-09 | 0.12.7 | Menu ⋮, « Copier le prompt » |
+| 2026-10-09 | 0.13.0 | J12 : fonctions IA validées |
+| 2026-10-09 | 0.14.0 | J13 : mémos vocaux validés |
+| 2026-10-09 | 0.14.1 | Sommaire, liste vide, Sans titre |
+| 2026-10-10 | 0.15.0 | J14 : mode liste validé |
+| 2026-10-10 | 0.15.1 | J15 : Android, en recette |
+| 2026-10-10 | 0.15.2 | Android : deux adresses, démarrage |
+| 2026-10-10 | 0.15.3 | Android : image pas encore copiée |
+| 2026-10-10 | 0.15.4 | J16 : modification légère, en recette |
+| 2026-10-10 | 0.15.5 | Android : éditeur de bloc, sans attente |
+| 2026-10-10 | 0.15.6 | Android : édition directe des pages |
+| 2026-10-11 | 0.15.7 | Android : accueil, callout, lancement |
+| 2026-10-11 | 0.15.8 | Sous-pages, tâches imbriquées |
+| 2026-10-11 | 0.15.9 | Sous-tâches cochées avec leur tâche |
+| 2026-10-11 | 0.16.0 | J15 : Android, consultation validée |
+| 2026-10-11 | 0.17.0 | J16 : modification légère validée |
+| 2026-10-11 | 0.17.1 | J17 : mémos du téléphone, en recette |
+| 2026-10-11 | 0.17.2 | Retours J16 et J17 du téléphone |
+| 2026-10-11 | 0.17.3 | Temps restant des transcriptions |
+| 2026-10-12 | 0.17.4 | Mise au propre par sections |
+| 2026-10-12 | 0.17.5 | Fermer quitte, `--page` |

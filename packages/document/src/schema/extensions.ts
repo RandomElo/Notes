@@ -15,6 +15,8 @@ import { Paragraph } from '@tiptap/extension-paragraph';
 import { Strike } from '@tiptap/extension-strike';
 import { Text } from '@tiptap/extension-text';
 import { Underline } from '@tiptap/extension-underline';
+import { FermetureAutomatique } from './auto-pairs';
+import { SousTachesCochees } from '../operations/toggle-task';
 import { avecElision } from './marks/elision';
 import { Highlight } from './marks/highlight';
 import { Callout } from './nodes/callout';
@@ -65,6 +67,8 @@ export const extensionsDuSchema: Extensions = [
   PageMention,
   // Les liens s'ouvrent et se créent par l'application (clic, collage d'une adresse), pas par l'extension.
   Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['notes'] }),
+  FermetureAutomatique,
+  SousTachesCochees,
   avecElision(Bold, '**'),
   avecElision(Italic, '*'),
   avecElision(Strike, '~~'),

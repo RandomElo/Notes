@@ -1,25 +1,16 @@
 # Raccourcis clavier
 
-Tous les raccourcis de l'application desktop, version 0.8.1.
+Tous les raccourcis de l'application desktop, version 0.17.5. Le téléphone n'a pas de raccourci clavier ; ses champs reprennent la saisie Markdown et la fermeture des paires ci-dessous.
 
-## Hors de l'application
-
-| Raccourci | Effet |
-|---|---|
-| `Ctrl+Alt+Espace` | Ouvre aussitôt une petite fenêtre de recherche, de n'importe où, sans la fenêtre de Notes. `Entrée` ouvre la page dans Notes, `Ctrl+Entrée` dans un nouvel onglet, `Échap` ou un clic ailleurs la cache |
-
-Il marche tant que Notes est lancée, même fenêtre fermée : fermer la fenêtre garde Notes en fond (la sync continue), `Ctrl+Q` la quitte pour de bon. Pour qu'il marche dès l'ouverture de session, cocher « Démarrer Notes avec la session » dans les réglages, section « Recherche globale ».
-
-C'est Notes qui capte ces touches. Si un raccourci personnalisé de Cinnamon les utilise déjà, il passe avant et Notes ne les reçoit pas (les réglages le signalent) : le retirer dans Paramètres système, Clavier, Raccourcis, Raccourcis personnalisés, puis relancer Notes.
+Notes n'a plus de recherche à elle depuis la 0.17.4 (ni `Ctrl+K`, ni `Ctrl+Alt+Espace`) : les pages se cherchent avec la barre de recherche du poste.
 
 ## Application
 
 | Raccourci | Effet |
 |---|---|
-| `Ctrl+K` | Recherche d'une page par son titre |
 | `Ctrl+N` | Nouvelle page juste après la page ouverte, au même niveau (à la racine si aucune page n'est ouverte) |
 | `Ctrl+Shift+N` | Nouvelle page à la racine |
-| `Ctrl+T` | Nouvel onglet, recherche ouverte |
+| `Ctrl+T` | Nouvel onglet, vide |
 | `Ctrl+W` | Fermer l'onglet (le dernier se vide au lieu de se fermer) |
 | `Ctrl+Tab` / `Ctrl+Shift+Tab` | Onglet suivant / précédent |
 | `Ctrl+1` à `Ctrl+9` | Onglet 1 à 9 |
@@ -27,20 +18,14 @@ C'est Notes qui capte ces touches. Si un raccourci personnalisé de Cinnamon les
 | `Ctrl+\` | Masquer ou montrer la barre latérale |
 | `Ctrl+Shift+\` | Masquer ou montrer le sommaire à droite de la page |
 | `Ctrl+,` | Ouvrir ou fermer les réglages |
-| `Ctrl+Q` | Quitter Notes pour de bon (fermer la fenêtre la garde en fond, pour la recherche globale) |
+| `Ctrl+Q` | Quitter Notes (comme fermer la fenêtre) |
 | `Échap` (réglages) | Revenir aux réglages depuis l'écran du thème, puis à la page |
 | `Échap` (corbeille) | Revenir à la page. Pendant une confirmation (« Effacer pour de bon »), l'annule d'abord |
+| `Ctrl+Z` (après « Accepter » d'une fonction IA) | Revenir à la page d'avant |
 
-## Recherche (`Ctrl+K`)
+## Sommaire complet
 
-| Raccourci | Effet |
-|---|---|
-| `↑` / `↓` | Résultat précédent / suivant |
-| `Entrée` | Ouvrir la page. Si rien ne correspond, créer la page : juste après la page ouverte, ou, choisi aux flèches, dedans ou à la racine |
-| `Ctrl+Entrée` | Ouvrir la page dans un nouvel onglet |
-| `Échap` | Fermer |
-
-Le sommaire complet de la page (icône à côté de « Enregistré ») se pilote de la même façon : flèches, `Entrée` pour aller au titre, `Échap`.
+Le sommaire complet de la page (icône au-dessus du sommaire latéral, ou menu « ⋮ ») se pilote au clavier : flèches, `Entrée` pour aller au titre, `Échap`.
 
 ## Arborescence
 
@@ -54,10 +39,10 @@ Le sommaire complet de la page (icône à côté de « Enregistré ») se pilote
 | `Maj+↑` / `Maj+↓` | Étendre la sélection depuis la page du focus |
 | `Maj+clic` | Sélectionner toutes les pages entre la page ouverte (ou le début de la sélection) et la page cliquée, sans l'ouvrir |
 | `Échap` | Défaire la sélection |
+| Touche Menu ou clic droit | Menu contextuel (flèches pour choisir, `Échap` ou `Tab` le ferme). Sur « Mémos vocaux » : « Ouvrir le dossier des mémos » |
 | `Suppr` | Mettre à la corbeille les pages sélectionnées, ou la page du focus. Si l'une a des sous-pages, une confirmation : `Entrée` confirme, `Échap` abandonne |
 | `F2` | Renommer |
 | `Alt+↑` / `Alt+↓` | Déplacer la page parmi ses sœurs |
-| Touche Menu | Menu contextuel |
 | `Entrée` / `Échap` (nom en cours de saisie) | Valider / annuler. `Échap` sur une page encore « Sans titre » et vide la supprime |
 
 ## Titre de la page
@@ -96,6 +81,18 @@ Le sommaire complet de la page (icône à côté de « Enregistré ») se pilote
 
 Dans le texte : `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``.
 
+## Fermeture des paires
+
+| Saisie | Donne |
+|---|---|
+| `(`, `[`, `{`, `"`, `'` | La paire avec une espace de chaque côté du curseur : `( \| )`, `[ \| ]`, `{ \| }`, `" \| "`, `' \| '` |
+| `«` | `« \| »`, avec des espaces insécables |
+| Le caractère fermant | Saute celui qui est déjà là |
+| `Retour arrière` dans une paire vide | Efface les deux |
+| Un des caractères ouvrants, texte sélectionné | Entoure la sélection |
+
+La paire ne s'ouvre que devant la fin de la ligne, une espace ou une ponctuation fermante. Un `[` en début de ligne ou après `- ` reste collé (`[]` pour une case à cocher), un `"` ou une apostrophe collés à un mot restent seuls (« l'arbre »). Rien dans le code.
+
 ## Blocs
 
 | Raccourci | Effet |
@@ -109,6 +106,7 @@ Dans le texte : `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``.
 | `Entrée` (bloc sélectionné) | Revenir au texte, curseur à la fin du bloc |
 | `Suppr` / `Retour arrière` (bloc sélectionné) | Supprimer les blocs sélectionnés |
 | `Entrée` sur une ligne vide à la fin d'un callout | Sortir du callout |
+| `Retour arrière` au tout début d'un callout | Retirer le callout, son texte reste en paragraphes |
 
 ## Tableaux
 
@@ -134,7 +132,12 @@ Dans le texte : `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``.
 
 | Raccourci | Effet |
 |---|---|
-| `Échap` | Fermer la visionneuse, la barre d'une image, la question d'un lien d'image collé, le détail de la sync |
+| `Échap` | Fermer la visionneuse, la barre d'une image, la question d'un lien d'image collé, le détail de la sync, la fenêtre d'export, la bulle d'une faute, la relecture d'un mémo (en arrêtant sa mise en forme) |
+| `Échap` (images inutilisées) | Annuler la confirmation « tout supprimer » |
+| Choix de l'icône : flèches, `Entrée`, `Échap` | Parcourir les emojis ou les icônes, appliquer, fermer |
+| Fenêtre d'export, liste des formats : `↑` / `↓`, `Entrée` ou `Espace`, `Échap` | Ouvrir la liste et choisir, valider, refermer la liste |
+| Fonctions IA : `↑` / `↓`, `Entrée`, `Échap` | Passer de « Relecture » à « Mise au propre », lancer, annuler l'appel en cours ou sinon fermer |
+| Liste des fautes (clic sur le compteur) : `↑` / `↓`, `Échap` | Faute précédente / suivante, fermer et revenir à la page |
 
 ## Écran des conflits
 

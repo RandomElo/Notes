@@ -64,9 +64,13 @@ const api: NotesApi = {
   synchroniserMaintenant: () => ipcRenderer.invoke(canaux.synchroniserMaintenant),
   pagesEnAttente: (demande) => ipcRenderer.invoke(canaux.pagesEnAttente, demande),
 
-  etatDuFond: () => ipcRenderer.invoke(canaux.etatDuFond),
-  definirDemarrageAuto: (actif) => ipcRenderer.invoke(canaux.definirDemarrageAuto, actif),
   quitterNotes: () => ipcRenderer.invoke(canaux.quitterNotes),
+  prendrePageDemandee: () => ipcRenderer.invoke(canaux.prendrePageDemandee),
+  surPageDemandee: (ecouteur) => {
+    const relais = (): void => ecouteur();
+    ipcRenderer.on(evenements.pageDemandee, relais);
+    return () => ipcRenderer.removeListener(evenements.pageDemandee, relais);
+  },
   miseAJourEnAttente: () => ipcRenderer.invoke(canaux.miseAJourEnAttente),
   surMiseAJourInstallee: (ecouteur) => {
     const relais = (): void => ecouteur();
@@ -74,25 +78,6 @@ const api: NotesApi = {
     return () => ipcRenderer.removeListener(evenements.miseAJourInstallee, relais);
   },
   relancerNotes: () => ipcRenderer.invoke(canaux.relancerNotes),
-  surRechercheMontree: (ecouteur) => {
-    const relais = (): void => ecouteur();
-    ipcRenderer.on(evenements.rechercheMontree, relais);
-    return () => ipcRenderer.removeListener(evenements.rechercheMontree, relais);
-  },
-  surRechercheCachee: (ecouteur) => {
-    const relais = (): void => ecouteur();
-    ipcRenderer.on(evenements.rechercheCachee, relais);
-    return () => ipcRenderer.removeListener(evenements.rechercheCachee, relais);
-  },
-  choisirDepuisLaRecherche: (demande) => ipcRenderer.invoke(canaux.choisirDepuisLaRecherche, demande),
-  fermerLaRecherche: () => ipcRenderer.invoke(canaux.fermerLaRecherche),
-  ajusterLaRecherche: (demande) => ipcRenderer.invoke(canaux.ajusterLaRecherche, demande),
-  prendrePageDemandee: () => ipcRenderer.invoke(canaux.prendrePageDemandee),
-  surPageDemandee: (ecouteur) => {
-    const relais = (): void => ecouteur();
-    ipcRenderer.on(evenements.pageDemandee, relais);
-    return () => ipcRenderer.removeListener(evenements.pageDemandee, relais);
-  },
 
   surEtatSync: (ecouteur) => {
     const relais = (_evenement: unknown, etat: SyncStatus): void => ecouteur(etat);
@@ -145,8 +130,7 @@ const api: NotesApi = {
 
   etatIa: () => ipcRenderer.invoke(canaux.etatIa),
   enregistrerReglagesIa: (reglages) => ipcRenderer.invoke(canaux.enregistrerReglagesIa, reglages),
-  enregistrerCleLitellm: (demande) => ipcRenderer.invoke(canaux.enregistrerCleLitellm, demande),
-  oublierCleLitellm: () => ipcRenderer.invoke(canaux.oublierCleLitellm),
+  consigneIa: (demande) => ipcRenderer.invoke(canaux.consigneIa, demande),
   estimerIa: (demande) => ipcRenderer.invoke(canaux.estimerIa, demande),
   lancerIa: (demande) => ipcRenderer.invoke(canaux.lancerIa, demande),
   annulerIa: () => ipcRenderer.invoke(canaux.annulerIa),
@@ -170,6 +154,8 @@ const api: NotesApi = {
   ecarterMemo: (demande) => ipcRenderer.invoke(canaux.ecarterMemo, demande),
   convertirMemo: (demande) => ipcRenderer.invoke(canaux.convertirMemo, demande),
   ouvrirDossierMemos: () => ipcRenderer.invoke(canaux.ouvrirDossierMemos),
+  estimerMemos: (demande) => ipcRenderer.invoke(canaux.estimerMemos, demande),
+  estimerMiseEnFormeMemo: (demande) => ipcRenderer.invoke(canaux.estimerMiseEnFormeMemo, demande),
   installerModeleWhisper: () => ipcRenderer.invoke(canaux.installerModeleWhisper),
   annulerInstallationWhisper: () => ipcRenderer.invoke(canaux.annulerInstallationWhisper),
   surEtatWhisper: (ecouteur) => {

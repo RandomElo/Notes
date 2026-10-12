@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
 import { ajouterALHistoriqueIa, appelsDuFichier, fusionnerAppels, lireAppel, lireHistoriqueIa } from './usage';
 import type { AiRun } from './usage';
-import { calibrer, debutDePeriode, depenseDeLaPeriode, ratioDeSortieParDefaut, totauxParPeriode } from './usage-stats';
+import { calibrer, debutDePeriode, ratioDeSortieParDefaut, totauxParPeriode } from './usage-stats';
 
 const appel = (champs: Partial<AiRun> = {}): AiRun => ({
   id: '0192a0b0-0000-7000-8000-000000000001',
@@ -67,7 +67,7 @@ describe('totaux et calage', () => {
     expect(debutDePeriode(maintenant, 'annee')).toBe(new Date(2026, 0, 1).getTime());
   });
 
-  it('additionne par période, périodes vides comprises, modèle local sans coût', () => {
+  it('additionne par période, périodes vides comprises', () => {
     const appels = [
       appel(),
       appel({ id: '0192a0b0-0000-7000-8000-000000000002', fournisseur: 'ollama', coutUsd: null }),
@@ -75,8 +75,6 @@ describe('totaux et calage', () => {
     ];
     const jours = totauxParPeriode(appels, 'jour', maintenant, 3);
     expect(jours.map((jour) => jour.appels)).toEqual([1, 0, 2]);
-    expect(jours[2]!.coutUsd).toBeCloseTo(0.0057);
-    expect(depenseDeLaPeriode(appels, 'mois', maintenant)).toBeCloseTo(0.0157);
     expect(totauxParPeriode(appels, 'mois', maintenant, 2).map((mois) => mois.appels)).toEqual([0, 3]);
   });
 

@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparer } from './app';
+import { actionDePage, attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparer } from './app';
 
 // Mode liste de tâches (J14, README §14) : une seule liste par page, sans titres, façon Keep.
 
@@ -13,11 +13,8 @@ test('passer une page en mode liste en fait une seule liste, prête à écrire ;
   const session = await lancer(preparation);
   const { page, vault } = session;
   await ouvrirPage(page, 'Projets');
-  const bouton = page.getByRole('button', { name: 'Mode liste de tâches' });
-  await expect(bouton).toHaveAttribute('aria-pressed', 'false');
-
-  await bouton.click();
-  await expect(bouton).toHaveAttribute('aria-pressed', 'true');
+  await actionDePage(page, 'Passer en liste de tâches');
+  await expect(editeur(page)).toBeFocused();
   // Pas de champ d'ajout : le curseur est dans une tâche vide, avant « Terminé ».
   await expect(page.getByRole('textbox', { name: 'Ajouter une tâche' })).toHaveCount(0);
   await page.keyboard.type('Lait', { delay: 15 });
@@ -26,13 +23,22 @@ test('passer une page en mode liste en fait une seule liste, prête à écrire ;
     .poll(() => lireCorps(vault, 'Projets'))
     .toBe('- [ ] Appeler le plombier\n- [ ] Refaire le site\n- [ ] Plus tard\n  ```sh\n  ls\n  ```\n- [ ] Lait\n- [x] Ranger le NAS\n');
   expect(await readFile(join(vault, 'Projets', 'page.md'), 'utf8')).toContain('\nmode: todo\n');
+  // Le menu « ⋮ » propose maintenant de quitter le mode ; Échap le ferme et rend le focus à son bouton.
+  await page.getByRole('button', { name: 'Actions de la page' }).click();
+  await expect(page.getByRole('menuitem', { name: 'Sommaire de la page' })).toBeFocused();
+  await expect(page.getByRole('menuitem')).toHaveText(['Sommaire de la page', 'Quitter le mode liste', 'Fonctions IA', 'Exporter la page']);
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('menu')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Actions de la page' })).toBeFocused();
+  await editeur(page).locator('li', { hasText: 'Lait' }).locator('p').click();
+  await page.waitForTimeout(100);
+  await page.keyboard.press('End');
   await expect(editeur(page).locator('h1, h2, h3')).toHaveCount(0);
 
   // Quitter le mode par le menu « / » : le contenu ne change pas.
   await page.keyboard.press('Enter');
   await page.keyboard.type('/quitter', { delay: 15 });
   await page.getByRole('option', { name: 'Quitter le mode liste' }).click();
-  await expect(bouton).toHaveAttribute('aria-pressed', 'false');
   await expect.poll(async () => readFile(join(vault, 'Projets', 'page.md'), 'utf8')).not.toContain('mode:');
   expect(await lireCorps(vault, 'Projets')).toContain('- [ ] Lait\n- [x] Ranger le NAS\n');
   await fermer(session);
@@ -106,5 +112,22 @@ test('un bloc choisi dans le menu se range sous la tâche', async () => {
   await page.keyboard.type('apt install nginx', { delay: 15 });
   await attendreEnregistrement(page);
   await expect.poll(() => lireCorps(vault, 'Projets')).toBe('- [ ] Installer le serveur\n  ```\n  apt install nginx\n  ```\n');
+  await fermer(session);
+});
+
+test('une page vide passée en liste montre sa case, sans rien écrire dans le fichier avant la frappe', async () => {
+  const preparation = await preparer();
+  await writeFile(join(preparation.vault, 'Projets', 'page.md'), enTeteProjets);
+  const session = await lancer(preparation);
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Projets');
+  await actionDePage(page, 'Passer en liste de tâches');
+  await expect(editeur(page).locator('p.tache-a-venir')).toHaveCount(1);
+  await page.waitForTimeout(1200);
+  expect(await lireCorps(vault, 'Projets')).toBe('');
+  await page.keyboard.type('Pain', { delay: 15 });
+  await attendreEnregistrement(page);
+  await expect.poll(() => lireCorps(vault, 'Projets')).toBe('- [ ] Pain\n');
+  await expect(editeur(page).locator('p.tache-a-venir')).toHaveCount(0);
   await fermer(session);
 });

@@ -1,9 +1,11 @@
 import { AudioLines, Download, FolderOpen, LoaderCircle, Mic, Play, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { MemosState, MemoView } from '../../../../shared/memos-contract';
 import { api } from '../../lib/ipc';
 import { MemoPlayer } from './MemoPlayer';
 import { MemoReview } from './MemoReview';
+import { dureesDesMemos, dureeTotale, libelleDeLaDuree } from './memo-timing';
+import type { Duration } from './memo-timing';
 
 const boutonSecondaire =
   'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm leading-none font-medium outline-0 aria-disabled:opacity-50';
@@ -107,6 +109,25 @@ export function MemoList({ etat, surEtat }: { etat: MemosState; surEtat: (etat: 
   const [revue, definirRevue] = useState<MemoView[] | null>(null);
   const [erreurDuDossier, definirErreurDuDossier] = useState<string | null>(null);
   const pret = etat.whisper.binaire && etat.whisper.modele === 'pret';
+  const [dureeDeTout, definirDureeDeTout] = useState<Duration | null>(null);
+  const chemins = etat.memos.map((memo) => memo.chemin).join('\n');
+
+  // Durée de « Tout transcrire », estimée de nouveau quand la liste change ou qu'une revue se ferme (calage à jour).
+  useEffect(() => {
+    if (!pret || chemins === '' || !chemins.includes('\n') || revue !== null) {
+      definirDureeDeTout(null);
+      return;
+    }
+    let actif = true;
+    void api
+      .estimerMemos({ chemins: chemins.split('\n') })
+      .then((estimation) => actif && definirDureeDeTout(dureeTotale(dureesDesMemos(estimation))))
+      .catch(() => undefined);
+    return () => {
+      actif = false;
+    };
+  }, [pret, chemins, revue]);
+
   return (
     <section aria-label="Mémos en attente" className="bg-surface mb-6 space-y-3 rounded-lg p-4">
       <div className="flex items-center gap-2">
@@ -123,6 +144,7 @@ export function MemoList({ etat, surEtat }: { etat: MemosState; surEtat: (etat: 
         >
           <FolderOpen className="size-4" aria-hidden="true" />
         </button>
+        {etat.memos.length > 1 && dureeDeTout !== null && <span className="text-discret text-xs">{libelleDeLaDuree(dureeDeTout)}</span>}
         {etat.memos.length > 1 && (
           <button type="button" aria-disabled={!pret} onClick={() => pret && definirRevue(etat.memos)} className={boutonPrincipal}>
             Tout transcrire

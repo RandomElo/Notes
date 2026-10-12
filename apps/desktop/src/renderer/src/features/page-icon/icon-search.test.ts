@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { chercherEmojis, emojis } from './emoji-search';
+import { chercherEmojis, emojis } from '@notes/ui/emoji';
 import { motsFrancais } from './lucide-fr';
 import { chercherIcones, nomsLucide } from './lucide-search';
 import { composantLucide } from './PageIcon';

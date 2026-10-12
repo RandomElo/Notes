@@ -1,7 +1,7 @@
 import { Image as IconeImage, Search, Smile, Shapes, Trash2 } from 'lucide-react';
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
-import { chercherEmojis } from './emoji-search';
+import { chercherEmojis } from '@notes/ui/emoji';
 import { ImageIconEditor } from './ImageIconEditor';
 import { chercherIcones } from './lucide-search';
 import { composantLucide } from './PageIcon';

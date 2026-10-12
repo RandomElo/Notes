@@ -7,6 +7,7 @@ import { SettingsStore } from '../settings/settings-store';
 import { creerFileDAttente } from '../vault/serial-queue';
 import { VaultService } from '../vault/vault-service';
 import { creerHandlersMemos } from './memos';
+import { calerTranscription } from '../whisper/timing';
 import { creerHandlersVault } from './vault';
 
 const etatWhisper: WhisperState = { binaire: true, modele: 'pret', recus: 0, total: 1, serveur: 'arrete', carte: 'Carte d’essai', erreur: null, dossier: '/w' };
@@ -23,19 +24,30 @@ async function monter(whisperEtat: WhisperState = etatWhisper) {
   const installerModele = vi.fn(() => whisperEtat);
   const convertir = vi.fn(async (_fichier: string) => new Uint8Array(44 + 32_000));
   const ouvrirDossier = vi.fn(async (_dossier: string) => '');
+  // 60 s d'audio, sauf un fichier dont ffmpeg ne donne pas la durée.
+  const dureeAudio = vi.fn(async (fichier: string) => (fichier.endsWith('.amr') ? null : 60_000));
+  const dureeEstimee = vi.fn(async (_fonction: string, caracteres: number) => caracteres * 10);
   const memos = creerHandlersMemos({
     vault,
     enSerie: file.enSerie,
     reglages,
-    whisper: { etat: () => whisperEtat, installerModele, annulerInstallation: () => undefined, transcrire },
+    whisper: {
+      etat: () => whisperEtat,
+      installerModele,
+      annulerInstallation: () => undefined,
+      transcrire,
+      calage: async () => ({ calage: calerTranscription([], true), serveurArrete: whisperEtat.serveur === 'arrete' }),
+    },
+    ia: { dureeEstimee },
     convertir,
+    dureeAudio,
     ouvrirDossier,
   });
   const deposer = async (nom: string, contenu = 'audio'): Promise<void> => {
     await mkdir(join(dossier, '.notes', 'memos'), { recursive: true });
     await writeFile(join(dossier, '.notes', 'memos', nom), contenu);
   };
-  return { memos, dossier, deposer, transcrire, reglages, installerModele, convertir, ouvrirDossier };
+  return { memos, dossier, deposer, transcrire, reglages, installerModele, convertir, ouvrirDossier, dureeAudio };
 }
 
 describe('handlers mémos', () => {
@@ -48,6 +60,23 @@ describe('handlers mémos', () => {
       expect(await memos.convertir({ chemin })).toMatchObject({ ok: false });
     }
     expect(convertir).toHaveBeenCalledTimes(1);
+  });
+
+  it('estime chaque mémo du dossier des mémos, démarrage du serveur à part', async () => {
+    const { memos, deposer, dossier, dureeAudio } = await monter();
+    await deposer('memo-2026-10-07-162405.m4a');
+    await deposer('memo-2026-10-07-170000.amr');
+    const estimation = await memos.estimer({ chemins: ['.notes/memos/memo-2026-10-07-162405.m4a', '.notes/memos/memo-2026-10-07-170000.amr', 'Bienvenue/page.md'] });
+    expect(estimation.demarrageMs).toBe(5000);
+    expect(estimation.memos).toEqual([
+      // 60 s à 1/15 plus 0,3 s ; 15 caractères par seconde, 10 ms par caractère.
+      { chemin: '.notes/memos/memo-2026-10-07-162405.m4a', audioMs: 60_000, transcriptionMs: 4300, miseEnFormeMs: 9000 },
+      { chemin: '.notes/memos/memo-2026-10-07-170000.amr', audioMs: null, transcriptionMs: null, miseEnFormeMs: null },
+    ]);
+    expect(dureeAudio).toHaveBeenCalledTimes(2);
+    expect(dureeAudio).toHaveBeenCalledWith(join(dossier, '.notes', 'memos', 'memo-2026-10-07-162405.m4a'));
+    expect(await memos.estimerMiseEnForme({ caracteres: 120 })).toBe(1200);
+    expect(await memos.estimerMiseEnForme({ caracteres: 'beaucoup' })).toBeNull();
   });
 
   it('ouvre le dossier des mémos, créé s’il manque', async () => {

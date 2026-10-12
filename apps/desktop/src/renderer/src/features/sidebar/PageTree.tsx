@@ -1,8 +1,9 @@
 import { dossierParent, titreParDefaut, trouverNoeud } from '@notes/core';
 import type { TreeNode } from '@notes/core';
-import { ArrowDownToLine, Copy, Eye, EyeOff, FilePlus, Pencil, Smile, Trash2 } from 'lucide-react';
+import { ArrowDownToLine, Copy, Eye, EyeOff, FilePlus, FolderOpen, Pencil, Smile, Trash2 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent } from 'react';
+import { api } from '../../lib/ipc';
 import type { Vault } from '../../state/useVault';
 import { ContextMenu } from './ContextMenu';
 import { DeleteConfirmation } from './DeleteConfirmation';
@@ -165,7 +166,13 @@ export function PageTree(props: PageTreeProps) {
           void vault.dupliquerPage(noeud.chemin).then((page) => page !== null && props.surSelection(page.id));
         },
       },
-      ...(noeud.role === 'memos' ? [{ libelle: 'Masquer de l’arborescence', icone: EyeOff, action: () => props.surMasquageDesMemos(true) }] : []),
+      ...(noeud.role === 'memos'
+        ? [
+            // Un fichier audio déposé dans ce dossier devient un mémo en attente (README §13).
+            { libelle: 'Ouvrir le dossier des mémos', icone: FolderOpen, action: () => void api.ouvrirDossierMemos() },
+            { libelle: 'Masquer de l’arborescence', icone: EyeOff, action: () => props.surMasquageDesMemos(true) },
+          ]
+        : []),
       { libelle: 'Mettre à la corbeille', icone: Trash2, raccourci: 'Suppr', action: () => supprimer([noeud], { x, y }) },
     ];
   };

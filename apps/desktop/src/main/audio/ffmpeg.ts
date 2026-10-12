@@ -72,3 +72,49 @@ export function convertirEnWav(binaire: string, fichier: string, lancer: Lancer 
     });
   });
 }
+
+/** « Duration: 00:01:23.45 » dans ce qu'écrit ffmpeg en lisant un fichier ; null si absent (« N/A »). */
+export function lireDureeAffichee(sortie: string): number | null {
+  const trouve = /Duration: (\d+):(\d{2}):(\d{2}(?:\.\d+)?)/.exec(sortie);
+  if (trouve === null) {
+    return null;
+  }
+  const [, heures, minutes, secondes] = trouve;
+  return Math.round((Number(heures) * 3600 + Number(minutes) * 60 + Number(secondes)) * 1000);
+}
+
+/**
+ * Durée d'un fichier audio en millisecondes, lue dans son en-tête par le
+ * ffmpeg livré, sans le décoder (quelques millisecondes) : pour estimer une
+ * transcription avant de la lancer. null si ffmpeg ne la donne pas.
+ */
+export function dureeAudio(binaire: string, fichier: string, lancer: Lancer = lancerParDefaut): Promise<number | null> {
+  return new Promise((resoudre) => {
+    let processus: ChildProcess;
+    try {
+      // Sans fichier de sortie, ffmpeg décrit l'entrée puis s'arrête en erreur : c'est voulu.
+      processus = lancer(binaire, ['-hide_banner', '-nostdin', '-i', `file:${fichier}`]);
+    } catch {
+      resoudre(null);
+      return;
+    }
+    let sortie = '';
+    const minuteur = setTimeout(() => {
+      processus.kill('SIGKILL');
+      resoudre(null);
+    }, 5000);
+    // Rien n'est attendu sur la sortie standard, mais elle est vidée pour que ffmpeg ne s'y bloque jamais.
+    processus.stdout?.resume();
+    processus.stderr?.on('data', (morceau: Buffer) => {
+      sortie = (sortie + morceau.toString('utf8')).slice(-8000);
+    });
+    processus.on('error', () => {
+      clearTimeout(minuteur);
+      resoudre(null);
+    });
+    processus.on('close', () => {
+      clearTimeout(minuteur);
+      resoudre(lireDureeAffichee(sortie));
+    });
+  });
+}

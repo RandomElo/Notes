@@ -4,12 +4,13 @@ export type { LocalEntry, LocalFs, LocalFsErrorCode } from './fs/local-fs';
 export { RemoteFsError, versCodeErreur } from './fs/remote-fs';
 export type { RemoteEntry, RemoteFs, RemoteFsErrorCode } from './fs/remote-fs';
 
-export { estCheminAbsolu, estIdentifiantDAppareil, lireReglages, reglagesParDefaut, validerReglagesNas } from './config/settings';
+export { estCheminAbsolu, estHoteValide, estIdentifiantDAppareil, lireReglages, reglagesParDefaut, validerReglagesNas } from './config/settings';
 export type { NasSettings, NasSettingsField, NasSettingsValidation, Settings } from './config/settings';
 
 export { estId, genererId } from './page/id';
 export { longueurMaxTitre, nomDeDossier, nomLibre, titreParDefaut, verifierTitre } from './page/naming';
 export { analyserPage, cheminDuFichierPage, lirePage } from './page/page-file';
+export { lireSurcharges } from './page/front-matter';
 export { natureDIcone } from './page/icon';
 export type { PageIcon } from './page/icon';
 export { fichierPage } from './page/types';
@@ -41,11 +42,16 @@ export { lireArbre, trouverNoeud } from './vault/tree';
 export type { TreeNode } from './vault/tree';
 
 export { sousDossierDistant } from './fs/remote-subdir';
+export { RemoteAsLocalFs } from './fs/remote-as-local';
 export { versOctets, versTexte } from './fs/utf8';
 export { estSauvegardeDeConflit } from './sync/conflict';
 export { etatLocalDePage, synchroniser } from './sync/engine';
 export type { CycleReport, SyncContext } from './sync/engine';
 export type { IndexStore } from './sync/index-store';
+export { PullCache, estCopieDOffice, fichierDuTheme } from './sync/pull-only';
+export { creerPageSurLeNas, modifierPageSurLeNas } from './sync/direct-write';
+export type { DirectWriteContext, DirectWriteResult, PageChange } from './sync/direct-write';
+export type { PullContext, PullReport } from './sync/pull-only';
 export { LockManager, dureeDeVieDuVerrouMs, inactiviteAvantRelacheMs } from './sync/lock';
 export type { LocalPageState, LockOwner, LockState, TakeResult } from './sync/lock';
 export { etatApresCycle, etatApresEchec, etatDesactive, etatEnCours, messageInjoignable } from './sync/status';
@@ -74,10 +80,10 @@ export { classerParTitre, correspondanceFloue, normaliserPourRecherche } from '.
 export type { FuzzyMatch, RankedResult } from './search/fuzzy';
 export { ajouterALHistoriqueIa, appelsDuFichier, fichierDHistoriqueIa, fusionnerAppels, lireAppel, lireHistoriqueIa } from './ai/usage';
 export type { AiEstimate, AiFunction, AiProvider, AiRun } from './ai/usage';
-export { calibrer, debutDePeriode, depenseDeLaPeriode, ratioDeSortieParDefaut, totauxParPeriode } from './ai/usage-stats';
+export { calibrer, debutDePeriode, ratioDeSortieParDefaut, totauxParPeriode } from './ai/usage-stats';
 export type { Calibration, UsageBucket, UsagePeriod } from './ai/usage-stats';
 export { adresseDeServiceValide, adresseOllamaParDefaut, fonctionsDePage, lireReglagesIa, nomDeModeleValide, reglagesIaParDefaut } from './config/ai-settings';
-export type { AiModelChoice, AiPageFunction, AiPrice, AiSettings } from './config/ai-settings';
+export type { AiModelChoice, AiPageFunction, AiSettings } from './config/ai-settings';
 export {
   cheminDeMemoValide,
   creerPageDeMemo,
@@ -93,3 +99,5 @@ export {
   trouverPageDesMemos,
 } from './memos/memos';
 export type { VoiceMemo } from './memos/memos';
+export { envoyerMemosEnAttente, listerMemosEnAttente } from './memos/memo-upload';
+export type { PendingMemo } from './memos/memo-upload';

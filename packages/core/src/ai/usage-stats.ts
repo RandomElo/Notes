@@ -1,7 +1,7 @@
 import type { AiFunction, AiRun } from './usage';
 
 /**
- * Ce qu'on tire de l'historique des appels IA : dépenses par période et
+ * Ce qu'on tire de l'historique des appels IA : totaux par période et
  * calage des estimations. Les périodes suivent l'heure locale du poste.
  */
 
@@ -13,8 +13,6 @@ export interface UsageBucket {
   appels: number;
   entree: number;
   sortie: number;
-  /** Dépense en dollars (appels à une API externe seulement). */
-  coutUsd: number;
 }
 
 /** Début de la période qui contient l'instant donné (lundi pour une semaine). */
@@ -52,22 +50,16 @@ export function totauxParPeriode(appels: readonly AiRun[], periode: UsagePeriod,
   while (debuts.length < nombre) {
     debuts.unshift(periodePrecedente(debuts[0]!, periode));
   }
-  const totaux = new Map<number, UsageBucket>(debuts.map((debut) => [debut, { debut, appels: 0, entree: 0, sortie: 0, coutUsd: 0 }]));
+  const totaux = new Map<number, UsageBucket>(debuts.map((debut) => [debut, { debut, appels: 0, entree: 0, sortie: 0 }]));
   for (const appel of appels) {
     const total = totaux.get(debutDePeriode(appel.date, periode));
     if (total !== undefined) {
       total.appels += 1;
       total.entree += appel.entree;
       total.sortie += appel.sortie;
-      total.coutUsd += appel.coutUsd ?? 0;
     }
   }
   return debuts.map((debut) => totaux.get(debut)!);
-}
-
-/** Dépense en dollars de la période en cours (jour, mois…). */
-export function depenseDeLaPeriode(appels: readonly AiRun[], periode: UsagePeriod, maintenant: number): number {
-  return totauxParPeriode(appels, periode, maintenant, 1)[0]!.coutUsd;
 }
 
 /** Combien de tokens de sortie pour un token d'entrée, avant tout historique. */

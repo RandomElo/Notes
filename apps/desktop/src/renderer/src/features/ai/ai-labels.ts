@@ -1,26 +1,10 @@
-/**
- * Textes des fonctions IA : montants, tokens, durées. Les montants sont en
- * dollars, la monnaie de facturation des fournisseurs passés par LiteLLM.
- */
+/** Textes des fonctions IA : tokens, durées, écarts. */
 
 const nombre = new Intl.NumberFormat('fr-FR');
 
 /** « 1 240 tokens ». */
 export function libelleDeTokens(tokens: number): string {
   return `${nombre.format(Math.round(tokens))} token${Math.round(tokens) > 1 ? 's' : ''}`;
-}
-
-/**
- * Un montant en dollars, assez précis pour les petites sommes : « 0,0026 $ »,
- * « 0,12 $ », « 3,40 $ ». Zéro s'écrit « 0 $ ».
- */
-export function libelleDeDollars(montant: number): string {
-  if (montant === 0) {
-    return '0 $';
-  }
-  const chiffres = montant >= 1 ? 2 : montant >= 0.01 ? 3 : 4;
-  const texte = new Intl.NumberFormat('fr-FR', { minimumFractionDigits: montant >= 1 ? 2 : 0, maximumFractionDigits: chiffres }).format(montant);
-  return `${texte === '0' ? '< 0,0001' : texte} $`;
 }
 
 /** « environ 12 s », « environ 2 min 30 s ». */
@@ -44,4 +28,25 @@ export function libelleDEcart(reel: number, estime: number): string {
     return 'exact';
   }
   return `${ecart > 0 ? '+' : '−'}${Math.abs(ecart)} %`;
+}
+
+/** « environ 30 s restantes », « environ 2 min restantes » ; « presque fini » sous deux secondes. */
+export function libelleDeTempsRestant(ms: number): string {
+  return ms < 2000 ? 'presque fini' : `${libelleDeDuree(ms)} restantes`;
+}
+
+/**
+ * Temps restant d'un appel à l'IA (README §12). Avant les premiers mots, et
+ * tant qu'ils sont peu nombreux, c'est l'estimation moins le temps écoulé ;
+ * ensuite, la part déjà reçue donne la vitesse réelle de cet appel.
+ */
+export function tempsRestantDeLIa(dureeEstimeeMs: number, ecouleMs: number, tokensRecus: number, sortieEstimee: number): number {
+  const part = sortieEstimee > 0 ? tokensRecus / sortieEstimee : 0;
+  if (part >= 1) {
+    return 0;
+  }
+  if (part < 0.2) {
+    return Math.max(0, dureeEstimeeMs - ecouleMs);
+  }
+  return Math.max(0, (ecouleMs * (1 - part)) / part);
 }

@@ -1,12 +1,13 @@
 {
   "name": "notes",
-  "version": "0.12.5",
+  "version": "0.17.5",
   "private": true,
   "type": "module",
   "description": "Éditeur de notes local-first avec synchronisation SMB",
   "workspaces": [
     "packages/*",
-    "apps/desktop"
+    "apps/desktop",
+    "apps/mobile"
   ],
   "engines": {
     "node": ">=22"
@@ -20,6 +21,8 @@
     "build:ffmpeg": "bash scripts/build-ffmpeg.sh",
     "package": "npm run build && npm run package -w @notes/desktop",
     "installer": "bash scripts/install-local.sh",
+    "android:apk": "bash scripts/build-android.sh",
+    "android:installer": "bash scripts/build-android.sh installer",
     "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint . && node scripts/check-map.mjs",
     "test": "vitest run && npm run test:companion",

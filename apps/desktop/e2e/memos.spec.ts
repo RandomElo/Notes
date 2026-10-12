@@ -91,6 +91,8 @@ test('un mémo déposé devient une sous-page transcrite et mise en forme ; éco
   const liste = page.getByRole('region', { name: 'Mémos en attente' });
   await expect(liste.getByRole('heading')).toHaveText('2 mémos en attente');
   await expect(liste.getByRole('listitem')).toHaveText([/Mémo du 7 octobre 2026 à 16 h 24/, /Mémo du 8 octobre 2026 à 9 h 00/]);
+  // Durée estimée de « Tout transcrire » : 1 s d'audio chacun, durée lue par ffmpeg ; modèle jamais utilisé pour la mise en forme.
+  await expect(liste).toContainText('environ 1 s, plus la mise en forme');
 
   // Écouter : un lecteur audio.
   await liste.getByRole('button', { name: 'Écouter Mémo du 7 octobre 2026 à 16 h 24' }).click();
@@ -105,6 +107,10 @@ test('un mémo déposé devient une sous-page transcrite et mise en forme ; éco
   await expect(comparaison).toContainText('- Acheter du pain.');
   await expect(comparaison).not.toContainText('Voici');
   await expect(fenetre).toContainText('1 s d’audio, transcrites en');
+  // La durée de la transcription est gardée sur le poste, pour les estimations suivantes.
+  const mesures = JSON.parse(await readFile(join(preparation.profil, 'transcriptions.json'), 'utf8')) as { audioMs: number; caracteres: number }[];
+  expect(mesures).toMatchObject([{ audioMs: 1000, demarrageMs: null }]);
+  expect(mesures[0]!.caracteres).toBeGreaterThan(40);
   expect(faux.wav[0]!.readUInt16LE(22)).toBe(1);
   expect(faux.wav[0]!.readUInt32LE(24)).toBe(16_000);
   await fenetre.getByRole('button', { name: 'Accepter' }).click();
@@ -197,6 +203,47 @@ test('un format que Chromium ne lit pas passe par ffmpeg ; le dossier des mémos
   expect(faux.wav[0]!.readUInt32LE(24)).toBe(16_000);
   await fenetre.getByRole('button', { name: 'Rejeter' }).click();
   await expect(fenetre).toHaveCount(0);
+
+  await fermer(session);
+  faux.serveur.close();
+});
+
+test('un fichier audio déposé pendant que Notes tourne, sous n’importe quel nom, se transcrit ; le clic droit ouvre le dossier', async () => {
+  const faux = await fauxServeurs();
+  const preparation = await preparer();
+  await writeFile(join(preparation.profil, 'settings.json'), JSON.stringify({ nas: null, vaultLocal: preparation.vault, ia: { adresseOllama: faux.adresse } }));
+  const session = await lancer(preparation, [], { NOTES_WHISPER_ADRESSE: faux.adresse, NOTES_CARTES_ESSAI: carteDe8Go });
+  const { page, application } = session;
+  await application.evaluate(({ shell }) => {
+    shell.openPath = async (chemin: string) => {
+      (globalThis as { dossierOuvert?: string }).dossierOuvert = chemin;
+      return '';
+    };
+  });
+  await expect(ligne(page, 'Mémos vocaux')).toHaveCount(0);
+
+  // Comme un enregistrement copié depuis un autre appareil : nom libre, déposé application ouverte.
+  const memos = join(session.vault, '.notes', 'memos');
+  await mkdir(memos, { recursive: true });
+  await writeFile(join(memos, 'Enregistrement 12.wav'), memoWav());
+  await expect(ligne(page, 'Mémos vocaux')).toBeVisible({ timeout: 15_000 });
+
+  await ligne(page, 'Mémos vocaux').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Ouvrir le dossier des mémos' }).click();
+  await expect.poll(() => application.evaluate(() => (globalThis as { dossierOuvert?: string }).dossierOuvert)).toBe(memos);
+
+  await ligne(page, 'Mémos vocaux').click();
+  const liste = page.getByRole('region', { name: 'Mémos en attente' });
+  await expect(liste.getByRole('heading')).toHaveText('Un mémo en attente');
+  await liste.getByRole('button', { name: 'Transcrire', exact: true }).click();
+  const fenetre = page.getByRole('dialog', { name: 'Transcription d’un mémo' });
+  await expect(fenetre).toContainText('Appeler le plombier demain.');
+  await fenetre.getByRole('button', { name: 'Accepter' }).click();
+  await expect(fenetre).toHaveCount(0);
+  // Sans date dans le nom, le mémo prend celle du fichier ; il devient une sous-page, l'audio part à la corbeille.
+  await expect.poll(async () => (await readdir(join(session.vault, 'Mémos vocaux'))).some((nom) => nom.startsWith('Mémo du '))).toBe(true);
+  await expect(liste.getByRole('heading', { level: 2 }).first()).toHaveText('Aucun mémo en attente');
+  expect(await readdir(memos)).toEqual([]);
 
   await fermer(session);
   faux.serveur.close();

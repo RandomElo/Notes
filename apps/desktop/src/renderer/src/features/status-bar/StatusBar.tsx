@@ -2,7 +2,6 @@ import { CloudAlert, CloudCheck, CloudOff, Clock, RefreshCw, TriangleAlert } fro
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { SyncStatusKind } from '@notes/core';
-import { AiSpend } from '../ai/AiSpend';
 import { SpellCounter } from '../spellcheck/SpellCounter';
 import { SyncPanel } from './SyncPanel';
 import { libelleDeSync } from './sync-labels';
@@ -19,10 +18,10 @@ const icones: Record<SyncStatusKind, { icone: LucideIcon; couleur: string }> = {
 
 /**
  * Barre de statut en bas de la fenêtre (README §7) : l'état de la sync, dont
- * un clic ouvre le détail au-dessus, la dépense IA du jour (§12) et le nombre
+ * un clic ouvre le détail au-dessus, et le nombre
  * de fautes de la page (§11).
  */
-export function StatusBar({ surResolution, surHistoriqueIa }: { surResolution: (sauvegarde: string) => void; surHistoriqueIa: () => void }) {
+export function StatusBar({ surResolution }: { surResolution: (sauvegarde: string) => void }) {
   const etat = useSyncStatus();
   const [ouvert, definirOuvert] = useState(false);
   const [maintenant, definirMaintenant] = useState(() => Date.now());
@@ -52,7 +51,6 @@ export function StatusBar({ surResolution, surHistoriqueIa }: { surResolution: (
   if (etat === null) {
     return (
       <footer className="bg-surface text-discret flex h-7 shrink-0 items-center justify-end gap-2 px-2 text-xs">
-        <AiSpend surOuverture={surHistoriqueIa} />
         <SpellCounter />
       </footer>
     );
@@ -101,7 +99,6 @@ export function StatusBar({ surResolution, surHistoriqueIa }: { surResolution: (
           />}
       </div>
       <div className="ml-auto flex items-center gap-2">
-        <AiSpend surOuverture={surHistoriqueIa} />
         <SpellCounter />
       </div>
     </footer>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { libelleDEcart, libelleDeDollars, libelleDeDuree, libelleDeTokens } from './ai-labels';
+import { libelleDEcart, libelleDeDuree, libelleDeTokens } from './ai-labels';
 import { comparerMots, comparerTextes, replier, resumer } from './diff-model';
 
 describe('comparaison avant/après', () => {
@@ -32,12 +32,7 @@ describe('comparaison avant/après', () => {
 });
 
 describe('libellés', () => {
-  it('écrit les montants, tokens, durées et écarts en français', () => {
-    expect(libelleDeDollars(0)).toBe('0 $');
-    expect(libelleDeDollars(0.00255)).toBe('0,0026 $');
-    expect(libelleDeDollars(0.1234)).toBe('0,123 $');
-    expect(libelleDeDollars(3.4)).toBe('3,40 $');
-    expect(libelleDeDollars(0.00001)).toBe('< 0,0001 $');
+  it('écrit les tokens, durées et écarts en français', () => {
     expect(libelleDeTokens(1240)).toBe('1 240 tokens');
     expect(libelleDeTokens(1)).toBe('1 token');
     expect(libelleDeDuree(12_300)).toBe('environ 12 s');

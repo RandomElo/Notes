@@ -1,4 +1,6 @@
 export { PageView, classeDePage } from './page-view/PageView';
+export { SubpagesBlock } from './components/SubpagesBlock';
+export type { SubpageEntry } from './components/SubpagesBlock';
 export { extensionsDAffichage } from './page-view/extensions';
 export { estMentionDeSite, titreDeMentionDeSite } from './page-view/site-mentions';
 export type { SiteMentionOptions } from './page-view/site-mentions';

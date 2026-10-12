@@ -4,7 +4,7 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { ElectronApplication, Page } from '@playwright/test';
 import { strFromU8, unzipSync } from 'fflate';
-import { fermer, lancer, ligne, ouvrirPage, preparer } from './app';
+import { actionDePage, fermer, lancer, ligne, ouvrirPage, preparer } from './app';
 
 // Critère de J9 : 20 pages en PDF sans coupure incorrecte. Plus les exports Markdown, HTML et ZIP.
 
@@ -64,7 +64,7 @@ async function fichiersOuverts(application: ElectronApplication): Promise<string
 }
 
 async function exporter(page: Page, format: string, reglages: (page: Page) => Promise<void> = async () => undefined): Promise<void> {
-  await page.getByRole('button', { name: 'Exporter la page' }).click();
+  await actionDePage(page, 'Exporter la page');
   const fenetre = page.getByRole('dialog', { name: 'Exporter la page' });
   await fenetre.getByRole('button', { name: /^Format : / }).click();
   await fenetre.getByRole('option', { name: format, exact: true }).click();

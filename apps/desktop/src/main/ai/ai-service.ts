@@ -1,42 +1,50 @@
-import { ajouterALHistoriqueIa, calibrer, depenseDeLaPeriode, fonctionsDePage, genererId, lireHistoriqueIa, lireReglagesIa, totauxParPeriode } from '@notes/core';
+import { ajouterALHistoriqueIa, calibrer, fonctionsDePage, genererId, lireHistoriqueIa, lireReglagesIa, totauxParPeriode } from '@notes/core';
 import type { AiPageFunction, AiRun, AiSettings, VaultContext } from '@notes/core';
-import { mettreDeCote, nettoyerSortie } from '@notes/document';
-import { consignesParDefaut, periodesMontrees } from '../../shared/ai-contract';
-import type { AiApiModelView, AiEstimateResult, AiProgress, AiRequest, AiRunResult, AiState, AiUsageView } from '../../shared/ai-contract';
-import type { SecretStore } from '../secrets/secret-store';
+import {
+  aDuTexte,
+  assemblerSections,
+  consigneDesTitres,
+  decouperEnSections,
+  demandeDeSection,
+  demandeDesTitres,
+  mettreDeCote,
+  mettreEnListes,
+  nettoyerSortie,
+  reponseDeSection,
+  sortieMaxDeSection,
+  sortieMaxDesTitres,
+  titresCorriges,
+} from '@notes/document';
+import type { NoteSection } from '@notes/document';
+import { consignesParDefaut, pageEntiereACopier, periodesMontrees } from '../../shared/ai-contract';
+import type { AiEstimateResult, AiProgress, AiPromptResult, AiRequest, AiRunResult, AiState, AiUsageView } from '../../shared/ai-contract';
 import type { SettingsStore } from '../settings/settings-store';
 import { AiError } from './chat';
 import type { ChatRequest, ChatResult } from './chat';
 import { carteRetenue } from './hardware';
 import type { GpuInfo } from './hardware';
-import { discuterAvecLitellm, listerModelesLitellm } from './litellm-client';
-import type { ApiModel } from './litellm-client';
 import { contexteMinimal, evaluerModeles, kvParTokenDe, lireParametres, modeleConseille } from './local-models';
 import type { LocalModel, LocalVerdict } from './local-models';
 import { decrireModeleOllama, discuterAvecOllama, listerModelesOllama, occupationOllama } from './ollama-client';
-import { coutEnDollars, dateDesTarifs, tarifDuModele } from './openai-prices';
-import { compterEntree, compterSortie } from './token-count';
+import { caracteresParToken, compterEntree, compterSortie } from './token-count';
 
-/** Clé de LiteLLM dans le coffre à secrets. */
-export const cleLitellm = 'litellm-api-key';
+/** Clé de LiteLLM, que les versions 0.12.x gardaient dans le coffre à secrets : effacée au démarrage (LiteLLM abandonné le 2026-10-09). */
+export const ancienneCleLitellm = 'litellm-api-key';
 
 /** Contexte demandé quand la mémoire de la carte est inconnue (Ollama sur une autre machine, NVIDIA sans `nvidia-smi`). */
 const contexteSansCarte = 16_384;
 const longueurMaxDUnePage = 400_000;
-/** Liste des modèles de LiteLLM gardée quelques minutes : l'estimation la lit à chaque ouverture de la fenêtre. */
-const dureeDuCacheLitellmMs = 5 * 60_000;
 /** Un modèle chargé à moins de 98 % en mémoire vidéo déborde sur le processeur. */
 const partEnVramMinimale = 0.98;
 
 export interface AiServiceDependencies {
   reglages: SettingsStore;
-  secrets: SecretStore;
   /** Contexte du dossier des notes ouvert ; lève une erreur s'il n'y en a pas. */
   contexte: () => VaultContext;
   /** File des opérations du vault : l'historique est un fichier du dossier des notes. */
   enSerie: <T>(tache: () => Promise<T>) => Promise<T>;
   surAvancement: (avancement: AiProgress) => void;
-  /** Après un appel ou un changement de réglages : la dépense affichée est à relire. */
+  /** Après un appel : l'historique affiché est à relire. */
   surHistorique: () => void;
   /** Cartes graphiques du poste (`hardware.ts`). */
   cartes: () => Promise<GpuInfo[]>;
@@ -44,12 +52,10 @@ export interface AiServiceDependencies {
   octetsAleatoires: (taille: number) => Uint8Array;
   /** Remplaçables dans les tests. */
   ollama?: { lister: typeof listerModelesOllama; decrire: typeof decrireModeleOllama; occupation: typeof occupationOllama; discuter: typeof discuterAvecOllama };
-  litellm?: { lister: typeof listerModelesLitellm; discuter: typeof discuterAvecLitellm };
 }
 
 interface Preparation {
   fonction: AiPageFunction;
-  fournisseur: 'ollama' | 'litellm';
   modele: string;
   automatique: boolean;
   systeme: string;
@@ -59,8 +65,6 @@ interface Preparation {
   entreeComptee: number;
   entree: number;
   sortie: number;
-  coutUsd: number | null;
-  tarifInconnu: boolean;
   dureeMs: number | null;
   appelsConnus: number;
   contexte: number;
@@ -77,9 +81,28 @@ export function lireDemande(recu: unknown): AiRequest | null {
   return { fonction: fonction as AiPageFunction, markdown, titre };
 }
 
-/** Une clé d'API plausible : des caractères imprimables, sans espace. LiteLLM accepte ses propres formats de clé. */
-export function cleValide(valeur: unknown): valeur is string {
-  return typeof valeur === 'string' && /^[\x21-\x7e]{8,500}$/.test(valeur.trim());
+/** Un appel au modèle, consigne de la fonction par défaut ; `devant` : ce qui est déjà rendu, montré avec la réponse en cours. */
+type Discussion = (texte: string, sortieMax: number | undefined, devant: string, systeme?: string) => Promise<ChatResult>;
+
+/**
+ * Ce qu'on colle dans un autre outil (un assistant en ligne, par exemple) :
+ * la consigne de la fonction, puis le texte de la page tel quel. La phrase
+ * sur les repères `[[BLOC-n]]` est retirée, puisque rien n'est mis de côté.
+ */
+export function consigneACopier(consigne: string, markdown: string): string {
+  // Les lignes vides et les retraits de la consigne (sous-puces d'un exemple) restent.
+  const sansReperes = consigne
+    .split('\n')
+    .flatMap((ligne) => {
+      if (!/\[\[BLOC-\d+\]\]/.test(ligne)) {
+        return [ligne];
+      }
+      const reste = ligne.replace(/\s*[^.]*\[\[BLOC-\d+\]\][^.]*\./g, '').trimEnd();
+      return /\p{L}/u.test(reste) ? [reste] : [];
+    })
+    .join('\n')
+    .trim();
+  return `${sansReperes}\n\nVoici le texte :\n\n${markdown.trim()}\n`;
 }
 
 /** Ollama tourne-t-il sur ce poste ? Sinon la carte du poste ne dit rien de la sienne. */
@@ -89,25 +112,20 @@ export function ollamaSurLePoste(adresse: string): boolean {
 
 /**
  * Fonctions IA du poste (README §12) : carte graphique et choix du modèle
- * local, LiteLLM, clé, estimation, appel annulable, nettoyage, historique. Un
- * appel à la fois. Rien n'est jamais écrit dans la page ici : la proposition
+ * local, estimation, appel annulable, arrêt si le modèle déborde de la
+ * mémoire vidéo, nettoyage, historique. Un appel à la fois. Rien n'est jamais écrit dans la page ici : la proposition
  * repart au renderer, qui la montre avant que l'utilisateur ne l'accepte.
  */
 export class AiService {
   private enCours: AbortController | null = null;
   private readonly maintenant: () => number;
   private readonly ollama;
-  private readonly litellm;
   /** Contexte par token de chaque modèle local, lu une fois par `/api/show`. */
   private readonly kvParModele = new Map<string, number | null>();
-  /** Modèles qu'Ollama a vus déborder de la mémoire vidéo pendant cette session. */
-  private readonly debordants = new Set<string>();
-  private cacheLitellm: { cle: string; au: number; modeles: ApiModel[] | null } | null = null;
 
   constructor(private readonly dependances: AiServiceDependencies) {
     this.maintenant = dependances.maintenant ?? Date.now;
     this.ollama = dependances.ollama ?? { lister: listerModelesOllama, decrire: decrireModeleOllama, occupation: occupationOllama, discuter: discuterAvecOllama };
-    this.litellm = dependances.litellm ?? { lister: listerModelesLitellm, discuter: discuterAvecLitellm };
   }
 
   private async reglagesIa(): Promise<AiSettings> {
@@ -146,32 +164,12 @@ export class AiService {
       modeles.push({ nom: modele.nom, taille: modele.taille, parametres: lireParametres(modele.parametres), famille: modele.famille, kvParToken: this.kvParModele.get(modele.nom) ?? null });
     }
     const carte = await this.carte(adresse);
-    return { verdict: evaluerModeles(modeles, carte, ollamaSurLePoste(adresse), this.debordants), carte };
-  }
-
-  /** Modèles de LiteLLM, gardés quelques minutes ; null sans adresse ni clé, ou si LiteLLM ne répond pas. */
-  private async modelesLitellm(reglages: AiSettings, forcer = false): Promise<ApiModel[] | null> {
-    const cle = await this.dependances.secrets.lire(cleLitellm);
-    if (reglages.adresseLitellm === '' || cle === null) {
-      return null;
-    }
-    const empreinte = `${reglages.adresseLitellm} ${cle.length}`;
-    if (!forcer && this.cacheLitellm !== null && this.cacheLitellm.cle === empreinte && this.maintenant() - this.cacheLitellm.au < dureeDuCacheLitellmMs && this.cacheLitellm.modeles !== null) {
-      return this.cacheLitellm.modeles;
-    }
-    const modeles = await this.litellm.lister(reglages.adresseLitellm, cle);
-    this.cacheLitellm = { cle: empreinte, au: this.maintenant(), modeles };
-    return modeles;
+    return { verdict: evaluerModeles(modeles, carte, ollamaSurLePoste(adresse)), carte };
   }
 
   async etat(): Promise<AiState> {
     const reglages = await this.reglagesIa();
-    const [local, modelesLitellm, appels, etatDeLaCle] = await Promise.all([
-      this.verdictLocal(reglages.adresseOllama),
-      this.modelesLitellm(reglages, true),
-      this.historique(),
-      this.dependances.secrets.etat(cleLitellm),
-    ]);
+    const local = await this.verdictLocal(reglages.adresseOllama);
     const carte = local?.carte ?? (await this.carte(reglages.adresseOllama));
     return {
       reglages,
@@ -184,76 +182,51 @@ export class AiService {
         modeles: (local?.verdict.modeles ?? []).map(({ nom, parametres, utilisable, raison }) => ({ nom, parametres, utilisable, raison })),
         conseil: local !== null && !local.verdict.disponible && carte?.dediee === true ? modeleConseille(carte.vram) : null,
       },
-      cleLitellm: etatDeLaCle,
-      modelesLitellm:
-        modelesLitellm?.map((modele): AiApiModelView => {
-          const tarif = tarifDuModele(modele.nom, reglages.tarifs, modele.tarif);
-          return { nom: modele.nom, tarif: tarif?.tarif ?? null, source: tarif?.source ?? null };
-        }) ?? null,
-      dateDesTarifs,
-      depenseDuJourUsd: depenseDeLaPeriode(appels, 'jour', this.maintenant()),
-      depenseDuMoisUsd: depenseDeLaPeriode(appels, 'mois', this.maintenant()),
     };
   }
 
   async enregistrerReglages(recu: unknown): Promise<AiState> {
     const actuels = await this.dependances.reglages.lire();
     await this.dependances.reglages.ecrire({ ...actuels, ia: lireReglagesIa(recu) });
-    // Une fonction passée à LiteLLM ou revenue au poste : la barre de statut montre ou cache la dépense.
-    this.dependances.surHistorique();
     return this.etat();
   }
 
-  async enregistrerCle(recu: unknown): Promise<AiState> {
-    if (cleValide(recu)) {
-      await this.dependances.secrets.enregistrer(cleLitellm, recu.trim());
-      this.cacheLitellm = null;
+  /** La consigne de la fonction et le texte de la page, à copier dans un autre outil. Ne contacte aucun modèle. */
+  async consigne(recu: unknown): Promise<AiPromptResult> {
+    const demande = lireDemande(recu);
+    if (demande === null) {
+      return { ok: false, message: 'Demande illisible.' };
     }
-    return this.etat();
-  }
-
-  async oublierCle(): Promise<AiState> {
-    await this.dependances.secrets.oublier(cleLitellm);
-    this.cacheLitellm = null;
-    return this.etat();
+    if (demande.markdown.trim() === '') {
+      return { ok: false, message: 'La page n’a pas de texte.' };
+    }
+    const reglages = await this.reglagesIa();
+    const consigne = reglages.consignes[demande.fonction] ?? consignesParDefaut[demande.fonction];
+    return { ok: true, texte: consigneACopier(demande.fonction === 'mise-au-propre' ? `${consigne}\n\n${pageEntiereACopier}` : consigne, demande.markdown) };
   }
 
   private async preparer(demande: AiRequest): Promise<Preparation | string> {
     const reglages = await this.reglagesIa();
     const choix = reglages.modeles[demande.fonction];
-    const { fournisseur } = choix;
     let modele = choix.modele;
-    let contexteMax: number | null = null;
-    let tarifLitellm = null;
-
-    if (fournisseur === 'ollama') {
-      const local = await this.verdictLocal(reglages.adresseOllama);
-      if (local === null) {
-        return 'Ollama ne répond pas. Vérifie qu’il tourne (réglages, Fonctions IA).';
-      }
-      if (!local.verdict.disponible) {
-        return local.verdict.raison ?? 'Pas d’IA locale sur ce poste.';
-      }
-      if (modele === '') {
-        modele = local.verdict.automatique!;
-      }
-      const evalue = local.verdict.modeles.find((candidat) => candidat.nom === modele);
-      if (evalue === undefined) {
-        return `Le modèle « ${modele} » n’est pas installé dans Ollama.`;
-      }
-      if (!evalue.utilisable) {
-        return `${modele} : ${evalue.raison ?? 'ne convient pas à cette carte.'}`;
-      }
-      contexteMax = evalue.contexteMax;
-    } else {
-      if (modele === '') {
-        return 'Choisis d’abord un modèle de LiteLLM pour cette fonction dans les réglages.';
-      }
-      if (reglages.adresseLitellm === '') {
-        return 'L’adresse de LiteLLM n’est pas réglée.';
-      }
-      tarifLitellm = (await this.modelesLitellm(reglages))?.find((candidat) => candidat.nom === modele)?.tarif ?? null;
+    const local = await this.verdictLocal(reglages.adresseOllama);
+    if (local === null) {
+      return 'Ollama ne répond pas. Vérifie qu’il tourne (réglages, Fonctions IA).';
     }
+    if (!local.verdict.disponible) {
+      return local.verdict.raison ?? 'Pas d’IA locale sur ce poste.';
+    }
+    if (modele === '') {
+      modele = local.verdict.automatique!;
+    }
+    const evalue = local.verdict.modeles.find((candidat) => candidat.nom === modele);
+    if (evalue === undefined) {
+      return `Le modèle « ${modele} » n’est pas installé dans Ollama.`;
+    }
+    if (!evalue.utilisable) {
+      return `${modele} : ${evalue.raison ?? 'ne convient pas à cette carte.'}`;
+    }
+    const contexteMax = evalue.contexteMax;
 
     const systeme = reglages.consignes[demande.fonction] ?? consignesParDefaut[demande.fonction];
     const { texte: envoye, reserves } = mettreDeCote(demande.markdown);
@@ -262,21 +235,19 @@ export class AiService {
     }
     const appels = await this.historique();
     const calage = calibrer(appels, demande.fonction, modele);
-    const entreeComptee = await compterEntree(fournisseur, systeme, envoye);
+    const entreeComptee = compterEntree(systeme, envoye);
     const entree = Math.round(entreeComptee * calage.facteurDEntree);
     const sortie = Math.round(entree * calage.ratioDeSortie);
     // Contexte par paliers de 4096 : Ollama recharge le modèle quand il change, autant que ce soit rare.
     const voulu = Math.max(contexteMinimal, Math.ceil((entree + sortie * 1.3 + 512) / 4096) * 4096);
     const plafond = contexteMax ?? contexteSansCarte;
-    if (fournisseur === 'ollama' && entree + sortie > plafond) {
+    if (entree + sortie > plafond) {
       return `La page est trop longue pour ${modele} sur cette carte (${Math.round(plafond / 1000)} 000 tokens au plus avec la réponse).`;
     }
-    const tarif = fournisseur === 'litellm' ? tarifDuModele(modele, reglages.tarifs, tarifLitellm) : null;
     return {
       fonction: demande.fonction,
-      fournisseur,
       modele,
-      automatique: fournisseur === 'ollama' && choix.modele === '',
+      automatique: choix.modele === '',
       systeme,
       envoye,
       reserves,
@@ -284,8 +255,6 @@ export class AiService {
       entreeComptee,
       entree,
       sortie,
-      coutUsd: tarif === null ? null : coutEnDollars(tarif.tarif, entree, sortie),
-      tarifInconnu: fournisseur === 'litellm' && tarif === null,
       dureeMs: calage.msParTokenDeSortie === null ? null : Math.round(calage.msParTokenDeSortie * sortie),
       appelsConnus: calage.appelsConnus,
       contexte: Math.min(voulu, Math.max(contexteMinimal, Math.floor(plafond / 4096) * 4096)),
@@ -301,26 +270,39 @@ export class AiService {
     if (typeof preparation === 'string') {
       return { ok: false, message: preparation };
     }
-    const reglages = await this.reglagesIa();
-    const appels = await this.historique();
-    const depenseDuMoisUsd = depenseDeLaPeriode(appels, 'mois', this.maintenant());
-    const seuil = reglages.seuilMensuelUsd;
     return {
       ok: true,
-      fournisseur: preparation.fournisseur,
       modele: preparation.modele,
       automatique: preparation.automatique,
       entree: preparation.entree,
       sortie: preparation.sortie,
-      coutUsd: preparation.coutUsd,
-      tarifInconnu: preparation.tarifInconnu,
       dureeMs: preparation.dureeMs,
       appelsConnus: preparation.appelsConnus,
-      depenseDuJourUsd: depenseDeLaPeriode(appels, 'jour', this.maintenant()),
-      depenseDuMoisUsd,
-      seuilMensuelUsd: seuil,
-      seuilDepasse: seuil !== null && depenseDuMoisUsd + (preparation.coutUsd ?? 0) > seuil,
     };
+  }
+
+  /**
+   * Durée probable d'une fonction sur un texte dont on ne connaît que la
+   * longueur (un mémo pas encore transcrit, README §13). null si l'IA locale
+   * n'est pas disponible ou si ce modèle n'a encore jamais servi.
+   */
+  async dureeEstimee(fonction: AiPageFunction, caracteres: number): Promise<number | null> {
+    const reglages = await this.reglagesIa();
+    const local = await this.verdictLocal(reglages.adresseOllama).catch(() => null);
+    if (local === null || !local.verdict.disponible) {
+      return null;
+    }
+    const modele = reglages.modeles[fonction].modele === '' ? local.verdict.automatique : reglages.modeles[fonction].modele;
+    if (modele === null || !local.verdict.modeles.some((candidat) => candidat.nom === modele && candidat.utilisable)) {
+      return null;
+    }
+    const calage = calibrer(await this.historique(), fonction, modele);
+    if (calage.msParTokenDeSortie === null) {
+      return null;
+    }
+    const systeme = reglages.consignes[fonction] ?? consignesParDefaut[fonction];
+    const entree = Math.round((Math.ceil((systeme.length + caracteres) / caracteresParToken) + compterEntree('', '')) * calage.facteurDEntree);
+    return Math.round(calage.msParTokenDeSortie * entree * calage.ratioDeSortie);
   }
 
   annuler(): void {
@@ -349,38 +331,61 @@ export class AiService {
   }
 
   private async executer(preparation: Preparation, signal: AbortSignal): Promise<AiRunResult> {
-    let recu = '';
-    const requete: ChatRequest = {
-      modele: preparation.modele,
-      systeme: preparation.systeme,
-      texte: preparation.envoye,
-      signal,
-      surMorceau: (texte) => {
-        recu = texte;
-        this.dependances.surAvancement({ texte, sortie: Math.ceil(texte.length / 3.6) });
-      },
-      ...(preparation.fournisseur === 'ollama' ? { contexte: preparation.contexte } : {}),
-    };
     const reglages = await this.reglagesIa();
+    // Dès le premier morceau, le modèle est chargé : s'il ne tient pas dans la mémoire vidéo, l'appel s'arrête
+    // (choix d'Eloi, 2026-10-09 : abandonner avec un message plutôt que continuer très lentement).
+    const arret = new AbortController();
+    const transmettre = (): void => arret.abort();
+    signal.addEventListener('abort', transmettre, { once: true });
+    let controle: Promise<void> | null = null;
+    let deborde = false;
+    let recu = '';
+    /** Un appel au modèle ; `devant` est ce qui a déjà été rendu, montré avec la réponse en cours. */
+    const discuter: Discussion = (texte, sortieMax, devant, systeme = preparation.systeme) => {
+      const requete: ChatRequest = {
+        modele: preparation.modele,
+        systeme,
+        texte,
+        signal: arret.signal,
+        contexte: preparation.contexte,
+        ...(sortieMax === undefined ? {} : { sortieMax }),
+        surMorceau: (morceau) => {
+          recu = devant + morceau;
+          this.dependances.surAvancement({ texte: recu, sortie: Math.ceil(recu.length / caracteresParToken) });
+          controle ??= this.aDeborde(reglages.adresseOllama, preparation.modele).then((oui) => {
+            if (oui) {
+              deborde = true;
+              arret.abort();
+            }
+          });
+        },
+      };
+      return this.ollama.discuter(reglages.adresseOllama, requete);
+    };
     const debut = this.maintenant();
     let resultat: ChatResult;
     try {
-      if (preparation.fournisseur === 'litellm') {
-        const cle = await this.dependances.secrets.lire(cleLitellm);
-        if (cle === null) {
-          return { ok: false, annule: false, message: 'Aucune clé LiteLLM n’est enregistrée sur ce poste.' };
-        }
-        resultat = await this.litellm.discuter(reglages.adresseLitellm, cle, requete);
-      } else {
-        resultat = await this.ollama.discuter(reglages.adresseOllama, requete);
+      resultat = preparation.fonction === 'mise-au-propre' ? await this.parSections(preparation.envoye, discuter) : await discuter(preparation.envoye, undefined, '');
+      await controle;
+      if (deborde) {
+        throw new AiError('annule', 'Le modèle a débordé de la mémoire vidéo.');
       }
     } catch (erreur) {
+      await controle;
       const annule = erreur instanceof AiError && erreur.code === 'annule';
       if (annule) {
-        // Une demande arrêtée en route a pu être facturée : elle va dans l'historique, sortie comptée par Notes.
-        await this.consigner(preparation, { texte: recu, entree: preparation.entree, sortie: await compterSortie(preparation.fournisseur, recu) }, this.maintenant() - debut, true);
+        await this.consigner(preparation, { texte: recu, entree: preparation.entree, sortie: compterSortie(recu) }, this.maintenant() - debut, true);
+      }
+      if (deborde) {
+        return {
+          ok: false,
+          annule: false,
+          message: `${preparation.modele} ne tient pas entièrement dans la mémoire de la carte graphique : une autre application l’occupe sans doute (un jeu, un logiciel de 3D ou de montage, un navigateur très chargé). L’appel est abandonné, il aurait été très lent. Ferme ce qui occupe la carte, puis relance.`,
+        };
       }
       return { ok: false, annule, message: erreur instanceof AiError ? erreur.message : 'Le modèle a échoué.' };
+    } finally {
+      signal.removeEventListener('abort', transmettre);
     }
     const appel = await this.consigner(preparation, resultat, this.maintenant() - debut, false);
     const nettoye = nettoyerSortie({
@@ -390,45 +395,68 @@ export class AiService {
       titre: preparation.titre,
       memeLongueur: preparation.fonction === 'relecture',
     });
-    const avertissements = [...nettoye.avertissements];
-    if (preparation.fournisseur === 'ollama' && (await this.aDeborde(reglages.adresseOllama, preparation.modele))) {
-      avertissements.push(`${preparation.modele} a débordé de la mémoire vidéo pendant cet appel (une autre application l’occupe peut-être) : il ne sera plus proposé avant le prochain lancement de Notes.`);
-    }
-    return { ok: true, markdown: nettoye.markdown, avertissements, appel };
+    return { ok: true, markdown: nettoye.markdown, avertissements: nettoye.avertissements, appel };
   }
 
-  /** Ollama dit-il que le modèle, encore chargé, ne tient pas entièrement en mémoire vidéo ? Le modèle est alors écarté pour la session. */
-  private async aDeborde(adresse: string, modele: string): Promise<boolean> {
-    const charge = (await this.ollama.occupation(adresse))?.find((candidat) => candidat.nom === modele);
-    if (charge === undefined || charge.taille === 0 || charge.enVram >= charge.taille * partEnVramMinimale) {
-      return false;
+  /**
+   * Mise au propre, une section après l'autre (`note-sections.ts`) : les
+   * titres restent tels quels, les lignes qui se suivent sont mises en liste
+   * avant l'appel, et une réponse peu sûre laisse les notes de la section.
+   */
+  private async parSections(envoye: string, discuter: Discussion): Promise<ChatResult> {
+    const rendues: NoteSection[] = [];
+    let entree = 0;
+    let sortie = 0;
+    for (const section of decouperEnSections(envoye)) {
+      const corps = mettreEnListes(section.corps);
+      if (!aDuTexte(corps)) {
+        rendues.push({ titre: section.titre, corps });
+        continue;
+      }
+      const devant = `${assemblerSections([...rendues, { titre: section.titre, corps: '' }])}\n\n`;
+      const reponse = await discuter(demandeDeSection({ titre: section.titre, corps }), sortieMaxDeSection(corps), devant);
+      entree += reponse.entree;
+      sortie += reponse.sortie;
+      rendues.push({ titre: section.titre, corps: reponseDeSection(corps, reponse.texte, reponse.coupee === true).texte });
     }
-    this.debordants.add(modele);
-    return true;
+    // Les fautes des titres, corrigées à part en un appel : niveaux et place ne changent pas.
+    const titres = rendues.flatMap((section) => (section.titre === null ? [] : [section.titre]));
+    if (titres.length > 0) {
+      const reponse = await discuter(demandeDesTitres(titres), sortieMaxDesTitres(titres), `${assemblerSections(rendues)}\n\n`, consigneDesTitres);
+      entree += reponse.entree;
+      sortie += reponse.sortie;
+      const corriges = titresCorriges(titres, reponse.texte);
+      let rang = 0;
+      for (const section of rendues) {
+        if (section.titre !== null) {
+          section.titre = corriges[rang++]!;
+        }
+      }
+    }
+    return { texte: `${assemblerSections(rendues)}\n`, entree, sortie };
+  }
+
+  /** Ollama dit-il que le modèle, chargé, ne tient pas entièrement en mémoire vidéo ? */
+  private async aDeborde(adresse: string, modele: string): Promise<boolean> {
+    const charge = (await this.ollama.occupation(adresse).catch(() => null))?.find((candidat) => candidat.nom === modele);
+    return charge !== undefined && charge.taille > 0 && charge.enVram < charge.taille * partEnVramMinimale;
   }
 
   /** Ajoute l'appel à l'historique, avec ce qu'en a compté le fournisseur, ou à défaut l'estimation. */
   private async consigner(preparation: Preparation, resultat: ChatResult, dureeMs: number, annule: boolean): Promise<AiRun> {
     const entree = resultat.entree > 0 ? resultat.entree : preparation.entree;
-    const sortie = resultat.sortie > 0 ? resultat.sortie : await compterSortie(preparation.fournisseur, resultat.texte);
-    let coutUsd: number | null = null;
-    if (preparation.fournisseur === 'litellm') {
-      const reglages = await this.reglagesIa();
-      const tarifLitellm = this.cacheLitellm?.modeles?.find((candidat) => candidat.nom === preparation.modele)?.tarif ?? null;
-      const tarif = tarifDuModele(preparation.modele, reglages.tarifs, tarifLitellm);
-      coutUsd = tarif === null ? null : coutEnDollars(tarif.tarif, entree, sortie);
-    }
+    const sortie = resultat.sortie > 0 ? resultat.sortie : compterSortie(resultat.texte);
     const maintenant = this.maintenant();
     const appel: AiRun = {
       id: genererId(maintenant, this.dependances.octetsAleatoires(10)),
       date: maintenant,
       fonction: preparation.fonction,
-      fournisseur: preparation.fournisseur,
+      fournisseur: 'ollama',
       modele: preparation.modele,
       entree,
       sortie,
-      coutUsd,
-      estimation: { entreeComptee: preparation.entreeComptee, entree: preparation.entree, sortie: preparation.sortie, coutUsd: preparation.coutUsd },
+      coutUsd: null,
+      estimation: { entreeComptee: preparation.entreeComptee, entree: preparation.entree, sortie: preparation.sortie, coutUsd: null },
       dureeMs,
       annule,
     };
@@ -444,20 +472,15 @@ export class AiService {
 
   async lireHistorique(): Promise<AiUsageView> {
     const appels = await this.historique();
-    const reglages = await this.reglagesIa();
     const maintenant = this.maintenant();
     return {
       appels,
-      litellmChoisi: fonctionsDePage.some((fonction) => reglages.modeles[fonction].fournisseur === 'litellm'),
       totaux: {
         jour: totauxParPeriode(appels, 'jour', maintenant, periodesMontrees.jour),
         semaine: totauxParPeriode(appels, 'semaine', maintenant, periodesMontrees.semaine),
         mois: totauxParPeriode(appels, 'mois', maintenant, periodesMontrees.mois),
         annee: totauxParPeriode(appels, 'annee', maintenant, periodesMontrees.annee),
       },
-      depenseDuJourUsd: depenseDeLaPeriode(appels, 'jour', maintenant),
-      depenseDuMoisUsd: depenseDeLaPeriode(appels, 'mois', maintenant),
-      seuilMensuelUsd: reglages.seuilMensuelUsd,
     };
   }
 }

@@ -54,9 +54,8 @@ export async function lancer({ vault, profil }: { vault: string; profil: string 
     cwd: dossierApplication,
     env: { ...environnementDEssai(profil), ...env },
   });
-  // La petite fenêtre de la recherche globale, créée cachée au lancement, n'est pas celle qu'on pilote.
-  // Une fenêtre tout juste créée n'a pas encore d'adresse : on attend de pouvoir les distinguer.
-  const estPrincipale = (fenetre: Page): boolean => fenetre.url().startsWith('file:') && !fenetre.url().endsWith('#recherche');
+  // Une fenêtre tout juste créée n'a pas encore d'adresse : on attend celle de l'application.
+  const estPrincipale = (fenetre: Page): boolean => fenetre.url().startsWith('file:');
   let page: Page | undefined;
   while ((page = application.windows().find(estPrincipale)) === undefined) {
     await new Promise((resoudre) => setTimeout(resoudre, 20));
@@ -65,7 +64,7 @@ export async function lancer({ vault, profil }: { vault: string; profil: string 
   return { application, page, vault, profil };
 }
 
-/** Ligne de commande qui lance l'application construite sur ce profil, comme le raccourci du bureau avec `--recherche`. */
+/** Ligne de commande qui lance l'application construite sur ce profil, comme le menu des applications. */
 export function argumentsDeLancement(profil: string, argumentsEnPlus: string[] = []): string[] {
   return [dossierApplication, `--user-data-dir=${profil}`, ...argumentsEnPlus];
 }
@@ -79,12 +78,9 @@ export async function fenetres(application: ElectronApplication): Promise<{ titr
 
 /** Ferme la fenêtre par son bouton, comme l'utilisateur, et attend la fin du processus. */
 export async function fermer({ application, page }: Session): Promise<void> {
-  const fermee = page.waitForEvent('close');
-  await page.getByRole('button', { name: 'Fermer', exact: true }).click();
-  await fermee;
-  // La fenêtre fermée, Notes reste en fond pour la recherche globale : on la quitte comme par « Quitter ».
+  // Fermer la fenêtre quitte Notes.
   const fin = application.waitForEvent('close');
-  await application.evaluate(({ app }) => app.quit());
+  await page.getByRole('button', { name: 'Fermer', exact: true }).click();
   await fin;
 }
 
@@ -102,6 +98,12 @@ export async function ouvrirPage(page: Page, titre: string): Promise<void> {
 /** Titre de la page ouverte, modifiable sur place. */
 export function titreDePage(page: Page): Locator {
   return page.getByRole('textbox', { name: 'Titre de la page' });
+}
+
+/** Choisit une action du menu « ⋮ » en haut de la page ouverte (sommaire, mode liste, fonctions IA, export). */
+export async function actionDePage(page: Page, libelle: string): Promise<void> {
+  await page.getByRole('button', { name: 'Actions de la page' }).click();
+  await page.getByRole('menuitem', { name: libelle, exact: true }).click();
 }
 
 /** Zone de saisie de la page ouverte. */

@@ -5,6 +5,8 @@ import { transcrireWav } from './client';
 import { cheminDuModele, modeleDeVoix, modeleInstalle, tailleDesModeles, telechargerModele } from './model';
 import { WhisperServer } from './server';
 import type { Lancer } from './server';
+import { calerTranscription, dureeDuWav } from './timing';
+import type { TranscriptionCalibration, TranscriptionMeasure } from './timing';
 
 export interface WhisperServiceOptions {
   /** Dossier du modèle (`model.ts`). */
@@ -18,6 +20,8 @@ export interface WhisperServiceOptions {
   /** Un serveur déjà lancé (essais de bout en bout) : ni modèle ni binaire à chercher. */
   adresseExterne?: string;
   lancer?: Lancer;
+  /** Durées des dernières transcriptions de ce poste, pour estimer les suivantes (`timing.ts`). */
+  mesures?: { lire: () => Promise<TranscriptionMeasure[]>; ajouter: (mesure: TranscriptionMeasure) => Promise<void> };
 }
 
 /**
@@ -118,19 +122,35 @@ export class WhisperService {
     const debut = Date.now();
     try {
       let adresse = this.options.adresseExterne;
+      let demarrageMs: number | null = null;
       if (adresse === undefined) {
+        const arrete = this.serveur?.enMarche() !== true;
         this.serveur ??= new WhisperServer({ binaire: this.options.binaire, modele: cheminDuModele(this.options.dossier), modeleDeVoix: cheminDuModele(this.options.dossier, modeleDeVoix),...(this.options.lancer === undefined ? {} : { lancer: this.options.lancer }) });
         adresse = await this.serveur.adresse();
+        demarrageMs = arrete ? Date.now() - debut : null;
         this.erreur = null;
         this.publier();
       }
+      const debutDeLaTranscription = Date.now();
       const texte = await transcrireWav(adresse, wav);
-      return { ok: true, texte, dureeMs: Date.now() - debut };
+      const fin = Date.now();
+      // Une mesure perdue ne gêne que la prochaine estimation : jamais la transcription.
+      void this.options.mesures?.ajouter({ audioMs: dureeDuWav(wav), transcriptionMs: fin - debutDeLaTranscription, demarrageMs, caracteres: texte.trim().length }).catch(() => undefined);
+      return { ok: true, texte, dureeMs: fin - debut };
     } catch (erreur) {
       this.erreur = erreur instanceof Error ? erreur.message : 'La transcription a échoué.';
       this.publier();
       return { ok: false, message: this.erreur };
     }
+  }
+
+  /** Le calage des estimations, et si la prochaine transcription devra d'abord démarrer le serveur. */
+  async calage(): Promise<{ calage: TranscriptionCalibration; serveurArrete: boolean }> {
+    const mesures = (await this.options.mesures?.lire().catch(() => [])) ?? [];
+    return {
+      calage: calerTranscription(mesures, this.carte !== null),
+      serveurArrete: this.options.adresseExterne === undefined && this.serveur?.enMarche() !== true,
+    };
   }
 
   arreter(): void {

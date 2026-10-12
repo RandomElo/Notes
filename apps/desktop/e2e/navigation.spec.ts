@@ -1,29 +1,20 @@
 import { execFile } from 'node:child_process';
-import { access, appendFile } from 'node:fs/promises';
+import { appendFile } from 'node:fs/promises';
 import { join } from 'node:path';
-import { _electron as electron, expect, test } from '@playwright/test';
-import type { ElectronApplication, Page } from '@playwright/test';
-import { argumentsDeLancement, attendreEnregistrement, dossierApplication, editeur, environnementDEssai, fenetres, fermer, lancer, ligne, ouvrirPage, preparer, titreDePage } from './app';
+import { expect, test } from '@playwright/test';
+import type { Page } from '@playwright/test';
+import { actionDePage, argumentsDeLancement, attendreEnregistrement, dossierApplication, editeur, fenetres, fermer, lancer, ligne, ouvrirPage, preparer, titreDePage } from './app';
 
 // Types du DOM, évalués dans la fenêtre : le projet des essais n'a pas la bibliothèque DOM.
 declare function getComputedStyle(element: unknown): { maskImage: string };
 
-// Critère de J7 : raccourci global et sommaire toujours à jour. Plus les onglets et la recherche Ctrl+K.
+// Critère de J7 : sommaire toujours à jour. Plus les onglets. Les deux recherches (Ctrl+K, Ctrl+Alt+Espace) sont retirées
+// depuis la 0.17.4 : la barre de recherche du poste les remplace, et ouvre une page par `--page=<id>`.
 
 const onglets = (page: Page) => page.getByRole('tablist', { name: 'Onglets' }).getByRole('tab');
 // Le titre seul, sans l'icône de la page (un emoji fait partie du texte de l'onglet).
 const titresDesOnglets = (page: Page) => onglets(page).locator('span.truncate').allTextContents();
 const ongletActif = (page: Page) => page.getByRole('tab', { selected: true }).locator('span.truncate');
-const recherche = (page: Page) => page.getByRole('dialog', { name: 'Rechercher une page' });
-
-/** La petite fenêtre de la recherche globale : créée cachée au lancement, ou à venir. */
-async function fenetreDeRecherche(application: ElectronApplication): Promise<Page> {
-  const deja = application.windows().find((fenetre) => fenetre.url().endsWith('#recherche'));
-  if (deja !== undefined) {
-    return deja;
-  }
-  return application.waitForEvent('window', { predicate: (fenetre) => fenetre.url().endsWith('#recherche') });
-}
 
 test('onglets : une page par onglet, Ctrl+clic, Ctrl+W, Ctrl+Tab, Ctrl+1, retrouvés au redémarrage', async () => {
   const preparation = await preparer();
@@ -79,155 +70,30 @@ test('onglets : une page par onglet, Ctrl+clic, Ctrl+W, Ctrl+Tab, Ctrl+1, retrou
   await fermer(session);
 });
 
-test('Ctrl+K : recherche floue sans accents, pages récentes, création si rien ne correspond', async () => {
-  const session = await lancer(await preparer());
-  const { page } = session;
-  await ouvrirPage(page, 'Courses');
-  await ouvrirPage(page, 'Bienvenue');
+const refonteDuNas = '0199a0b0-0000-7000-8000-000000000003';
+const courses = '0199a0b0-0000-7000-8000-000000000005';
 
-  await page.keyboard.press('Control+k');
-  await expect(recherche(page).getByRole('combobox')).toBeFocused();
-  // Sans saisie : les pages récentes, la plus récente en premier.
-  await expect(recherche(page).getByRole('option').nth(0)).toContainText('Bienvenue');
-  await expect(recherche(page).getByRole('option').nth(1)).toContainText('Courses');
-
-  await page.keyboard.type('refnas', { delay: 15 });
-  await expect(recherche(page).getByRole('option').first()).toContainText('Refonte du NAS');
-  await page.keyboard.press('Enter');
-  await expect(recherche(page)).toBeHidden();
+test('--page=<id> : la barre de recherche du poste ouvre une page, Notes lancée ou non ; plus de recherche dans Notes ; fermer quitte', async () => {
+  const preparation = await preparer();
+  // Notes pas lancée : elle s'ouvre sur la page demandée.
+  const session = await lancer(preparation, [`--page=${refonteDuNas}`]);
+  const { application, page } = session;
   await expect(titreDePage(page)).toHaveText('Refonte du NAS');
-  // La page arrive dans l'onglet affiché.
-  expect(await titresDesOnglets(page)).toEqual(['Refonte du NAS']);
 
-  // Accents ignorés, Ctrl+Entrée : nouvel onglet.
+  // Ctrl+K ne fait plus rien ; Ctrl+T ouvre un onglet vide, sans recherche.
   await page.keyboard.press('Control+k');
-  await expect(recherche(page).getByRole('combobox')).toBeFocused();
-  await page.keyboard.type('BIENVENUE', { delay: 15 });
-  await page.keyboard.press('Control+Enter');
-  await expect(titreDePage(page)).toHaveText('Bienvenue');
-  expect(await titresDesOnglets(page)).toEqual(['Refonte du NAS', 'Bienvenue']);
-
-  // Rien ne correspond : on propose de créer la page, après la page ouverte d'abord, curseur dans son contenu.
-  await page.keyboard.press('Control+k');
-  await expect(recherche(page).getByRole('combobox')).toBeFocused();
-  await page.keyboard.type('Idées de sorties', { delay: 15 });
-  await expect(recherche(page).getByRole('option')).toHaveText([
-    'Créer « Idées de sorties » après « Bienvenue »',
-    'Créer « Idées de sorties » dans « Bienvenue »',
-    'Créer « Idées de sorties » à la racine',
-  ]);
-  await page.keyboard.press('Enter');
-  await expect(titreDePage(page)).toHaveText('Idées de sorties');
-  await expect(ligne(page, 'Idées de sorties')).toBeVisible();
-  const racine = await page.locator('[role="treeitem"][aria-level="1"] span[title]').allTextContents();
-  expect(racine.indexOf('Idées de sorties')).toBe(racine.indexOf('Bienvenue') + 1);
-  await expect(editeur(page)).toBeFocused();
-  await page.keyboard.type('Première ligne', { delay: 15 });
-  await attendreEnregistrement(page);
-  await expect(editeur(page)).toContainText('Première ligne');
-
-  // Un autre emplacement au clavier : flèche bas, « dans » la page ouverte.
-  await page.keyboard.press('Control+k');
-  await expect(recherche(page).getByRole('combobox')).toBeFocused();
-  await page.keyboard.type('Cinéma', { delay: 15 });
-  await page.keyboard.press('ArrowDown');
-  await expect(recherche(page).getByRole('option', { selected: true })).toHaveText('Créer « Cinéma » dans « Idées de sorties »');
-  await page.keyboard.press('Enter');
-  await expect(titreDePage(page)).toHaveText('Cinéma');
-  await expect.poll(() => access(join(session.vault, 'Idées de sorties', 'Cinéma', 'page.md')).then(() => true, () => false)).toBe(true);
-
-  // Échap ferme sans rien changer ; Ctrl+T ouvre un onglet vide et la recherche.
   await page.keyboard.press('Control+t');
-  await expect(recherche(page)).toBeVisible();
-  await page.keyboard.press('Escape');
-  await expect(recherche(page)).toBeHidden();
   await expect(ongletActif(page)).toHaveText('Nouvel onglet');
-  await fermer(session);
-});
+  await expect(page.getByRole('combobox')).toHaveCount(0);
 
-test('recherche globale, Notes pas lancée : seule la recherche s’affiche, la page choisie s’ouvre dans la fenêtre principale', async () => {
-  const preparation = await preparer();
-  const application = await electron.launch({ args: argumentsDeLancement(preparation.profil, ['--recherche']), cwd: dossierApplication, env: environnementDEssai(preparation.profil) });
-  const petite = await fenetreDeRecherche(application);
-  await expect(petite.getByRole('combobox', { name: 'Rechercher une page' })).toBeFocused();
-  // Rien d'autre à l'écran : pas de fenêtre principale.
-  expect(await fenetres(application)).toEqual([{ titre: 'Notes, recherche', visible: true }]);
-
-  await petite.keyboard.type('refnas', { delay: 15 });
-  await expect(petite.getByRole('option').first()).toContainText('Refonte du NAS');
-  await petite.keyboard.press('Enter');
-
-  const page = await application.waitForEvent('window', { predicate: (fenetre) => !fenetre.url().endsWith('#recherche') });
-  await expect(titreDePage(page)).toHaveText('Refonte du NAS');
-  await expect.poll(() => fenetres(application)).toEqual(expect.arrayContaining([{ titre: 'Notes', visible: true }, { titre: 'Notes, recherche', visible: false }]));
-  await fermer({ application, page, vault: preparation.vault, profil: preparation.profil });
-});
-
-test('recherche globale : fenêtre fermée, Notes reste en fond et la recherche revient aussitôt, vide', async () => {
-  const preparation = await preparer();
-  const session = await lancer(preparation);
-  const { application, page } = session;
-  await ouvrirPage(page, 'Courses');
+  // Notes lancée : la seconde instance passe la page à la fenêtre ouverte, dans l'onglet affiché.
   const executable = await application.evaluate(() => process.execPath);
-  const relancer = (argumentsEnPlus: string[]) =>
-    new Promise<void>((resoudre) => {
-      execFile(executable, argumentsDeLancement(preparation.profil, argumentsEnPlus), { cwd: dossierApplication }, () => resoudre());
-    });
-
-  // Fermer la fenêtre : elle est enregistrée et détruite, l'application continue, recherche cachée.
-  const fermee = page.waitForEvent('close');
-  await page.getByRole('button', { name: 'Fermer', exact: true }).click();
-  await fermee;
-  await expect.poll(() => fenetres(application)).toEqual([{ titre: 'Notes, recherche', visible: false }]);
-
-  // Le raccourci (ici par l'argument, l'instance unique le reçoit) montre la recherche déjà prête.
-  const petite = await fenetreDeRecherche(application);
-  await relancer(['--recherche']);
-  await expect.poll(() => fenetres(application)).toEqual([{ titre: 'Notes, recherche', visible: true }]);
-  await expect(petite.getByRole('combobox')).toBeFocused();
-  await petite.keyboard.type('cours', { delay: 15 });
-  await petite.keyboard.press('Escape');
-  await expect.poll(() => fenetres(application)).toEqual([{ titre: 'Notes, recherche', visible: false }]);
-
-  // Rouverte : la saisie précédente est oubliée.
-  await relancer(['--recherche']);
-  await expect.poll(() => fenetres(application)).toEqual([{ titre: 'Notes, recherche', visible: true }]);
-  await expect(petite.getByRole('combobox')).toHaveValue('');
-  await expect(petite.getByRole('combobox')).toBeFocused();
-  await petite.keyboard.type('bienvenue', { delay: 15 });
-  await petite.keyboard.press('Enter');
-  const principale = await application.waitForEvent('window', { predicate: (fenetre) => !fenetre.url().endsWith('#recherche') });
-  await expect(titreDePage(principale)).toHaveText('Bienvenue');
-  // Les onglets d'avant la fermeture sont là, la page choisie a remplacé l'onglet affiché.
-  expect(await titresDesOnglets(principale)).toEqual(['Bienvenue']);
-
-  // Un lancement sans argument ramène la fenêtre ; Ctrl+Q quitte pour de bon.
-  const fin = application.waitForEvent('close');
-  await principale.keyboard.press('Control+q').catch(() => undefined);
-  await fin;
-});
-
-test('recherche globale, fenêtre ouverte : Échap cache la recherche sans toucher à la fenêtre, Ctrl+Entrée ouvre un onglet', async () => {
-  const preparation = await preparer();
-  const session = await lancer(preparation);
-  const { application, page } = session;
-  await ouvrirPage(page, 'Courses');
-  const executable = await application.evaluate(() => process.execPath);
-  const petite = await fenetreDeRecherche(application);
-
-  execFile(executable, argumentsDeLancement(preparation.profil, ['--recherche']), { cwd: dossierApplication });
-  await expect(petite.getByRole('combobox')).toBeFocused();
-  await petite.keyboard.press('Escape');
-  await expect.poll(() => fenetres(application)).toEqual(expect.arrayContaining([{ titre: 'Notes', visible: true }, { titre: 'Notes, recherche', visible: false }]));
+  execFile(executable, argumentsDeLancement(preparation.profil, [`--page=${courses}`]), { cwd: dossierApplication });
   await expect(titreDePage(page)).toHaveText('Courses');
+  expect(await titresDesOnglets(page)).toEqual(['Refonte du NAS', 'Courses']);
+  expect(await fenetres(application)).toEqual([{ titre: 'Notes', visible: true }]);
 
-  execFile(executable, argumentsDeLancement(preparation.profil, ['--recherche']), { cwd: dossierApplication });
-  await expect.poll(() => fenetres(application)).toEqual(expect.arrayContaining([{ titre: 'Notes, recherche', visible: true }]));
-  await expect(petite.getByRole('combobox')).toBeFocused();
-  await petite.keyboard.type('bienvenue', { delay: 15 });
-  await petite.keyboard.press('Control+Enter');
-  await expect(titreDePage(page)).toHaveText('Bienvenue');
-  expect(await titresDesOnglets(page)).toEqual(['Courses', 'Bienvenue']);
+  // Fermer la fenêtre quitte Notes.
   await fermer(session);
 });
 
@@ -262,7 +128,7 @@ test('sommaire : à jour à la frappe, suit la lecture, sommaire complet avec fi
   await expect(sommaire.locator('[aria-current="location"]')).toHaveText('Mise en forme');
 
   // Sommaire complet : tous les niveaux, filtre sans accents, Entrée y va.
-  await page.getByRole('button', { name: 'Sommaire de la page' }).click();
+  await actionDePage(page, 'Sommaire de la page');
   const complet = page.getByRole('dialog', { name: 'Sommaire de la page' });
   await expect(complet.getByRole('heading', { name: 'Sommaire' })).toBeVisible();
   await expect(complet).toContainText('Bienvenue');

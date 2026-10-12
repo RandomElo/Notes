@@ -81,6 +81,8 @@ interface ChatChunk {
   done?: boolean;
   prompt_eval_count?: number;
   eval_count?: number;
+  /** « length » quand `num_predict` a arrêté la réponse. */
+  done_reason?: string;
   error?: string;
 }
 
@@ -108,7 +110,11 @@ function envoyer(adresse: string, demande: ChatRequest, sansReflexion: boolean):
       stream: true,
       // Les modèles qui réfléchissent avant de répondre (Qwen3) le font sinon dans la sortie, et en prennent le temps.
       ...(sansReflexion ? { think: false } : {}),
-      options: { temperature: 0.3, ...(demande.contexte === undefined ? {} : { num_ctx: demande.contexte }) },
+      options: {
+        temperature: 0.3,
+        ...(demande.contexte === undefined ? {} : { num_ctx: demande.contexte }),
+        ...(demande.sortieMax === undefined ? {} : { num_predict: demande.sortieMax }),
+      },
     }),
   });
 }
@@ -139,6 +145,7 @@ export async function discuterAvecOllama(adresse: string, demande: ChatRequest):
   let texte = '';
   let entree = 0;
   let sortie = 0;
+  let coupee = false;
   try {
     for await (const ligne of lignesDuFlux(reponse.body, demande.signal)) {
       let morceau: ChatChunk;
@@ -157,10 +164,11 @@ export async function discuterAvecOllama(adresse: string, demande: ChatRequest):
       if (morceau.done === true) {
         entree = morceau.prompt_eval_count ?? 0;
         sortie = morceau.eval_count ?? 0;
+        coupee = morceau.done_reason === 'length';
       }
     }
   } catch (erreur) {
     throw erreurDeConnexion(erreur, demande.signal, 'Ollama');
   }
-  return { texte, entree, sortie };
+  return { texte, entree, sortie, coupee };
 }

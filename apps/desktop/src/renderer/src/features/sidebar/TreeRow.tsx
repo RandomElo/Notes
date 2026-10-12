@@ -1,3 +1,4 @@
+import { titreParDefaut } from '@notes/core';
 import type { TreeNode } from '@notes/core';
 import { ChevronRight, Ellipsis, FileQuestion, FileText, Folder, ListTodo, Plus } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
@@ -164,7 +165,12 @@ function RowIcon({ noeud }: { noeud: TreeNode }) {
   return <PageIcon icone={noeud.icone} chemin={noeud.chemin} className="text-discret size-4 text-sm" defaut={defaut} />;
 }
 
-/** Champ de renommage : Entrée ou la perte du focus valide, Échap abandonne. */
+/**
+ * Champ de renommage : Entrée ou la perte du focus valide, Échap abandonne.
+ * Un focus perdu ailleurs que dans la page, sur un nom resté « Sans titre »,
+ * abandonne aussi : une page qu'on vient de créer et qu'on quitte sans la
+ * nommer ni rien y écrire est retirée, au lieu de rester en « Sans titre ».
+ */
 function TitleInput(props: { titre: string; surValidation: (titre: string) => void; surAbandon: () => void }) {
   const [valeur, definirValeur] = useState(props.titre);
   const champ = useRef<HTMLInputElement>(null);
@@ -196,7 +202,11 @@ function TitleInput(props: { titre: string; surValidation: (titre: string) => vo
       spellCheck={false}
       onChange={(evenement) => definirValeur(evenement.target.value)}
       onClick={(evenement) => evenement.stopPropagation()}
-      onBlur={() => finir(true)}
+      onBlur={(evenement) => {
+        // Le focus va dans la page elle-même (on y écrit sans l'avoir nommée) : elle reste.
+        const versLaPage = evenement.relatedTarget instanceof Element && evenement.relatedTarget.closest('[data-zone-page]') !== null;
+        finir(versLaPage || !(props.titre === titreParDefaut && valeur.trim() === titreParDefaut));
+      }}
       onKeyDown={(evenement) => {
         evenement.stopPropagation();
         if (evenement.key === 'Enter') {

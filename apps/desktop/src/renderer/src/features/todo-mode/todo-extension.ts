@@ -188,31 +188,40 @@ function invite(etat: EditorState): Decoration | null {
   return Decoration.node($head.before(), $head.after(), { class: 'invite-tache', 'data-placeholder': texte });
 }
 
+/** Classe d'un paragraphe vide de premier niveau en mode liste : il montre une case, comme une tâche (voir styles.css). */
+export const classeTacheAVenir = 'tache-a-venir';
+
 function decorations(etat: EditorState, { actif, replie }: EtatDuModeListe, surRepli: (replie: boolean) => void): DecorationSet {
   if (!actif) {
     return DecorationSet.empty;
   }
-  const positions = sectionTerminee(etat.doc);
+  const liste: Decoration[] = [];
+  // Page en liste encore vide : sa ligne montre la case (demande d'Eloi). Elle ne devient une tâche du fichier qu'à la frappe.
+  etat.doc.forEach((bloc, debut) => {
+    if (bloc.type.name === 'paragraph' && bloc.content.size === 0) {
+      liste.push(Decoration.node(debut, debut + bloc.nodeSize, { class: classeTacheAVenir }));
+    }
+  });
   const indication = invite(etat);
-  if (positions.length === 0) {
-    return indication === null ? DecorationSet.empty : DecorationSet.create(etat.doc, [indication]);
-  }
-  const liste: Decoration[] = [
-    Decoration.widget(positions[0]!, (vue) => titreDeSection(vue, positions.length, replie, surRepli), {
-      side: -1,
-      key: `termine-${positions.length}-${replie}`,
-      ignoreSelection: true,
-    }),
-  ];
   if (indication !== null) {
     liste.push(indication);
   }
-  if (replie) {
-    for (const position of positions) {
-      liste.push(Decoration.node(position, position + etat.doc.nodeAt(position)!.nodeSize, { class: classeTacheRepliee }));
+  const positions = sectionTerminee(etat.doc);
+  if (positions.length > 0) {
+    liste.push(
+      Decoration.widget(positions[0]!, (vue) => titreDeSection(vue, positions.length, replie, surRepli), {
+        side: -1,
+        key: `termine-${positions.length}-${replie}`,
+        ignoreSelection: true,
+      }),
+    );
+    if (replie) {
+      for (const position of positions) {
+        liste.push(Decoration.node(position, position + etat.doc.nodeAt(position)!.nodeSize, { class: classeTacheRepliee }));
+      }
     }
   }
-  return DecorationSet.create(etat.doc, liste);
+  return liste.length === 0 ? DecorationSet.empty : DecorationSet.create(etat.doc, liste);
 }
 
 export interface TodoModeOptions {

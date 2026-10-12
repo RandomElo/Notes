@@ -4,9 +4,9 @@ import { libellesDesFonctions } from '../../../../shared/ai-contract';
 import type { AiUsageView } from '../../../../shared/ai-contract';
 import { api } from '../../lib/ipc';
 import { useStoredState } from '../../state/useStoredState';
-import { libelleDEcart, libelleDeDollars, libelleDeTokens } from './ai-labels';
+import { libelleDEcart, libelleDeDuree, libelleDeTokens } from './ai-labels';
 
-type Mesure = 'cout' | 'tokens' | 'appels';
+type Mesure = 'tokens' | 'appels';
 
 const periodes: readonly { cle: UsagePeriod; libelle: string }[] = [
   { cle: 'jour', libelle: 'Jours' },
@@ -15,16 +15,15 @@ const periodes: readonly { cle: UsagePeriod; libelle: string }[] = [
   { cle: 'annee', libelle: 'Années' },
 ];
 const mesures: readonly { cle: Mesure; libelle: string }[] = [
-  { cle: 'cout', libelle: 'Dépense' },
   { cle: 'tokens', libelle: 'Tokens' },
   { cle: 'appels', libelle: 'Appels' },
 ];
 const estPeriode = (valeur: unknown): valeur is UsagePeriod => periodes.some((periode) => periode.cle === valeur);
 const estMesure = (valeur: unknown): valeur is Mesure => mesures.some((mesure) => mesure.cle === valeur);
 
-const valeurDe = (total: UsageBucket, mesure: Mesure): number => (mesure === 'cout' ? total.coutUsd : mesure === 'tokens' ? total.entree + total.sortie : total.appels);
-const libelleDeValeur = (valeur: number, mesure: Mesure): string =>
-  mesure === 'cout' ? libelleDeDollars(valeur) : mesure === 'tokens' ? libelleDeTokens(valeur) : `${valeur} appel${valeur > 1 ? 's' : ''}`;
+const valeurDe = (total: UsageBucket, mesure: Mesure): number => (mesure === 'tokens' ? total.entree + total.sortie : total.appels);
+const appelsEnClair = (nombre: number): string => `${nombre} appel${nombre > 1 ? 's' : ''}`;
+const libelleDeValeur = (valeur: number, mesure: Mesure): string => (mesure === 'tokens' ? libelleDeTokens(valeur) : appelsEnClair(valeur));
 
 function libelleDePeriode(debut: number, periode: UsagePeriod, court: boolean): string {
   const date = new Date(debut);
@@ -120,7 +119,9 @@ function Barres({ totaux, periode, mesure }: { totaux: UsageBucket[]; periode: U
           style={{ left: `${((marge.gauche + (survolee + 0.5) * pas) / largeur) * 100}%` }}
         >
           <p className="font-medium">{libelleDePeriode(choisie.debut, periode, false)}</p>
-          <p>{libelleDeDollars(choisie.coutUsd)} · {libelleDeTokens(choisie.entree + choisie.sortie)} · {choisie.appels} appel{choisie.appels > 1 ? 's' : ''}</p>
+          <p>
+            {libelleDeTokens(choisie.entree + choisie.sortie)} · {appelsEnClair(choisie.appels)}
+          </p>
         </div>
       )}
     </div>
@@ -170,8 +171,7 @@ function Appels({ appels }: { appels: AiRun[] }) {
             <th className="py-1 pr-3 font-medium">Modèle</th>
             <th className="py-1 pr-3 text-right font-medium">Envoyé</th>
             <th className="py-1 pr-3 text-right font-medium">Reçu</th>
-            <th className="py-1 pr-3 text-right font-medium">Coût</th>
-            <th className="py-1 text-right font-medium">Estimé</th>
+            <th className="py-1 text-right font-medium">Durée</th>
           </tr>
         </thead>
         <tbody>
@@ -189,8 +189,7 @@ function Appels({ appels }: { appels: AiRun[] }) {
               <td className="py-1 pr-3 text-right whitespace-nowrap">
                 {appel.sortie} <span className="text-discret">({libelleDEcart(appel.sortie, appel.estimation.sortie)})</span>
               </td>
-              <td className="py-1 pr-3 text-right whitespace-nowrap">{appel.coutUsd === null ? 'local' : libelleDeDollars(appel.coutUsd)}</td>
-              <td className="py-1 text-right whitespace-nowrap">{appel.estimation.coutUsd === null ? '' : libelleDeDollars(appel.estimation.coutUsd)}</td>
+              <td className="py-1 text-right whitespace-nowrap">{libelleDeDuree(appel.dureeMs).replace('environ ', '')}</td>
             </tr>
           ))}
         </tbody>
@@ -199,11 +198,11 @@ function Appels({ appels }: { appels: AiRun[] }) {
   );
 }
 
-/** Historique des fonctions IA (README §12), ouvert depuis les réglages ou la barre de statut. */
+/** Historique des fonctions IA (README §12), ouvert depuis les réglages. */
 export function AiUsageScreen() {
   const [vue, definirVue] = useState<AiUsageView | null>(null);
   const [periode, definirPeriode] = useStoredState<UsagePeriod>('notes.ia.periode', 'jour', estPeriode);
-  const [mesure, definirMesure] = useStoredState<Mesure>('notes.ia.mesure', 'cout', estMesure);
+  const [mesure, definirMesure] = useStoredState<Mesure>('notes.ia.mesure', 'tokens', estMesure);
 
   useEffect(() => {
     const lire = (): void => void api.historiqueIa().then(definirVue);
@@ -219,14 +218,12 @@ export function AiUsageScreen() {
       <div>
         <h2 className="text-xl font-semibold">Historique des fonctions IA</h2>
         <p className="text-discret mt-1 text-sm">
-          Tous les appels, de tous les postes (gardés dans le dossier des notes). Seuls les appels par LiteLLM coûtent ; les montants sont en dollars, la monnaie
-          de facturation des fournisseurs.
+          Tous les appels, de tous les postes (gardés dans le dossier des notes), avec ce que le modèle a lu et écrit face à l’estimation.
         </p>
       </div>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
-        <Chiffre libelle="Aujourd’hui" valeur={libelleDeDollars(vue.depenseDuJourUsd)} />
-        <Chiffre libelle="Ce mois-ci" valeur={libelleDeDollars(vue.depenseDuMoisUsd)} />
-        <Chiffre libelle="Alerte mensuelle" valeur={vue.seuilMensuelUsd === null ? 'aucune' : libelleDeDollars(vue.seuilMensuelUsd)} />
+      <div className="grid grid-cols-2 gap-3">
+        <Chiffre libelle="Aujourd’hui" valeur={appelsEnClair(vue.totaux.jour.at(-1)?.appels ?? 0)} />
+        <Chiffre libelle="Ce mois-ci" valeur={appelsEnClair(vue.totaux.mois.at(-1)?.appels ?? 0)} />
       </div>
       <section className="bg-surface space-y-3 rounded-lg p-4">
         <div className="flex flex-wrap items-center justify-between gap-2">

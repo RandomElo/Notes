@@ -1,12 +1,11 @@
-import type { AiPageFunction, AiPrice, AiProvider, AiSettings } from '@notes/core';
-import { BarChart3, Check, CircleSlash, Cpu, KeyRound, RefreshCw, RotateCcw, Trash2, TriangleAlert } from 'lucide-react';
-import { useEffect, useId, useState } from 'react';
+import type { AiPageFunction, AiSettings } from '@notes/core';
+import { BarChart3, Check, CircleSlash, Cpu, RefreshCw, RotateCcw } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import { consignesParDefaut, libellesDesFonctions } from '../../../../shared/ai-contract';
-import type { AiApiModelView, AiState } from '../../../../shared/ai-contract';
+import type { AiState } from '../../../../shared/ai-contract';
 import { api } from '../../lib/ipc';
 import { ExportSelect } from '../export/ExportSelect';
 import { TextField } from '../settings/TextField';
-import { libelleDeDollars } from './ai-labels';
 
 const boutonSecondaire =
   'bg-texte/10 hover:bg-texte/20 focus-visible:bg-accent/40 inline-flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm leading-none font-medium outline-0 aria-disabled:opacity-50';
@@ -15,99 +14,19 @@ const boutonPrincipal =
 const champ = 'bg-fond border-bordure focus:outline-accent rounded-md border px-2 py-1 text-sm focus:outline-2 focus:outline-offset-1';
 
 const fonctions: readonly AiPageFunction[] = ['relecture', 'mise-au-propre', 'memo'];
-const fournisseurs: readonly { cle: AiProvider; libelle: string }[] = [
-  { cle: 'ollama', libelle: 'Ce poste (Ollama)' },
-  { cle: 'litellm', libelle: 'LiteLLM (payant)' },
-];
 
-/** Un nombre saisi à la française (« 0,75 »), null s'il n'en est pas un. */
-function lireMontant(texte: string): number | null {
-  const valeur = Number(texte.trim().replace(',', '.'));
-  return texte.trim() === '' || !Number.isFinite(valeur) || valeur < 0 ? null : valeur;
-}
-const ecrireMontant = (valeur: number): string => String(Math.round(valeur * 10000) / 10000).replace('.', ',');
 const go = (octets: number): string => `${Math.round((octets / 1024 ** 3) * 10) / 10} Go`.replace('.', ',');
-/** Une adresse en http vers une autre machine : la clé y passe en clair sur le réseau. */
-const clairSurLeReseau = (adresse: string): boolean => /^http:\/\//.test(adresse) && !/^http:\/\/(localhost|127\.|\[::1\])/.test(adresse);
 
-/** Modèles proposés pour une fonction. Pour Ollama, « Automatique » en tête, puis ceux qui conviennent à la carte. */
-function choixDeModeles(etat: AiState, fournisseur: AiProvider, actuel: string): { cle: string; libelle: string }[] {
-  if (fournisseur === 'ollama') {
-    const choix = [
-      { cle: '', libelle: etat.local.automatique === null ? 'Automatique (aucun ne convient)' : `Automatique : ${etat.local.automatique}` },
-      ...etat.local.modeles.filter((modele) => modele.utilisable).map((modele) => ({ cle: modele.nom, libelle: modele.nom })),
-    ];
-    if (actuel !== '' && !choix.some((option) => option.cle === actuel)) {
-      choix.push({ cle: actuel, libelle: `${actuel} (ne convient pas)` });
-    }
-    return choix;
+/** Modèles proposés pour une fonction : « Automatique » en tête, puis ceux qui conviennent à la carte. */
+function choixDeModeles(etat: AiState, actuel: string): { cle: string; libelle: string }[] {
+  const choix = [
+    { cle: '', libelle: etat.local.automatique === null ? 'Automatique (aucun ne convient)' : `Automatique : ${etat.local.automatique}` },
+    ...etat.local.modeles.filter((modele) => modele.utilisable).map((modele) => ({ cle: modele.nom, libelle: modele.nom })),
+  ];
+  if (actuel !== '' && !choix.some((option) => option.cle === actuel)) {
+    choix.push({ cle: actuel, libelle: `${actuel} (ne convient pas)` });
   }
-  const liste = (etat.modelesLitellm ?? []).map((modele) => ({ cle: modele.nom, libelle: modele.nom }));
-  if (actuel !== '' && !liste.some((option) => option.cle === actuel)) {
-    liste.unshift({ cle: actuel, libelle: `${actuel} (introuvable)` });
-  }
-  if (actuel === '') {
-    liste.unshift({ cle: '', libelle: liste.length === 0 ? 'Aucun modèle disponible' : 'Choisir un modèle' });
-  }
-  return liste;
-}
-
-const sources: Record<NonNullable<AiApiModelView['source']>, string> = {
-  reglages: 'Tarif saisi ici.',
-  litellm: 'Tarif donné par LiteLLM.',
-  notes: 'Tarif relevé par Notes chez OpenAI, faute de tarif chez LiteLLM.',
-};
-
-/** Tarif d'un modèle de LiteLLM, en dollars par million de tokens : celui de LiteLLM, corrigeable. */
-function Tarif({ modele, vue, saisi, surChangement }: { modele: string; vue: AiApiModelView | null; saisi: AiPrice | null; surChangement: (tarif: AiPrice | null) => void }) {
-  const depart = saisi ?? vue?.tarif ?? null;
-  const [entree, definirEntree] = useState(() => (depart === null ? '' : ecrireMontant(depart.entree)));
-  const [sortie, definirSortie] = useState(() => (depart === null ? '' : ecrireMontant(depart.sortie)));
-  const id = useId();
-  const mettreAJour = (nouvelleEntree: string, nouvelleSortie: string): void => {
-    const e = lireMontant(nouvelleEntree);
-    const s = lireMontant(nouvelleSortie);
-    // Un tarif identique à celui de LiteLLM n'est pas gardé : il suivra LiteLLM.
-    const reference = vue?.source === 'reglages' ? null : (vue?.tarif ?? null);
-    surChangement(e === null || s === null || (reference !== null && reference.entree === e && reference.sortie === s) ? null : { entree: e, sortie: s });
-  };
-  return (
-    <div className="space-y-1">
-      <div className="flex flex-wrap items-center gap-2 text-sm">
-        <span className="min-w-40 font-mono text-xs">{modele}</span>
-        <label htmlFor={`${id}-e`} className="text-discret text-xs">
-          entrée
-        </label>
-        <input
-          id={`${id}-e`}
-          inputMode="decimal"
-          value={entree}
-          onChange={(evenement) => {
-            definirEntree(evenement.target.value);
-            mettreAJour(evenement.target.value, sortie);
-          }}
-          className={`${champ} w-20`}
-        />
-        <label htmlFor={`${id}-s`} className="text-discret text-xs">
-          sortie
-        </label>
-        <input
-          id={`${id}-s`}
-          inputMode="decimal"
-          value={sortie}
-          onChange={(evenement) => {
-            definirSortie(evenement.target.value);
-            mettreAJour(entree, evenement.target.value);
-          }}
-          className={`${champ} w-20`}
-        />
-        <span className="text-discret text-xs">$ par million de tokens</span>
-      </div>
-      <p className="text-discret text-xs">
-        {saisi !== null ? sources.reglages : vue?.source != null ? sources[vue.source] : 'Aucun tarif connu : sans lui, le coût ne peut pas être estimé.'}
-      </p>
-    </div>
-  );
+  return choix;
 }
 
 /** Ce que la carte du poste permet : IA locale possible ou non, et pourquoi. */
@@ -146,22 +65,18 @@ function CetteMachine({ etat }: { etat: AiState }) {
 
 /**
  * Fonctions IA dans les réglages (README §12) : ce que la carte permet, Ollama,
- * LiteLLM en option, modèle par fonction, tarifs, seuil de dépense, consignes.
- * Tout est propre à ce poste ; la clé de LiteLLM est chiffrée par le trousseau.
+ * modèle par fonction, consignes. Tout est propre à ce poste.
  */
 export function AiPanel({ surHistorique }: { surHistorique: () => void }) {
   const [etat, definirEtat] = useState<AiState | null>(null);
   const [brouillon, definirBrouillon] = useState<AiSettings | null>(null);
-  const [cle, definirCle] = useState('');
   const [message, definirMessage] = useState<string | null>(null);
   const [verification, definirVerification] = useState(false);
-  const [seuil, definirSeuil] = useState('');
 
   const recevoir = (nouveau: AiState, remplacerBrouillon: boolean): void => {
     definirEtat(nouveau);
     if (remplacerBrouillon) {
       definirBrouillon(nouveau.reglages);
-      definirSeuil(nouveau.reglages.seuilMensuelUsd === null ? '' : ecrireMontant(nouveau.reglages.seuilMensuelUsd));
     }
   };
 
@@ -193,8 +108,6 @@ export function AiPanel({ surHistorique }: { surHistorique: () => void }) {
       Vérifier
     </button>
   );
-  const modelesLitellmChoisis = [...new Set(fonctions.map((fonction) => brouillon.modeles[fonction]).filter((choix) => choix.fournisseur === 'litellm' && choix.modele !== '').map((choix) => choix.modele))];
-  const cleValide = /^[\x21-\x7e]{8,500}$/.test(cle.trim());
 
   return (
     <section aria-labelledby="titre-ia" className="space-y-4">
@@ -205,7 +118,8 @@ export function AiPanel({ surHistorique }: { surHistorique: () => void }) {
           </h2>
           <p className="text-discret mt-1 text-sm">
             Relecture et mise au propre d’une page, par l’icône en haut de la page. Par défaut, un modèle tourne sur ce poste avec Ollama, sans rien envoyer sur
-            Internet ; Notes le choisit selon la carte graphique. LiteLLM est possible en option, payant. Ces réglages sont propres à ce poste.
+            Internet ; Notes le choisit selon la carte graphique. Pour passer par un autre outil, la fenêtre de la page copie la consigne et le texte. Ces réglages
+            sont propres à ce poste.
           </p>
         </div>
         <button type="button" onClick={surHistorique} className={boutonSecondaire}>
@@ -236,67 +150,6 @@ export function AiPanel({ surHistorique }: { surHistorique: () => void }) {
         )}
       </div>
 
-      <div className="bg-surface space-y-3 rounded-lg p-4 text-sm">
-        <h3 className="font-medium">LiteLLM, en option</h3>
-        <div className="flex items-end gap-2">
-          <div className="flex-1">
-            <TextField
-              libelle="Adresse de LiteLLM"
-              valeur={brouillon.adresseLitellm}
-              indication="http://serveur:4000"
-              surChangement={(adresseLitellm) => changer({ adresseLitellm })}
-            />
-          </div>
-          {boutonVerifier}
-        </div>
-        {clairSurLeReseau(brouillon.adresseLitellm) && (
-          <p className="text-alerte flex items-start gap-2 text-xs">
-            <TriangleAlert className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
-            En http, la clé passe en clair sur le réseau local. https est préférable si LiteLLM le permet.
-          </p>
-        )}
-        {etat.cleLitellm === 'absent' ? (
-          <div className="flex items-end gap-2">
-            <div className="flex-1">
-              <TextField libelle="Clé de LiteLLM" type="password" valeur={cle} surChangement={definirCle} aide="Chiffrée par le trousseau du système, jamais écrite en clair." />
-            </div>
-            <button
-              type="button"
-              aria-disabled={!cleValide}
-              onClick={() => {
-                if (cleValide) {
-                  void api.enregistrerCleLitellm({ cle }).then((nouveau) => {
-                    definirCle('');
-                    recevoir(nouveau, false);
-                  });
-                }
-              }}
-              className={`${boutonPrincipal} mb-5 h-9`}
-            >
-              <KeyRound className="size-4" aria-hidden="true" />
-              Enregistrer la clé
-            </button>
-          </div>
-        ) : (
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p role="status">
-              {etat.cleLitellm === 'enregistre' ? 'Clé enregistrée, chiffrée par le trousseau du système.' : 'Clé gardée jusqu’à la fermeture de Notes : sans trousseau, elle sera redemandée.'}{' '}
-              {etat.reglages.adresseLitellm === '' ? (
-                'Il reste l’adresse à régler.'
-              ) : etat.modelesLitellm === null ? (
-                <span className="text-alerte">LiteLLM ne répond pas ou refuse la clé.</span>
-              ) : (
-                `${etat.modelesLitellm.length} modèle${etat.modelesLitellm.length > 1 ? 's' : ''} disponible${etat.modelesLitellm.length > 1 ? 's' : ''}.`
-              )}
-            </p>
-            <button type="button" onClick={() => void api.oublierCleLitellm().then((nouveau) => recevoir(nouveau, false))} className={boutonSecondaire}>
-              <Trash2 className="size-4" aria-hidden="true" />
-              Oublier la clé
-            </button>
-          </div>
-        )}
-      </div>
-
       <div className="bg-surface space-y-4 rounded-lg p-4 text-sm">
         <h3 className="font-medium">Modèle de chaque fonction</h3>
         {fonctions.map((fonction) => {
@@ -305,59 +158,14 @@ export function AiPanel({ surHistorique }: { surHistorique: () => void }) {
             <div key={fonction} className="flex flex-wrap items-center gap-2">
               <span className="min-w-40">{libellesDesFonctions[fonction]}</span>
               <ExportSelect
-                libelle={`Fournisseur pour ${libellesDesFonctions[fonction]}`}
-                valeur={choix.fournisseur}
-                choix={fournisseurs}
-                surChoix={(fournisseur) => changer({ modeles: { ...brouillon.modeles, [fonction]: { fournisseur, modele: '' } } })}
-              />
-              <ExportSelect
                 libelle={`Modèle pour ${libellesDesFonctions[fonction]}`}
                 valeur={choix.modele}
-                choix={choixDeModeles(etat, choix.fournisseur, choix.modele)}
-                surChoix={(modele) => changer({ modeles: { ...brouillon.modeles, [fonction]: { ...choix, modele } } })}
+                choix={choixDeModeles(etat, choix.modele)}
+                surChoix={(modele) => changer({ modeles: { ...brouillon.modeles, [fonction]: { modele } } })}
               />
             </div>
           );
         })}
-        {modelesLitellmChoisis.length > 0 && (
-          <div className="space-y-3 pt-2">
-            <h4 className="text-discret text-xs font-medium">Tarifs</h4>
-            {modelesLitellmChoisis.map((modele) => (
-              <Tarif
-                key={modele}
-                modele={modele}
-                vue={etat.modelesLitellm?.find((candidat) => candidat.nom === modele) ?? null}
-                saisi={brouillon.tarifs[modele] ?? null}
-                surChangement={(tarif) => {
-                  const tarifs = { ...brouillon.tarifs };
-                  if (tarif === null) {
-                    delete tarifs[modele];
-                  } else {
-                    tarifs[modele] = tarif;
-                  }
-                  changer({ tarifs });
-                }}
-              />
-            ))}
-            <div className="flex flex-wrap items-center gap-2">
-              <label htmlFor="seuil-ia" className="min-w-40">
-                Alerte au-delà de
-              </label>
-              <input
-                id="seuil-ia"
-                inputMode="decimal"
-                value={seuil}
-                placeholder="aucune"
-                onChange={(evenement) => {
-                  definirSeuil(evenement.target.value);
-                  changer({ seuilMensuelUsd: lireMontant(evenement.target.value) });
-                }}
-                className={`${champ} w-24`}
-              />
-              <span className="text-discret text-xs">$ par mois. Ce mois-ci : {libelleDeDollars(etat.depenseDuMoisUsd)}.</span>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="bg-surface space-y-4 rounded-lg p-4 text-sm">
