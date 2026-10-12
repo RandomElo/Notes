@@ -56,7 +56,7 @@ function decoder(octets: Uint8Array, typeDeContenu: string): string {
 }
 
 /**
- * Titre et favicon d'un site, pour une mention de site (README §6). Seulement
+ * Titre et favicon d'un site, pour une mention de site (docs/spec/editeur.md). Seulement
  * http et https, sans cookies, délai et taille bornés. La favicon doit être
  * une image reconnue par ses premiers octets (PNG, JPEG, GIF, WebP, AVIF ou
  * ICO) : le renderer la convertit en PNG. Sans titre, la mention n'a pas lieu.

@@ -111,7 +111,7 @@ export function ollamaSurLePoste(adresse: string): boolean {
 }
 
 /**
- * Fonctions IA du poste (README §12) : carte graphique et choix du modèle
+ * Fonctions IA du poste (docs/spec/ia.md) : carte graphique et choix du modèle
  * local, estimation, appel annulable, arrêt si le modèle déborde de la
  * mémoire vidéo, nettoyage, historique. Un appel à la fois. Rien n'est jamais écrit dans la page ici : la proposition
  * repart au renderer, qui la montre avant que l'utilisateur ne l'accepte.
@@ -283,7 +283,7 @@ export class AiService {
 
   /**
    * Durée probable d'une fonction sur un texte dont on ne connaît que la
-   * longueur (un mémo pas encore transcrit, README §13). null si l'IA locale
+   * longueur (un mémo pas encore transcrit, docs/spec/memos.md). null si l'IA locale
    * n'est pas disponible ou si ce modèle n'a encore jamais servi.
    */
   async dureeEstimee(fonction: AiPageFunction, caracteres: number): Promise<number | null> {

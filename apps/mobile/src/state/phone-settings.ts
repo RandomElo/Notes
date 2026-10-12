@@ -2,8 +2,8 @@ import { estHoteValide, validerReglagesNas } from '@notes/core';
 import type { NasSettings } from '@notes/core';
 
 /**
- * Réglages du téléphone, dans le stockage privé de l'application (README
- * §16), jamais synchronisés. Aucun identifiant ici : le mot de passe est
+ * Réglages du téléphone, dans le stockage privé de l'application
+ * (docs/spec/securite.md), jamais synchronisés. Aucun identifiant ici : le mot de passe est
  * chiffré à part par le plugin natif.
  */
 export interface PhoneSettings {

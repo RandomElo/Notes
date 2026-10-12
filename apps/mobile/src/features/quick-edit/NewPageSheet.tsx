@@ -3,7 +3,7 @@ import type { FormEvent } from 'react';
 import { Sheet } from '../../components/Sheet';
 import { useNotes } from '../../state/NotesContext';
 
-/** Création d'une page simple sur le NAS (README §15) : un titre, classique ou en liste de tâches. */
+/** Création d'une page simple sur le NAS (docs/spec/android.md) : un titre, classique ou en liste de tâches. */
 export function NewPageSheet({ parent, titreDuParent, creee, fermer }: { parent: string; titreDuParent: string | null; creee: (chemin: string) => void; fermer: () => void }) {
   const { creerPage, modifiable } = useNotes();
   const [titre, definirTitre] = useState('');

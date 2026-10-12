@@ -1,7 +1,7 @@
 import { dirname, isAbsolute, join } from 'node:path';
 
 /**
- * Dossier de LanguageTool (README §11) : à côté de l'AppImage, hors de ses
+ * Dossier de LanguageTool (docs/spec/correction.md) : à côté de l'AppImage, hors de ses
  * fichiers (`~/Applications/LanguageTool`). Hors AppImage (développement),
  * dans `~/Applications`. `NOTES_DOSSIER_LANGUAGETOOL` le remplace, pour un
  * essai qui ne doit pas toucher à l'installation du poste.

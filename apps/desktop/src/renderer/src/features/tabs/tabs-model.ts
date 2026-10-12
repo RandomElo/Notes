@@ -1,5 +1,5 @@
 /**
- * Onglets de la fenêtre (README §7) : logique pure, testée. Un onglet montre
+ * Onglets de la fenêtre (docs/spec/interface.md) : logique pure, testée. Un onglet montre
  * une page (sa clé dans l'arborescence) ou rien. Une page n'est jamais
  * ouverte dans deux onglets : l'ouvrir ramène à l'onglet qui la montre.
  */

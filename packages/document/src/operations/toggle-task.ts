@@ -31,7 +31,7 @@ export function cocherLesSousTaches(tr: Transform, position: number): boolean {
  * Coche ou décoche la tâche qui commence à « position » ; cochée, ses
  * sous-tâches le sont aussi. En mode liste, elle est ensuite rangée :
  * cochée, en tête de « Terminé » ; décochée, après les tâches à faire
- * (README §14). Faux si ce n'est pas une tâche ou si elle est déjà dans cet
+ * (docs/spec/liste-de-taches.md). Faux si ce n'est pas une tâche ou si elle est déjà dans cet
  * état.
  */
 export function basculerTache(tr: Transform, position: number, coche: boolean, modeListe: boolean): boolean {

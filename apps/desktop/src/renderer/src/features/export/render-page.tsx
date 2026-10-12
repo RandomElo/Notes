@@ -86,7 +86,7 @@ const attendre = (millisecondes: number): Promise<void> => new Promise((fin) => 
 
 /**
  * Rend une page hors de l'écran, avec le même schéma, les mêmes vues et la même
- * coloration du code que l'éditeur, puis en tire le HTML d'export (README §9).
+ * coloration du code que l'éditeur, puis en tire le HTML d'export (docs/spec/export.md).
  * Rien de ce qui vient du fichier n'est interprété comme du HTML : le contenu
  * passe par le schéma, et le DOM ainsi construit est sérialisé.
  */

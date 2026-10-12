@@ -1,5 +1,5 @@
 /**
- * Recherche floue sur les titres de page (README §7) : les lettres tapées
+ * Recherche floue sur les titres de page (docs/spec/interface.md) : les lettres tapées
  * doivent apparaître dans le titre, dans l'ordre, pas forcément côte à côte.
  * Accents, casse et espaces de la saisie sont ignorés. Les lettres qui se
  * suivent et celles qui ouvrent un mot comptent davantage.

@@ -22,7 +22,7 @@ export function inscrireEditeurOuvert(id: string, suivre: EditeurOuvert['suivre'
 }
 
 /**
- * Renomme une page (README §6). Le main réécrit ses mentions dans les autres
+ * Renomme une page (docs/spec/editeur.md). Le main réécrit ses mentions dans les autres
  * pages, sauf dans la page ouverte : écrire son fichier ferait un conflit avec
  * la frappe en cours. C'est son éditeur qui change ses mentions, et elles
  * partent avec l'enregistrement suivant.

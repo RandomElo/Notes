@@ -5,7 +5,7 @@ import { analyseur } from './tokenizer';
 import type { Jeton } from './tokenizer';
 
 /**
- * Callout dans le fichier (README §4) : un bloc fencé `notes-callout` dont le
+ * Callout dans le fichier (docs/spec/stockage.md) : un bloc fencé `notes-callout` dont le
  * contenu est du YAML, avec trois clés facultatives.
  *
  * ```notes-callout

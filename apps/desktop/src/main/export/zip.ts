@@ -19,7 +19,7 @@ export function estCheminDArchive(chemin: string): boolean {
 const dejaCompresse = /\.(webp|png|jpe?g|gif|avif)$/i;
 
 /**
- * L'archive ZIP d'un export (README §9). Refuse un chemin qui sortirait de
+ * L'archive ZIP d'un export (docs/spec/export.md). Refuse un chemin qui sortirait de
  * l'archive à l'extraction ou un fichier en double.
  */
 export function creerArchive(entrees: ArchiveEntry[]): Uint8Array {

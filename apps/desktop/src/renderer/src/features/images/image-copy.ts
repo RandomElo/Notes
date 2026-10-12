@@ -14,7 +14,7 @@ export interface ImageCopyOptions {
 }
 
 /**
- * Image copiée d'une page et collée dans une autre (README §6) : son adresse
+ * Image copiée d'une page et collée dans une autre (docs/spec/editeur.md) : son adresse
  * est relative à sa page d'origine. Au collage, elle est réadressée vers
  * l'image d'origine pour s'afficher tout de suite, puis le fichier est copié
  * dans les `assets/` de la page et l'adresse devient locale.

@@ -5,7 +5,7 @@ import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { CellSelection, TableMap, addColumn, addRow, cellAround, removeColumn, removeRow } from '@tiptap/pm/tables';
 
 /**
- * Commandes des tableaux (README §6), pures : elles rendent la transaction à
+ * Commandes des tableaux (docs/spec/editeur.md), pures : elles rendent la transaction à
  * appliquer, ou null si elles ne s'appliquent pas. Un tableau GFM n'a ni
  * cellules fusionnées ni largeurs : chaque cellule tient une case.
  */

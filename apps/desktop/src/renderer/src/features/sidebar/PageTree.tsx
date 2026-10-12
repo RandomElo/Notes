@@ -32,7 +32,7 @@ export interface PageTreeProps {
   surIcone: (noeud: TreeNode, x: number, y: number) => void;
   /** Met ces pages à la corbeille (sans leurs sous-pages sélectionnées, qui partent avec elles). Vrai si c'est fait. */
   surCorbeille: (noeuds: TreeNode[]) => Promise<boolean>;
-  /** Masque la page « Mémos vocaux » de l'arborescence sur ce poste, ou la réaffiche (README §13). */
+  /** Masque la page « Mémos vocaux » de l'arborescence sur ce poste, ou la réaffiche (docs/spec/memos.md). */
   surMasquageDesMemos: (masquer: boolean) => void;
   /** La page « Mémos vocaux » est masquée : le clic droit dans le vide propose de la réafficher. */
   memosMasques: boolean;
@@ -168,7 +168,7 @@ export function PageTree(props: PageTreeProps) {
       },
       ...(noeud.role === 'memos'
         ? [
-            // Un fichier audio déposé dans ce dossier devient un mémo en attente (README §13).
+            // Un fichier audio déposé dans ce dossier devient un mémo en attente (docs/spec/memos.md).
             { libelle: 'Ouvrir le dossier des mémos', icone: FolderOpen, action: () => void api.ouvrirDossierMemos() },
             { libelle: 'Masquer de l’arborescence', icone: EyeOff, action: () => props.surMasquageDesMemos(true) },
           ]

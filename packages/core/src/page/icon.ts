@@ -1,5 +1,5 @@
 /**
- * Icône d'une page (README §6), clé `icon` du front-matter. Trois formes,
+ * Icône d'une page (docs/spec/editeur.md), clé `icon` du front-matter. Trois formes,
  * lisibles sans l'application :
  * - un emoji, écrit tel quel (`icon: 📚`) ;
  * - un nom d'icône Lucide en kebab-case (`icon: book-open`) ;

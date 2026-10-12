@@ -27,7 +27,7 @@ import { estEnAttente } from '../state/pending-pages';
 type Lecture = { etat: 'lecture' } | { etat: 'pret'; corps: string; surcharges: Record<string, string> } | { etat: 'erreur' };
 
 /**
- * Lecture d'une page (README §15), avec le même rendu que le desktop : le
+ * Lecture d'une page (docs/spec/android.md), avec le même rendu que le desktop : le
  * Markdown passe par le schéma TipTap en lecture seule, jamais de HTML brut.
  * La page se relit après chaque sync qui a changé le cache.
  */
@@ -84,7 +84,7 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
     },
     [adresse, dossierDesImages],
   );
-  // Les images ne descendent qu'à l'affichage (README §15) : on dit qu'il y en a une même quand elle n'est pas encore là.
+  // Les images ne descendent qu'à l'affichage (docs/spec/android.md) : on dit qu'il y en a une même quand elle n'est pas encore là.
   const nasJoignable = etat.genre === 'a-jour' || etat.genre === 'synchro';
   const absenceImage = useCallback(
     (src: string) => {
@@ -118,7 +118,7 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
   // Seules les pages du dossier des notes se modifient ; une note venue d'un autre outil reste en lecture.
   const pageModifiable = noeud !== null && noeud.genre === 'page';
   const modeListe = noeud?.mode === 'todo';
-  /** Le corps affiché : celui du cache, avec les modifications qui partent sur le NAS (README §5). */
+  /** Le corps affiché : celui du cache, avec les modifications qui partent sur le NAS (docs/spec/sync.md). */
   const surLeNas = usePageWrites(pageModifiable && !enAttente ? noeud.chemin : null, lecture.etat === 'pret' ? lecture.corps : null, modeListe);
   /** Une page créée sans NAS : son contenu attend sur le téléphone, et s'écrit même sans NAS. */
   const surLeTelephone = usePendingPageWrites(pageModifiable && enAttente ? noeud.chemin : null, modeListe);
@@ -137,7 +137,7 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
     }
     definirChoixDIcone(true);
   };
-  /** L'icône part dans l'en-tête de la page, sur le NAS (README §4, clé `icon`). */
+  /** L'icône part dans l'en-tête de la page, sur le NAS (docs/spec/stockage.md, clé `icon`). */
   const choisirIcone = (emoji: string | null): void => {
     definirChoixDIcone(false);
     if (noeud === null) {

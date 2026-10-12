@@ -34,7 +34,7 @@ function dessiner(image: ImageBitmap, cadrage: Crop, cote: number, masque: Offsc
 }
 
 /**
- * Icône image (README §6) : une image choisie, recadrée en carré (glisser
+ * Icône image (docs/spec/editeur.md) : une image choisie, recadrée en carré (glisser
  * pour déplacer, molette ou curseur pour zoomer), réduite à 128 × 128 et
  * enregistrée en WebP. « Retirer le fond » détoure le carré choisi par un
  * modèle local, sans réseau.

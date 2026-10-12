@@ -1,5 +1,5 @@
 /**
- * Conversion d'un mémo vocal pour whisper.cpp (README §13) : n'importe quel
+ * Conversion d'un mémo vocal pour whisper.cpp (docs/spec/memos.md) : n'importe quel
  * format que lit Chromium (AAC d'un `.m4a` de téléphone compris) devient un
  * WAV 16 kHz mono 16 bits. Le décodeur de la page fait le travail ; ce qu'il
  * ne lit pas (AMR, WMA, AIFF…) passe par le ffmpeg livré avec Notes, dans le

@@ -35,7 +35,7 @@ export function adresseDeFavicon(href: string): string | null {
 
 /**
  * Fait des liens vers « adresse » choisis par « garder » des mentions de site
- * (README §6) : titre et favicon du site, demandés par le main. La favicon est
+ * (docs/spec/editeur.md) : titre et favicon du site, demandés par le main. La favicon est
  * gardée dans le dossier des notes. Rend le message d'erreur, null si c'est fait.
  */
 export async function mentionnerLeSite(editor: Editor, adresse: string, garder: (lien: LinkRange) => boolean): Promise<string | null> {

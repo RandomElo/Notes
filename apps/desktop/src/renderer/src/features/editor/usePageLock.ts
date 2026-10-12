@@ -14,7 +14,7 @@ export interface PageLock {
 }
 
 /**
- * Verrou de la page ouverte (README §5). Lu à l'ouverture et après chaque
+ * Verrou de la page ouverte (docs/spec/sync.md). Lu à l'ouverture et après chaque
  * cycle de sync. Tant qu'un autre appareil l'édite, la page est en lecture
  * seule. Sans NAS, rien n'est bloqué.
  */

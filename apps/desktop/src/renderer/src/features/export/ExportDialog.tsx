@@ -69,7 +69,7 @@ interface ExportDialogProps {
 }
 
 /**
- * Fenêtre d'export d'une page (README §9) : le format, ses options, puis la
+ * Fenêtre d'export d'une page (docs/spec/export.md) : le format, ses options, puis la
  * boîte « Enregistrer sous » du système. Le résultat s'affiche à côté du bouton.
  */
 export function ExportDialog({ noeud, theme, surFermeture }: ExportDialogProps) {

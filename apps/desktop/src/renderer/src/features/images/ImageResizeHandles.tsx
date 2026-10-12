@@ -36,7 +36,7 @@ function positionDeLImage(editor: Editor, figure: Element): number | null {
 const borner = (valeur: number): number => Math.max(largeurMinDImage, Math.min(largeurMaxDImage, Math.round(valeur)));
 
 /**
- * Poignées de taille d'une image, comme dans Notion (README §6) : au survol,
+ * Poignées de taille d'une image, comme dans Notion (docs/spec/editeur.md) : au survol,
  * une barre sur chaque bord ; tirée, elle change la largeur pendant le geste,
  * et la page ne la reçoit qu'au lâcher. Une image centrée grandit des deux
  * côtés. La largeur est un pourcentage entier de 10 à 100 ; 100 ne s'écrit pas.

@@ -1,7 +1,7 @@
 import { readFile, rename, writeFile } from 'node:fs/promises';
 
 /**
- * Durée d'une transcription, estimée avant de la lancer (README §13, demande
+ * Durée d'une transcription, estimée avant de la lancer (docs/spec/memos.md, demande
  * d'Eloi du 2026-10-11). Calée sur les dernières transcriptions de ce poste :
  * la vitesse dépend de la carte graphique, donc l'historique reste sur le
  * poste, pas dans le dossier des notes.

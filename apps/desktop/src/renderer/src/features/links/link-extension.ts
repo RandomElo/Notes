@@ -40,7 +40,7 @@ function lienSousLeClic(vue: EditorView, evenement: MouseEvent): string | null {
 }
 
 /**
- * Liens dans l'éditeur (README §6) : un clic ouvre le lien, une adresse
+ * Liens dans l'éditeur (docs/spec/editeur.md) : un clic ouvre le lien, une adresse
  * collée sur une sélection en fait un lien, une adresse collée seule devient
  * un lien au texte nettoyé (`google.com`), un lien vers une page connue une
  * mention. Pour modifier un lien : les flèches, ou « Modifier » dans son infobulle.

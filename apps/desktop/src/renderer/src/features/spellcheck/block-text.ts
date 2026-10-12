@@ -4,7 +4,7 @@ import type { SpellcheckRequest } from '../../../../shared/ipc-contract';
 /** Ce qui tient la place d'un nœud en ligne sans texte (mention, saut de ligne) : un caractère, comme sa taille dans le document. */
 export const caractereDeRemplacement = '\uFFFC';
 
-/** Adresses écrites en clair dans le texte : jamais vérifiées (README §11). */
+/** Adresses écrites en clair dans le texte : jamais vérifiées (docs/spec/correction.md). */
 const adresse = /\b(?:https?:\/\/|www\.)[^\s<>"]+|\b[\w.+-]+@[\w-]+(?:\.[\w-]+)+\b/gi;
 
 /** Vrai pour un bloc dont le texte se vérifie : un bloc de texte qui n'est pas du code. */

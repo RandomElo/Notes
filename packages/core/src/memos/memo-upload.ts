@@ -4,7 +4,7 @@ import type { RemoteFs } from '../fs/remote-fs';
 import { dossierDesMemos } from './memos';
 
 /*
- * Envoi des mémos enregistrés sur le téléphone (J17, README §13). Le mémo est
+ * Envoi des mémos enregistrés sur le téléphone (J17, docs/spec/memos.md). Le mémo est
  * d'abord rangé dans un dossier privé de l'application ; il part dans
  * `.notes/memos/` dès que le NAS répond, puis est retiré du téléphone. Seule
  * exception, avec les pages créées hors ligne, à « rien sans le NAS » : un

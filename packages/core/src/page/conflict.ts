@@ -3,7 +3,7 @@ import { fichierPage } from './types';
 const prefixe = 'page.conflit-';
 
 /**
- * Nom de la sauvegarde d'une version qui allait être écrasée (README §5) :
+ * Nom de la sauvegarde d'une version qui allait être écrasée (docs/spec/sync.md) :
  * `page.conflit-2026-10-02-141503.md`, à l'heure du poste. Pas de deux-points,
  * que SMB refuse. « dejaPris » évite d'écraser une sauvegarde de la même seconde.
  */

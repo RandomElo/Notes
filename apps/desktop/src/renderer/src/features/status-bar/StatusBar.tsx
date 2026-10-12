@@ -17,9 +17,9 @@ const icones: Record<SyncStatusKind, { icone: LucideIcon; couleur: string }> = {
 };
 
 /**
- * Barre de statut en bas de la fenêtre (README §7) : l'état de la sync, dont
+ * Barre de statut en bas de la fenêtre (docs/spec/interface.md) : l'état de la sync, dont
  * un clic ouvre le détail au-dessus, et le nombre
- * de fautes de la page (§11).
+ * de fautes de la page (docs/spec/correction.md).
  */
 export function StatusBar({ surResolution }: { surResolution: (sauvegarde: string) => void }) {
   const etat = useSyncStatus();

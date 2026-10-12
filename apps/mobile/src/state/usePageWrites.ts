@@ -19,7 +19,7 @@ export interface PageWrites {
  * Modifications d'une page sur le téléphone, affichées avant d'être écrites
  * (choix d'Eloi du 2026-10-10). Rien n'est gardé sur le téléphone : chaque
  * modification part aussitôt sur le NAS, sous verrou, dans l'ordre, et le
- * cache n'est mis à jour qu'une fois le NAS écrit (README §5). Chaque écriture
+ * cache n'est mis à jour qu'une fois le NAS écrit (docs/spec/sync.md). Chaque écriture
  * remplace le corps qu'elle a vu par le nouveau : si le NAS a autre chose
  * (page changée sur le PC), elle est refusée, l'écran revient à la version du
  * NAS et les modifications suivantes, préparées sur la version refusée, sont

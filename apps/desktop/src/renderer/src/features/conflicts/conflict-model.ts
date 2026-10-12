@@ -2,7 +2,7 @@ import { assemblerTexte } from '@notes/document';
 import type { ConflictRow } from '@notes/document';
 
 /**
- * État de l'écran des conflits (README §5), sans React : ce qui a été choisi
+ * État de l'écran des conflits (docs/spec/sync.md), sans React : ce qui a été choisi
  * pour chaque différence, et le corps qui en sort. A est la page, B la
  * version mise de côté. Chaque fonction rend un nouvel état.
  */

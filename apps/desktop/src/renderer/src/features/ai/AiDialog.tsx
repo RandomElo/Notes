@@ -31,7 +31,9 @@ interface AiDialogProps {
   titre: string;
   /** Corps de la page tel qu'il est dans l'éditeur, en Markdown. */
   lireCorps: () => string;
-  /** Remplace le contenu de la page par la proposition (annulable par Ctrl+Z). */
+  /** Vrai si la fonction ne porte que sur les blocs sélectionnés, pas sur toute la page. */
+  surLaSelection?: boolean;
+  /** Remplace le contenu de la page, ou les blocs sélectionnés, par la proposition (annulable par Ctrl+Z). */
   surAcceptation: (markdown: string) => void;
   surFermeture: () => void;
 }
@@ -83,11 +85,11 @@ function Bilan({ resultat }: { resultat: Extract<AiRunResult, { ok: true }> }) {
 }
 
 /**
- * Fonctions IA d'une page (README §12) : choix de la fonction et estimation,
+ * Fonctions IA d'une page (docs/spec/ia.md) : choix de la fonction et estimation,
  * appel annulable, puis comparaison avant/après. Rien ne change dans la page
  * tant que la proposition n'est pas acceptée.
  */
-export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiDialogProps) {
+export function AiDialog({ titre, lireCorps, surLaSelection = false, surAcceptation, surFermeture }: AiDialogProps) {
   const [fonction, definirFonction] = useStoredState<Exclude<AiPageFunction, 'memo'>>('notes.ia.fonction', 'relecture', estFonction);
   const [mode, definirMode] = useStoredState<ComparisonMode>('notes.ia.comparaison', 'colonnes', estModeDeComparaison);
   const [estimation, definirEstimation] = useState<AiEstimateResult | null>(null);
@@ -202,7 +204,7 @@ export function AiDialog({ titre, lireCorps, surAcceptation, surFermeture }: AiD
         <div className="flex items-center gap-2.5 px-5 pt-4 pb-3">
           <Sparkles className="text-accent size-5 shrink-0" aria-hidden="true" />
           <h2 className="shrink-0 text-base font-semibold">{etape.genre === 'comparaison' ? libellesDesFonctions[fonction] : 'Fonctions IA'}</h2>
-          <p className="text-discret min-w-0 truncate text-sm">{titre}</p>
+          <p className="text-discret min-w-0 truncate text-sm">{surLaSelection ? `${titre} · blocs sélectionnés` : titre}</p>
           {etape.genre === 'comparaison' && (
             <div className="ml-auto flex shrink-0 gap-1" role="group" aria-label="Disposition de la comparaison">
               {(

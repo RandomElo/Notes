@@ -35,7 +35,7 @@ export interface ImageFilesOptions {
 }
 
 /**
- * Images collées ou déposées dans la page (README §6) : chaque fichier est
+ * Images collées ou déposées dans la page (docs/spec/editeur.md) : chaque fichier est
  * converti en WebP, copié par le main dans le dossier `assets/` de la page,
  * puis inséré là où il a été collé ou déposé.
  */

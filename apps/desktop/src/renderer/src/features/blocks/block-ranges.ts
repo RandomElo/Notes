@@ -1,7 +1,7 @@
 import type { Node as ProseMirrorNode, ResolvedPos } from '@tiptap/pm/model';
 
 /**
- * Ce qu'est un « bloc » pour la gestion au clavier (README §6) : ce qu'on
+ * Ce qu'est un « bloc » pour la gestion au clavier (docs/spec/editeur.md) : ce qu'on
  * sélectionne, déplace et duplique d'un seul geste. Un paragraphe, un titre, un
  * bloc de code, une citation, et chaque item de liste avec ce qu'il contient.
  * Une liste elle-même n'est pas un bloc (ses items le sont), ni le premier

@@ -1,6 +1,6 @@
 {
   "name": "@notes/mobile",
-  "version": "0.17.5",
+  "version": "0.18.4",
   "private": true,
   "type": "module",
   "description": "Compagnon Android de Notes : consultation, retouches, mémos vocaux",

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Émulateur Android 13 sans fenêtre, pour essayer l'application sur le poste (README §3, « Essais Android sur le poste »).
+# Émulateur Android 13 sans fenêtre, pour essayer l'application sur le poste (docs/spec/architecture.md, « Essais Android sur le poste »).
 # Usage : bash scripts/android-emulateur.sh demarrer | arreter
 # Le téléphone virtuel « notes-essai » est créé au premier démarrage dans ~/.android/avd/.
 # Depuis l'émulateur, le poste est à l'adresse 10.0.2.2 (le Samba d'essai y répond).

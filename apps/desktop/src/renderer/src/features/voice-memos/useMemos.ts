@@ -3,7 +3,7 @@ import type { MemosState } from '../../../../shared/memos-contract';
 import { api } from '../../lib/ipc';
 
 /**
- * État des mémos vocaux (README §13), relu quand le dossier des notes change
+ * État des mémos vocaux (docs/spec/memos.md), relu quand le dossier des notes change
  * (un mémo arrive par la sync, une sous-page est créée) et quand la
  * transcription change d'état (téléchargement du modèle, serveur).
  */

@@ -3,7 +3,7 @@ import type { ImageAlign, ImageAttributes, ImageWidth } from '../schema/nodes/im
 import type { Jeton } from './tokenizer';
 
 /**
- * Image dans le fichier (README §4, décision du 2026-10-03) :
+ * Image dans le fichier (docs/spec/stockage.md, décision du 2026-10-03) :
  * `![texte](assets/x.png#largeur=66&align=centre "Légende")`. La largeur (un
  * entier de 10 à 100) et
  * l'alignement vont dans le fragment de l'adresse, que les autres outils

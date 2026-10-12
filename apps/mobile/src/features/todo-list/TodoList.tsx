@@ -75,7 +75,7 @@ const delaiDeRelacheMs = 1500;
 const inactiviteDeSaisieMs = 60_000;
 
 /**
- * Page en mode liste sur le téléphone, façon Keep (README §14, §15, choix
+ * Page en mode liste sur le téléphone, façon Keep (docs/spec/liste-de-taches.md, docs/spec/android.md, choix
  * d'Eloi du 2026-10-10) : toucher le texte d'une tâche l'édite sur place,
  * Entrée crée la tâche suivante, × la supprime, l'enregistrement se fait en
  * quittant la ligne ; un appui long fait glisser une tâche, en hauteur pour
@@ -484,7 +484,7 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
     }}>
       {brouillon !== null && brouillon.apres === null && ligneBrouillon(0)}
       {lignes.every((ligne) => ligne.termine) && brouillon === null && (
-        // Une liste vide (ou toute cochée) montre sa case (README §14) : la toucher ouvre une tâche, en tête.
+        // Une liste vide (ou toute cochée) montre sa case (docs/spec/liste-de-taches.md) : la toucher ouvre une tâche, en tête.
         <button
           type="button"
           onClick={() => {

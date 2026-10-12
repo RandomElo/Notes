@@ -6,7 +6,7 @@ const motif = /\.conflit-\d{4}-\d{2}-\d{2}-\d{6}(-\d+)?(\.[^.]*)?$/;
 
 /**
  * Nom de la sauvegarde d'un fichier qui diverge : `page.conflit-[date].md`
- * pour une page (README §5), et la même forme pour tout autre fichier
+ * pour une page (docs/spec/sync.md), et la même forme pour tout autre fichier
  * (`.order.conflit-[date]`, `theme.conflit-[date].toml`).
  */
 export function nomDeSauvegarde(nom: string, date: Date, dejaPris: readonly string[]): string {

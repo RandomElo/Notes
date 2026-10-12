@@ -13,6 +13,8 @@ export { mentionsARenommer, renommerMentions } from './operations/rename-mention
 export { convertirEnListe, normaliserListe, ouvrirNouvelleTache, rangerTaches, retirerTachesVides, sectionTerminee } from './operations/todo-mode';
 export { SousTachesCochees, basculerTache, cocherLesSousTaches } from './operations/toggle-task';
 export { calloutDuCurseur, changerIcone as changerIconeDuCallout, changerNature as changerNatureDuCallout, iconesProposees, naturesDeCallout, retirerCallout } from './operations/callout';
+export { imagesLocales, remplacerImages, titreEtCorps } from './import/dropped-markdown';
+export { avecLargeursDesTableaux, deplacerBordure, largeursDesTableaux, largeursEgales } from './operations/table-widths';
 export { ajouterItemApres, ajouterTache, contenuDeLigne, decalerADroite, decalerAGauche, deplacerItem, modifierTexteDItem, supprimerItem, texteDeLItem } from './operations/list-items';
 export { documentDuCorps, modifierCorps } from './operations/apply';
 export { lireMarkdown } from './markdown/parse';

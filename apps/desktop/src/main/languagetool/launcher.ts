@@ -3,7 +3,7 @@ import { join } from 'node:path';
 /**
  * Port du serveur LanguageTool : celui qu'attend l'extension LanguageTool du
  * navigateur pour un serveur local (`http://localhost:8081/v2`), qu'Eloi
- * utilise aussi (README §11).
+ * utilise aussi (docs/spec/correction.md).
  */
 export const portDeLanguageTool = 8081;
 
@@ -14,7 +14,7 @@ export const nomDesReglages = 'server.properties';
 /**
  * Réglages du serveur. `pipelineCaching` est indispensable : sans lui, chaque
  * vérification en français reconstruit la règle d'orthographe et prend environ
- * 760 ms ; avec, 45 ms (mesures du 2026-10-04, README §11).
+ * 760 ms ; avec, 45 ms (mesures du 2026-10-04, docs/spec/correction.md).
  */
 export function reglagesDuServeur(dossier: string): string {
   return [
@@ -39,7 +39,7 @@ export function reglagesDuServeur(dossier: string): string {
 export function scriptDeLancement(): string {
   return [
     '#!/bin/bash',
-    '# Lance le serveur LanguageTool installé par Notes (README §11). Écrit par Notes à chaque démarrage.',
+    '# Lance le serveur LanguageTool installé par Notes (docs/spec/correction.md). Écrit par Notes à chaque démarrage.',
     'for f in /proc/$$/fd/*; do n=${f##*/}; [ "$n" -gt 2 ] 2>/dev/null && eval "exec $n>&-"; done',
     'dossier="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"',
     `pid="$dossier/${nomDuPid}"`,

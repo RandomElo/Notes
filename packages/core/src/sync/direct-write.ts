@@ -15,7 +15,7 @@ import { fichierOrdre, lireOrdre } from '../vault/order';
 import type { LockManager } from './lock';
 
 /*
- * Écriture depuis le téléphone (README §5, « Écriture depuis Android ») : pas
+ * Écriture depuis le téléphone (docs/spec/sync.md, « Écriture depuis Android ») : pas
  * de copie modifiée en attente, chaque modification va directement sur le
  * NAS, sous le verrou de la page, appliquée à la version fraîchement relue.
  * Le cache n'est mis à jour qu'une fois le NAS écrit. Le téléphone ne peut
@@ -106,7 +106,7 @@ export async function modifierPageSurLeNas(contexte: DirectWriteContext, page: s
 }
 
 /**
- * Crée une page simple sur le NAS (README §15), avec les mêmes règles que sur
+ * Crée une page simple sur le NAS (docs/spec/android.md), avec les mêmes règles que sur
  * le desktop (nom du dossier, page en dernier dans l'ordre du parent), puis
  * la recopie dans le cache avec l'ordre du parent. Le NAS n'est interrogé que
  * pour l'essentiel (parent, noms pris, ordre) : les pages sœurs se lisent dans

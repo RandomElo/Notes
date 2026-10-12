@@ -18,7 +18,7 @@ export function nombreDeSousPages(noeuds: readonly TreeNode[]): number {
 
 /**
  * Confirmation avant de mettre à la corbeille une page qui a des sous-pages
- * (choix d'Eloi, README §10), affichée à côté de la ligne. `Entrée` confirme,
+ * (choix d'Eloi, docs/spec/corbeille.md), affichée à côté de la ligne. `Entrée` confirme,
  * `Échap` ou un clic ailleurs abandonne.
  */
 export function DeleteConfirmation({ noeuds, x, y, surConfirmation, surAbandon }: DeleteConfirmationProps) {

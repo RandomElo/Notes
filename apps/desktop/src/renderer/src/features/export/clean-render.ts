@@ -40,7 +40,7 @@ function deballer(element: Element): void {
 }
 
 /**
- * Le rendu de l'éditeur, prêt pour un fichier (README §9) : plus rien de
+ * Le rendu de l'éditeur, prêt pour un fichier (docs/spec/export.md) : plus rien de
  * l'édition (attributs, poignées, images manquantes), un `thead` pour que
  * l'en-tête d'un tableau se répète d'une page à l'autre, des ancres sur les
  * titres, des liens limités au web et aux pages de l'archive.

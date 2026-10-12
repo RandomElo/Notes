@@ -242,3 +242,14 @@ test("sans LanguageTool installé : les réglages proposent l'installation, rien
 
   await fermer(session);
 });
+
+test('un poste qui ne suit pas : pas d’installation proposée, la raison à la place, l’édition marche', async () => {
+  const session = await lancer(await preparerCoursesClassique(), [], { NOTES_MEMOIRE_ESSAI: String(8 * 1024 ** 3) });
+  const { page } = session;
+  await page.keyboard.press('Control+,');
+  const section = page.getByRole('region', { name: 'Correction orthographique' });
+  await expect(section).toContainText('Ce poste a 8 Go de mémoire vive');
+  await expect(section).toContainText("L'écriture reste possible, sans correction.");
+  await expect(section.getByRole('button', { name: /Installer la correction/ })).toHaveCount(0);
+  await fermer(session);
+});

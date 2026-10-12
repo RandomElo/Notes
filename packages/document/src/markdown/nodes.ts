@@ -105,7 +105,8 @@ export function convertirJetons(jetons: Jeton[]): ProseMirrorNode[] {
         // Le premier paragraphe d'une tâche commence par sa case, qui n'est pas du texte.
         const parent = pile[pile.length - 2];
         const sansCase = parent?.type === 'taskItem' && parent.contenu.length === 0;
-        sommet().contenu.push(...convertirEnLigne(jeton.children ?? [], sansCase));
+        const dansUneCellule = parent?.type === 'tableCell' || parent?.type === 'tableHeader';
+        sommet().contenu.push(...convertirEnLigne(jeton.children ?? [], sansCase, dansUneCellule));
         return;
       }
       case 'hr':
@@ -207,7 +208,7 @@ function estSerree(jetons: Jeton[], index: number): boolean {
   });
 }
 
-function convertirEnLigne(jetons: Jeton[], sansCase: boolean): ProseMirrorNode[] {
+function convertirEnLigne(jetons: Jeton[], sansCase: boolean, dansUneCellule = false): ProseMirrorNode[] {
   let actives: readonly Mark[] = [];
   const noeuds: ProseMirrorNode[] = [];
   const texte = (contenu: string, marquesDuTexte: readonly Mark[] = actives): void => {
@@ -243,6 +244,14 @@ function convertirEnLigne(jetons: Jeton[], sansCase: boolean): ProseMirrorNode[]
         break;
       case 'hardbreak':
         noeuds.push(creer('hardBreak'));
+        break;
+      case 'br_html':
+        // Saut de ligne d'une cellule ; ailleurs, `<br>` reste du texte, comme tout HTML.
+        if (dansUneCellule) {
+          noeuds.push(creer('hardBreak'));
+        } else {
+          texte(jeton.content);
+        }
         break;
       case 'code_inline':
         texte(jeton.content, marque('code').addToSet(actives));

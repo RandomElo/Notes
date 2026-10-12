@@ -25,7 +25,7 @@ export interface StandaloneHtmlInput {
   theme: Theme;
   /** Surcharges de couleurs de la page (`variablesDeSurcharge`), posées sur le conteneur. */
   surcharges: Record<string, string>;
-  /** Vrai pour le PDF : fond blanc, couleurs du thème foncées au besoin pour rester lisibles (README §9). */
+  /** Vrai pour le PDF : fond blanc, couleurs du thème foncées au besoin pour rester lisibles (docs/spec/export.md). */
   papier: boolean;
   /** Titres de la page : un sommaire est mis en tête si la page est assez longue (`sommaireUtile`). */
   sommaire: ExportOutlineEntry[];
@@ -111,7 +111,7 @@ function sommaireHtml(tousLesTitres: ExportOutlineEntry[], papier: boolean): str
 }
 
 /**
- * Le document HTML d'une page exportée (README §9), sans aucun script. Seul, il
+ * Le document HTML d'une page exportée (docs/spec/export.md), sans aucun script. Seul, il
  * contient ses styles et ses images, et sa politique de sécurité interdit tout
  * chargement hors des images `data:`. Dans une archive, il renvoie à la feuille
  * de style et aux images de l'archive, et ne charge rien d'autre.

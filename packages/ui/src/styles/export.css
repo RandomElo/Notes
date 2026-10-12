@@ -1,5 +1,5 @@
 /*
- * Mise en page d'une page exportée (README §9) : HTML autonome, PDF, pages
+ * Mise en page d'une page exportée (docs/spec/export.md) : HTML autonome, PDF, pages
  * d'une archive. S'ajoute à base.css, qui donne le contenu. Aucun script.
  */
 html {
@@ -176,7 +176,7 @@ body {
 }
 
 /*
- * PDF (README §9) : titres jamais seuls en bas d'une page ; code, images,
+ * PDF (docs/spec/export.md) : titres jamais seuls en bas d'une page ; code, images,
  * tableaux et callouts non coupés quand ils tiennent sur une page ; en-tête
  * d'un tableau répété ; orphelines et veuves.
  */

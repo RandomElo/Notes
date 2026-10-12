@@ -20,7 +20,7 @@ import { lireArbre } from '../vault/tree';
 import type { TreeNode } from '../vault/tree';
 
 /**
- * Corbeille (README §10). Une page supprimée part avec tout son dossier dans
+ * Corbeille (docs/spec/corbeille.md). Une page supprimée part avec tout son dossier dans
  * `.trash/<horodatage> <nom>/`, à côté d'un `.trashmeta.yaml` qui dit d'où
  * elle vient. Elle y passe d'abord sur le poste, dans un `.trash/` que la sync
  * ne transporte pas ; le cycle suivant la dépose dans le `.trash/` du NAS et
@@ -33,7 +33,7 @@ export const fichierMetaCorbeille = '.trashmeta.yaml';
 /** Une entrée plus vieille que ce délai est purgée au démarrage. */
 export const retentionCorbeilleMs = 30 * 24 * 60 * 60 * 1000;
 
-/** Une page avec sa descendance, une image d'une page, ou l'audio d'un mémo vocal transcrit (README §13). */
+/** Une page avec sa descendance, une image d'une page, ou l'audio d'un mémo vocal transcrit (docs/spec/memos.md). */
 export type TrashKind = 'page' | 'image' | 'memo';
 
 /** Une entrée de la corbeille, telle que décrite par son `.trashmeta.yaml`. */

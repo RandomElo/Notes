@@ -12,7 +12,7 @@ import { lireOrdre } from './order';
  * - dossier : dossier sans page.md mais qui contient des notes. Jamais importé.
  * - fichier : fichier .md posé là par un autre outil. Jamais importé.
  * Un élément non importé est affiché mais rien n'y est écrit tant que
- * l'utilisateur ne demande pas son import (README §4).
+ * l'utilisateur ne demande pas son import (docs/spec/stockage.md).
  */
 export interface TreeNode {
   /** Chemin dans le vault : le dossier de la page, ou le fichier .md pour un « fichier ». */
@@ -41,7 +41,7 @@ export function estIgnore(nom: string, estDossier: boolean): boolean {
   if (estDossier) {
     return nom === dossierAssets;
   }
-  // Sauvegardes de conflit de la sync (README §5) : ce ne sont pas des pages.
+  // Sauvegardes de conflit de la sync (docs/spec/sync.md) : ce ne sont pas des pages.
   return !nom.toLowerCase().endsWith('.md') || nom === fichierPage || estFichierDeConflit(nom);
 }
 

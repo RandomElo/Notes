@@ -1,6 +1,6 @@
 /** Côté de l'aperçu du recadrage, en pixels d'écran. */
 export const tailleDeLApercu = 224;
-/** Côté de l'icône enregistrée (README §6). */
+/** Côté de l'icône enregistrée (docs/spec/editeur.md). */
 export const tailleDeLIcone = 128;
 const zoomMax = 4;
 

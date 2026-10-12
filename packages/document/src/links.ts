@@ -1,5 +1,5 @@
 /**
- * Liens externes (README §4) : une adresse collée seule devient un lien dont
+ * Liens externes (docs/spec/stockage.md) : une adresse collée seule devient un lien dont
  * le texte est l'adresse nettoyée, `https://www.google.com/` devenant
  * `google.com`.
  */

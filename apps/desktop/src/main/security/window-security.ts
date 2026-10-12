@@ -6,7 +6,7 @@ const politiqueDeBase = [
   "default-src 'none'",
   // Les images de la page viennent seulement du dossier des notes, par le protocole du main (images/asset-protocol.ts).
   `img-src 'self' data: ${schemaDesImages}:`,
-  // Écoute d'un mémo vocal : ses octets sont lus par une adresse blob: créée par la page (README §13).
+  // Écoute d'un mémo vocal : ses octets sont lus par une adresse blob: créée par la page (docs/spec/memos.md).
   'media-src blob:',
   "font-src 'self'",
   "object-src 'none'",

@@ -16,7 +16,7 @@ const estTable = (valeur: unknown): valeur is Record<string, unknown> =>
   typeof valeur === 'object' && valeur !== null && !Array.isArray(valeur) && !(valeur instanceof Date);
 
 /**
- * Lit le texte de `theme.toml`. Validation tolérante (README §8) : une valeur
+ * Lit le texte de `theme.toml`. Validation tolérante (docs/spec/theme.md) : une valeur
  * fausse ou une clé inconnue est ignorée, le défaut reste en place et un
  * avertissement le dit. Un fichier illisible donne le thème par défaut. Cette
  * fonction ne lève jamais d'erreur.

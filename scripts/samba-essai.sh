@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Serveur Samba d'essai pour l'application Android (README §3, « Essais Android sur le poste »).
+# Serveur Samba d'essai pour l'application Android (docs/spec/architecture.md, « Essais Android sur le poste »).
 # Imite le NAS : SMB 3.1.1 seul, signature exigée, chiffrement laissé au choix du client.
 # Usage, depuis la racine du dépôt :
 #   sudo bash scripts/samba-essai.sh demarrer [sans-chiffrement]

@@ -18,7 +18,7 @@ const marques: { nom: string; libelle: string; raccourci: string; icone: LucideI
 ];
 
 /**
- * Barre d'outils flottante (README §6) : elle apparaît quand du texte est
+ * Barre d'outils flottante (docs/spec/editeur.md) : elle apparaît quand du texte est
  * sélectionné (au clic aussi dans une cellule ou un callout, pour leurs
  * menus), et disparaît à la frappe, au clic ailleurs ou sur Échap. Son contenu dépend du bloc : dans un bloc de code, pas de
  * mise en forme du texte, seulement la nature du bloc. Dans une cellule, les

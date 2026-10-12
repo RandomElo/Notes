@@ -102,7 +102,7 @@ function Ligne({ memo, pret, surTranscription, surEcart }: { memo: MemoView; pre
 }
 
 /**
- * En tête de la page « Mémos vocaux » (README §13) : les mémos en attente,
+ * En tête de la page « Mémos vocaux » (docs/spec/memos.md) : les mémos en attente,
  * à écouter, transcrire un par un ou tous d'affilée, ou mettre à la corbeille.
  */
 export function MemoList({ etat, surEtat }: { etat: MemosState; surEtat: (etat: MemosState) => void }) {

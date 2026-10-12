@@ -43,7 +43,7 @@ function montrerLaTete(editor: Editor): void {
 const tabPourLeBloc = (editor: Editor): boolean => editor.isActive('table') || editor.isActive('codeBlock');
 
 /**
- * Gestion des blocs au clavier (README §6) : Échap sélectionne le bloc (puis
+ * Gestion des blocs au clavier (docs/spec/editeur.md) : Échap sélectionne le bloc (puis
  * sa liste, puis rend le curseur). Sans Ctrl, les flèches agissent sur la
  * sélection (flèches : naviguer, Maj+flèches : étendre). Ctrl+Maj+flèches
  * déplace les blocs. Ctrl+D duplique, Tab et Maj+Tab indentent, Entrée

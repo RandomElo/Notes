@@ -21,7 +21,7 @@ export interface ThemeStatus {
 }
 
 /**
- * Charge le thème du dossier des notes et le recharge à chaud (README §8) : le
+ * Charge le thème du dossier des notes et le recharge à chaud (docs/spec/theme.md) : le
  * fichier est relu à chaque modification du vault, et ses variables CSS sont
  * posées sur la racine du document. Une lecture ratée ou un fichier faux ne
  * bloque rien : le thème par défaut, ou les valeurs par défaut, s'appliquent.

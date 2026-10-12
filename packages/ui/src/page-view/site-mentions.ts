@@ -88,7 +88,7 @@ function decorations(document: ProseMirrorNode, options: SiteMentionOptions): De
 }
 
 /**
- * Le lien du schéma, avec les mentions de site (README §6) : un lien au titre
+ * Le lien du schéma, avec les mentions de site (docs/spec/editeur.md) : un lien au titre
  * « mention » s'affiche en puce, favicon devant, sans l'infobulle « mention »
  * du navigateur. Il le reste au copier-coller (`data-mention-site`).
  */

@@ -8,7 +8,7 @@ import { useNotes } from '../state/NotesContext';
 import { pagesAplaties } from '../state/pages';
 import { useCacheUrls } from '../state/useCacheUrls';
 
-/** Recherche par titre (README §15), floue et insensible aux accents, comme `Ctrl+K` sur le desktop. Sans saisie : les récentes. */
+/** Recherche par titre (docs/spec/android.md), floue et insensible aux accents, comme `Ctrl+K` sur le desktop. Sans saisie : les récentes. */
 export function Search() {
   const { arbre, reglages } = useNotes();
   const navigation = useNavigation();

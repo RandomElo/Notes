@@ -1,4 +1,5 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { mkdir, mkdtemp, readFile, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, lireVault, ouvrirPage, preparer, preparerCoursesClassique, titreDePage } from './app';
@@ -133,7 +134,7 @@ test('les raccourcis de saisie Markdown produisent les bons blocs et le bon fich
     ].join('\n\n') + '\n',
   );
 
-  // Raccourcis clavier de mise en forme (annexe du README).
+  // Raccourcis clavier de mise en forme (docs/raccourcis.md).
   await page.keyboard.press('Enter');
   await page.keyboard.press('Control+b');
   await taper('gras');
@@ -329,5 +330,56 @@ test('cocher une tâche coche ses sous-tâches à tous les niveaux, décocher ne
   await editeur(page).locator('li', { hasText: 'React' }).first().locator('input[type=checkbox]').first().uncheck();
   await attendreEnregistrement(page);
   expect(await lireCorps(prepare.vault, 'Courses')).toContain('- [ ] React\n  - [x] HTML\n    - [x] head\n');
+  await fermer(session);
+});
+
+test('un fichier Markdown déposé devient une sous-page, images comprises, ou s’ajoute à la page ouverte', async () => {
+  const preparation = await preparer();
+  // Un export d'un autre outil : titre en première ligne, une image à côté, une autre hors de son dossier (ignorée).
+  const dehors = await mkdtemp(join(tmpdir(), 'notes-depot-'));
+  await mkdir(join(dehors, 'export', 'images'), { recursive: true });
+  const png = Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==', 'base64');
+  await writeFile(join(dehors, 'export', 'images', 'schema.png'), png);
+  await writeFile(join(dehors, 'secret.png'), png);
+  const fichier = join(dehors, 'export', 'Cours du lundi.md');
+  await writeFile(fichier, '# Cours du lundi\n\nTexte du cours.\n\n![Schéma](images/schema.png)\n\n![Hors](../secret.png)\n');
+  const session = await lancer(preparation);
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Bienvenue');
+
+  type Depot = { ok: boolean; pages?: { chemin: string }[]; markdown?: string };
+  const creer = await page.evaluate((chemin) => (globalThis as unknown as { notes: { creerPagesDepuisMarkdown: (d: unknown) => Promise<Depot> } }).notes.creerPagesDepuisMarkdown({ fichiers: [chemin], parent: 'Bienvenue' }), fichier);
+  expect(creer.ok).toBe(true);
+  expect(creer.pages?.[0]?.chemin).toBe('Bienvenue/Cours du lundi');
+  const corps = await lireCorps(vault, 'Bienvenue/Cours du lundi');
+  expect(corps).toBe('Texte du cours.\n\n![Schéma](assets/schema.png)\n\n![Hors](../secret.png)\n');
+  expect(await readFile(join(vault, 'Bienvenue', 'Cours du lundi', 'assets', 'schema.png'))).toEqual(png);
+
+  // Ajouter à la page ouverte : le texte revient avec ses images copiées dans le dossier de la page.
+  const ajout = await page.evaluate((chemin) => (globalThis as unknown as { notes: { markdownAAjouter: (d: unknown) => Promise<Depot> } }).notes.markdownAAjouter({ fichiers: [chemin], page: 'Bienvenue' }), fichier);
+  // « Bienvenue » a déjà un schema.png : la copie prend un autre nom, rien n'est écrasé.
+  expect(ajout.markdown).toBe('# Cours du lundi\n\nTexte du cours.\n\n![Schéma](assets/schema-2.png)\n\n![Hors](../secret.png)\n');
+  expect(await readFile(join(vault, 'Bienvenue', 'assets', 'schema-2.png'))).toEqual(png);
+  // Un fichier qui n'est pas du Markdown est refusé.
+  const refus = await page.evaluate((chemin) => (globalThis as unknown as { notes: { markdownAAjouter: (d: unknown) => Promise<Depot> } }).notes.markdownAAjouter({ fichiers: [chemin], page: 'Bienvenue' }), join(dehors, 'secret.png'));
+  expect(refus.ok).toBe(false);
+  await fermer(session);
+});
+
+test('en écrivant en fin de page, la ligne en cours reste au-dessus du dernier tiers de la fenêtre', async () => {
+  const session = await lancer(await preparer());
+  const { page } = session;
+  await ouvrirPage(page, 'Bienvenue');
+  await editeur(page).click();
+  await page.keyboard.press('Control+End');
+  for (let ligne = 0; ligne < 40; ligne++) {
+    await page.keyboard.press('Enter');
+    await page.keyboard.type(`Ligne ${ligne}`);
+  }
+  const { bas, hauteur } = await page.evaluate(() => {
+    const fenetre = globalThis as unknown as { innerHeight: number; getSelection(): { getRangeAt(index: number): { getBoundingClientRect(): { bottom: number } } } };
+    return { bas: fenetre.getSelection().getRangeAt(0).getBoundingClientRect().bottom, hauteur: fenetre.innerHeight };
+  });
+  expect(bas).toBeLessThan((hauteur * 2) / 3 + 40);
   await fermer(session);
 });

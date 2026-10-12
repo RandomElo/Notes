@@ -9,7 +9,7 @@ const delaiDInactiviteMs = 120_000;
 const delaiMaxMs = 60_000;
 
 /**
- * Détourage d'une icône de page (README §6) : le modèle silueta tourne dans
+ * Détourage d'une icône de page (docs/spec/editeur.md) : le modèle silueta tourne dans
  * un worker, par le moteur ONNX en WebAssembly, sans réseau ni module natif.
  * « dossier » contient le modèle et le moteur (scripts/prepare-models.sh).
  */

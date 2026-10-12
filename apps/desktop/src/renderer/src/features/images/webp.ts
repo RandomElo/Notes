@@ -19,7 +19,7 @@ export interface ImageFile {
 }
 
 /**
- * Une image en WebP compressé (README §6) : décodée et réencodée par le moteur
+ * Une image en WebP compressé (docs/spec/editeur.md) : décodée et réencodée par le moteur
  * d'images de Chromium, réduite à 1920 px de large. Un GIF ou un SVG reste
  * tel quel, comme une image que le moteur ne sait pas lire. Un WebP déjà plus
  * léger que sa version réencodée est gardé.

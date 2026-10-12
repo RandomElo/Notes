@@ -8,7 +8,7 @@ import type { VaultContext } from './context';
 import { estIgnore } from './tree';
 
 /**
- * Images d'une page (README §4 et §6) : elles sont copiées dans le dossier
+ * Images d'une page (docs/spec/stockage.md et docs/spec/editeur.md) : elles sont copiées dans le dossier
  * `assets/` de la page, et la page y renvoie par un chemin relatif
  * (`assets/schema.png`). Une page déplacée ou dupliquée emporte donc ses images.
  */

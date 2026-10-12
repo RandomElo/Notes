@@ -1,5 +1,5 @@
 /**
- * Lecture du début d'une page web pour une mention de site (README §6) : son
+ * Lecture du début d'une page web pour une mention de site (docs/spec/editeur.md) : son
  * titre et l'adresse de sa favicon. Le HTML n'est jamais interprété ni
  * affiché : on y cherche seulement ces deux informations, en texte.
  */
@@ -28,7 +28,11 @@ function attributs(balise: string): Record<string, string> {
   return trouves;
 }
 
-/** Titre de la page : `og:title`, sinon `<title>`, espaces resserrés, 200 caractères au plus. null s'il n'y en a pas. */
+/**
+ * Titre de la page : `og:title`, sinon `<title>`, espaces resserrés, 200 caractères au plus. null s'il n'y en a pas.
+ * Un séparateur laissé en bout de titre est retiré : un site dont le titre se complète en JavaScript
+ * envoie souvent « Course | » au lieu de « Course | Nom du site ».
+ */
 export function titreDeLaPage(html: string): string | null {
   let titre: string | null = null;
   for (const [balise] of html.matchAll(/<meta\b[^>]*>/gi)) {
@@ -39,7 +43,7 @@ export function titreDeLaPage(html: string): string | null {
     }
   }
   titre ??= /<title\b[^>]*>([\s\S]*?)<\/title>/i.exec(html)?.[1] ?? null;
-  const propre = titre === null ? '' : decoderEntites(titre).replace(/\s+/g, ' ').trim();
+  const propre = titre === null ? '' : decoderEntites(titre).replace(/\s+/g, ' ').replace(/^[\s|·•:–—-]+|[\s|·•:–—-]+$/g, '');
   return propre === '' ? null : [...propre].slice(0, 200).join('');
 }
 

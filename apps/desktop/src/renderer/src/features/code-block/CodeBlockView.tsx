@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { LanguagePicker } from './LanguagePicker';
 
 /**
- * Bloc de code dans l'éditeur (README §6) : une barre au-dessus du code avec
+ * Bloc de code dans l'éditeur (docs/spec/editeur.md) : une barre au-dessus du code avec
  * le langage, qu'on change dans une liste avec recherche, et un bouton pour
  * copier le code. La coloration et les numéros de ligne viennent de
  * `@notes/ui` (décorations), le reste du bloc est du texte ordinaire.

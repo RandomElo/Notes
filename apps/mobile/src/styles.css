@@ -67,3 +67,19 @@ body {
 .callout-pastille-danger {
   background-color: var(--callout-danger);
 }
+
+/*
+ * Tableaux sur le téléphone : largeur selon le contenu et défilement horizontal, comme avant les colonnes fixes
+ * du PC (largeurs réglées à la souris, docs/spec/editeur.md) : sur un écran étroit, des colonnes fixes seraient écrasées.
+ */
+.notes-page table {
+  width: auto;
+  min-width: 100%;
+  table-layout: auto;
+}
+
+.notes-page th,
+.notes-page td {
+  min-width: 4em;
+  overflow-wrap: normal;
+}

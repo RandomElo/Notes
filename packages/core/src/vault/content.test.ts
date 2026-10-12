@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { nomDuFichierDeConflit } from '../page/conflict';
 import { MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
-import { enregistrerCorps, lireContenu, lireCorps } from './content';
+import { enregistrerCorps, enregistrerLargeursDesTableaux, lireContenu, lireCorps } from './content';
+import { lireLargeursDesTableaux } from '../page/front-matter';
 import { lireArbre } from './tree';
 
 const enTete = '---\nid: 0199a0b0-0000-7000-8000-000000000001\n# un commentaire à garder\ntitle: Alpha\ncle_inconnue: 12\ncreated: 2026-01-01T00:00:00.000Z\nupdated: 2026-01-01T00:00:00.000Z\n---\n';
@@ -106,5 +107,28 @@ describe('nomDuFichierDeConflit', () => {
     const date = new Date(2026, 9, 2, 14, 5, 3);
     expect(nomDuFichierDeConflit(date)).toBe('page.conflit-2026-10-02-140503.md');
     expect(nomDuFichierDeConflit(date, ['page.conflit-2026-10-02-140503.md'])).toBe('page.conflit-2026-10-02-140503-2.md');
+  });
+});
+
+describe('largeur des colonnes des tableaux', () => {
+  it('se lit et s’écrit dans l’en-tête, une ligne par tableau, sans toucher au corps', async () => {
+    const fs = MemoryLocalFs.depuis({ 'Page/page.md': '---\nid: 0199a0b0-0000-7000-8000-000000000001\ntitle: Page\n---\n| a | b |\n| - | - |\n' });
+    const contexte = contexteDeTest(fs);
+    expect((await lireContenu(fs, 'Page')).largeursDesTableaux).toEqual([]);
+    expect(await enregistrerLargeursDesTableaux(contexte, 'Page', [[30, 70]])).toBe(true);
+    const texte = await fs.lireTexte('Page/page.md');
+    expect(texte).toContain('table_widths:\n  - [30, 70]\n');
+    expect(texte.endsWith('---\n| a | b |\n| - | - |\n')).toBe(true);
+    expect((await lireContenu(fs, 'Page')).largeursDesTableaux).toEqual([[30, 70]]);
+    expect(await enregistrerLargeursDesTableaux(contexte, 'Page', [[30, 70]])).toBe(false);
+    // Le corps enregistré emmène les largeurs ; des colonnes toutes égales retirent la clé.
+    const corps = (await lireContenu(fs, 'Page')).corps;
+    expect(await enregistrerCorps(contexte, 'Page', { corps, corpsDeBase: corps, largeursDesTableaux: [[]] })).toEqual({ ecrit: true, conflit: null });
+    expect(await fs.lireTexte('Page/page.md')).not.toContain('table_widths');
+  });
+
+  it('ignore des largeurs mal formées', () => {
+    expect(lireLargeursDesTableaux('table_widths:\n  - [30, 70]\n  - [abc]\n  - [0, 100]\n  - plat\n')).toEqual([[30, 70], [], [], []]);
+    expect(lireLargeursDesTableaux('table_widths: 3\n')).toEqual([]);
   });
 });

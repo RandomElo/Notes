@@ -18,7 +18,7 @@ export function argumentsDeConversion(fichier: string): string[] {
 
 /**
  * Convertit un fichier audio (ou vidéo : seul le son est gardé) en WAV 16 kHz
- * mono par le ffmpeg livré avec Notes (README §13). Sert aux formats que
+ * mono par le ffmpeg livré avec Notes (docs/spec/memos.md). Sert aux formats que
  * Chromium ne lit pas. Le chemin est absolu et déjà vérifié par l'appelant ;
  * le préfixe `file:` empêche ffmpeg de le lire comme une option ou un autre
  * protocole. Rejette avec un message en français.

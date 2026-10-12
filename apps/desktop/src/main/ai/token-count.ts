@@ -1,5 +1,5 @@
 /**
- * Comptage local des tokens d'une demande, avant de l'envoyer (README §12).
+ * Comptage local des tokens d'une demande, avant de l'envoyer (docs/spec/ia.md).
  * Chaque modèle d'Ollama a son propre découpage, qu'on ne peut pas lire ici :
  * on part de la longueur du texte, et l'écart avec ce que compte Ollama est
  * rattrapé par le calage sur l'historique (`calibrer` de @notes/core).

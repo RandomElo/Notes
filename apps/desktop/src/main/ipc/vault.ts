@@ -1,5 +1,5 @@
 import { renommerMentions } from '@notes/document';
-import { LocalFsError, VaultError, ajouterIconeImage, changerIcone, changerMode, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, deplacerPages, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
+import { LocalFsError, VaultError, enregistrerLargeursDesTableaux, ajouterIconeImage, changerIcone, changerMode, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, deplacerPages, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
 import type { BrokenMention, PageLocation, TreeNode, VaultContext } from '@notes/core';
 import type { ConflictReadResult, PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
 import { creerFileDAttente } from '../vault/serial-queue';
@@ -152,13 +152,28 @@ export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAtt
     },
 
     enregistrerPage: (demande: unknown): Promise<PageSaveResult> => {
-      const { chemin, corps, corpsDeBase } = champs(demande);
-      if (!estChemin(chemin) || !estCorps(corps) || !estCorps(corpsDeBase)) {
+      const { chemin, corps, corpsDeBase, largeursDesTableaux } = champs(demande);
+      if (!estChemin(chemin) || !estCorps(corps) || !estCorps(corpsDeBase) || (largeursDesTableaux !== undefined && !estListeDeLargeurs(largeursDesTableaux))) {
         return Promise.resolve(requeteInvalide());
       }
       return enSerie(async () => {
         try {
-          return { ok: true, ...(await enregistrerCorps(vault.contexte(), chemin, { corps, corpsDeBase })) };
+          return { ok: true, ...(await enregistrerCorps(vault.contexte(), chemin, { corps, corpsDeBase, ...(largeursDesTableaux === undefined ? {} : { largeursDesTableaux }) })) };
+        } catch (erreur) {
+          return { ok: false, erreur: versErreur(erreur) };
+        }
+      });
+    },
+
+    enregistrerLargeursDesTableaux: (demande: unknown): Promise<{ ok: true } | VaultFailure> => {
+      const { chemin, largeursDesTableaux } = champs(demande);
+      if (!estChemin(chemin) || !estListeDeLargeurs(largeursDesTableaux)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          await enregistrerLargeursDesTableaux(vault.contexte(), chemin, largeursDesTableaux);
+          return { ok: true };
         } catch (erreur) {
           return { ok: false, erreur: versErreur(erreur) };
         }
@@ -213,7 +228,7 @@ type EchecOuEtat = VaultState | VaultFailure;
 
 /**
  * Une page renommée : ses mentions prennent le nouveau titre dans les pages qui
- * la citent (README §6), pour que les fichiers restent justes hors de
+ * la citent (docs/spec/editeur.md), pour que les fichiers restent justes hors de
  * l'application. La page « sauf », ouverte dans l'éditeur, s'en charge
  * elle-même : l'écrire ici ferait un conflit avec la frappe en cours. Une page
  * qui ne peut pas être réécrite n'empêche pas le renommage.
@@ -233,6 +248,15 @@ async function suivreLeRenommage(contexte: VaultContext, id: string, titre: stri
 
 /** Taille maximale d'un corps de page accepté du renderer : bien au-delà d'une note, bien en deçà d'un abus. */
 const tailleMaxDuCorps = 20_000_000;
+
+/** Largeurs des colonnes des tableaux : au plus 200 tableaux de 50 colonnes, des pourcentages entiers de 1 à 100. */
+function estListeDeLargeurs(valeur: unknown): valeur is number[][] {
+  return (
+    Array.isArray(valeur) &&
+    valeur.length <= 200 &&
+    valeur.every((tableau) => Array.isArray(tableau) && tableau.length <= 50 && tableau.every((largeur) => Number.isInteger(largeur) && largeur >= 1 && largeur <= 100))
+  );
+}
 
 function estCorps(valeur: unknown): valeur is string {
   return typeof valeur === 'string' && valeur.length <= tailleMaxDuCorps;

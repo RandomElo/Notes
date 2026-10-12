@@ -1,5 +1,5 @@
 /*
- * Remise à zéro d'une page exportée (README §9). Dans l'application, Tailwind
+ * Remise à zéro d'une page exportée (docs/spec/export.md). Dans l'application, Tailwind
  * retire les marges et les styles par défaut du navigateur (son « preflight »),
  * et base.css compte dessus : sans elle, un paragraphe garde sa marge d'un
  * texte, ce qui décale le texte d'une tâche sous sa case et écarte les puces.

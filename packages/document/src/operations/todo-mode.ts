@@ -3,7 +3,7 @@ import type { Node as ProseMirrorNode, Schema } from '@tiptap/pm/model';
 import type { Transform } from '@tiptap/pm/transform';
 
 /*
- * Règles du mode liste de tâches (README §14). Tout passe par une
+ * Règles du mode liste de tâches (docs/spec/liste-de-taches.md). Tout passe par une
  * transformation ProseMirror, sans éditeur : le desktop les applique dans son
  * éditeur, le téléphone (J16) directement sur le document lu du fichier.
  */
@@ -41,7 +41,7 @@ function sansTitres(noeud: ProseMirrorNode, schema: Schema): ProseMirrorNode {
 }
 
 /**
- * Remet la page en une seule liste de tâches (README §14, choix d'Eloi du
+ * Remet la page en une seule liste de tâches (docs/spec/liste-de-taches.md, choix d'Eloi du
  * 2026-10-08 : une liste par page, pas de titres). Paragraphes, titres et
  * items de puces ou numérotés deviennent des tâches ; un autre bloc (code,
  * tableau, image, callout) passe sous la tâche qui le précède, ou sous une

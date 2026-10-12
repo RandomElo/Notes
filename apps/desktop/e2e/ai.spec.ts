@@ -250,3 +250,31 @@ test('sans Ollama, la fonction se désactive sans bloquer l’édition', async (
   await expect(page.getByText('Ollama ne répond pas à cette adresse.')).toBeVisible();
   await fermer(session);
 });
+
+test('une fonction IA ne porte que sur les blocs sélectionnés, et seuls eux changent', async () => {
+  const faux = await fauxServeur();
+  const preparation = await preparerCoursesClassique();
+  await writeFile(join(preparation.profil, 'settings.json'), JSON.stringify({ nas: null, vaultLocal: preparation.vault, ia: { adresseOllama: faux.adresse } }));
+  const session = await lancer(preparation, [], { NOTES_CARTES_ESSAI: carteDe8Go });
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Courses');
+  await ajouterUnParagraphe(page, 'Premier a relire.');
+  await ajouterUnParagraphe(page, 'Second a relire.');
+
+  // Le premier paragraphe sélectionné en partie : la fonction porte sur lui en entier, et sur rien d'autre.
+  await editeur(page).getByText('Premier a relire.').click({ clickCount: 3 });
+  await actionDePage(page, 'Fonctions IA');
+  const fenetre = fenetreIa(page);
+  await expect(fenetre).toContainText('blocs sélectionnés');
+  await fenetre.getByRole('button', { name: 'Lancer' }).click();
+  await fenetre.getByRole('button', { name: 'Accepter' }).click();
+  expect(faux.ollama).toEqual(['Premier a relire.\n']);
+  await expect(editeur(page)).toContainText('Premier à relire.');
+  await expect(editeur(page)).toContainText('Second a relire.');
+  await attendreEnregistrement(page);
+  const corps = await lireCorps(vault, 'Courses');
+  expect(corps).toContain('Premier à relire.');
+  expect(corps).toContain('Second a relire.');
+  await fermer(session);
+  faux.serveur.close();
+});

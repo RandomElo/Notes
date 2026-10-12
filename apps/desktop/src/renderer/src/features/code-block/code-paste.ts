@@ -3,7 +3,7 @@ import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
 
 /**
- * Détection du langage au collage (README §6) : du code collé dans un bloc de
+ * Détection du langage au collage (docs/spec/editeur.md) : du code collé dans un bloc de
  * code vide et sans langage lui donne son langage, s'il se reconnaît
  * nettement. Ailleurs, le collage reste celui de l'éditeur.
  */

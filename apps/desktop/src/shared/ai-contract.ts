@@ -1,7 +1,7 @@
 import type { AiPageFunction, AiRun, AiSettings, UsageBucket, UsagePeriod } from '@notes/core';
 
 /**
- * Fonctions IA (README §12) : ce que le main et le renderer s'échangent.
+ * Fonctions IA (docs/spec/ia.md) : ce que le main et le renderer s'échangent.
  * Les canaux sont dans `ipc-contract.ts`, avec les autres.
  */
 
@@ -20,7 +20,7 @@ export const consignesParDefaut: Record<AiPageFunction, string> = {
     'Les lignes de la forme [[BLOC-1]] remplacent des blocs mis de côté : recopie-les telles quelles, à leur place.',
     'Réponds uniquement par le texte relu, en Markdown, sans phrase d’introduction ni de conclusion, sans emoji et sans gras ajouté.',
   ].join('\n'),
-  // Essais du 2026-10-12 (README §12) : Notes envoie une section à la fois, lignes déjà mises en liste, titres gardés à part.
+  // Essais du 2026-10-12 (docs/spec/ia.md) : Notes envoie une section à la fois, lignes déjà mises en liste, titres gardés à part.
   'mise-au-propre': [
     'Tu reçois les notes d’une section, prises en vrac (cours, réunion, lecture), en français, en Markdown, avec le titre de la section pour le contexte. Remets-les au propre pour qu’elles se relisent facilement des mois plus tard.',
     '',

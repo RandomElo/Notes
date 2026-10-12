@@ -10,7 +10,7 @@ export type { NasSettings, NasSettingsField, NasSettingsValidation, Settings } f
 export { estId, genererId } from './page/id';
 export { longueurMaxTitre, nomDeDossier, nomLibre, titreParDefaut, verifierTitre } from './page/naming';
 export { analyserPage, cheminDuFichierPage, lirePage } from './page/page-file';
-export { lireSurcharges } from './page/front-matter';
+export { lireLargeursDesTableaux, lireSurcharges } from './page/front-matter';
 export { natureDIcone } from './page/icon';
 export type { PageIcon } from './page/icon';
 export { fichierPage } from './page/types';
@@ -22,7 +22,7 @@ export { listerImagesAConvertir, naturesAConvertir, nomEnWebp, remplacerImageDan
 export type { ImageToConvert } from './vault/image-conversion';
 export { VaultError } from './vault/context';
 export type { VaultContext, VaultErrorCode } from './vault/context';
-export { enregistrerCorps, lireContenu, lireCorps } from './vault/content';
+export { enregistrerCorps, enregistrerLargeursDesTableaux, lireContenu, lireCorps } from './vault/content';
 export type { PageContent, SaveRequest, SaveResult } from './vault/content';
 export { estFichierDeConflitDePage, lireConflit, listerConflits, resoudreConflit } from './vault/conflicts';
 export type { ConflictVersions } from './vault/conflicts';

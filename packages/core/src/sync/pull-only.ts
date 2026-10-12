@@ -10,7 +10,7 @@ import { releverDistant, releverLocal } from './scan';
 import type { Releve } from './scan';
 
 /**
- * Sync descendante du téléphone (README §5) : le cache local est une copie du
+ * Sync descendante du téléphone (docs/spec/sync.md) : le cache local est une copie du
  * NAS, jamais modifiée sur place. Le texte des pages, l'ordre et le thème sont
  * copiés à chaque cycle, de quoi tout lire hors ligne ; les images et autres
  * fichiers ne descendent qu'à la demande, quand une page les affiche.

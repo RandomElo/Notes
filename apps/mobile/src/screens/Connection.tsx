@@ -14,7 +14,7 @@ const messages: Partial<Record<RemoteFsErrorCode, string>> = {
   acces_refuse: 'Accès refusé à ce partage.',
 };
 
-/** Adresse du NAS, partage, identifiants (README §15). Le mot de passe part au plugin natif, qui le chiffre et ne le rend jamais. */
+/** Adresse du NAS, partage, identifiants (docs/spec/android.md). Le mot de passe part au plugin natif, qui le chiffre et ne le rend jamais. */
 export function Connection({ retour }: { retour?: () => void }) {
   const { reglages, seConnecter } = useNotes();
   const [champs, definirChamps] = useState<NasSettings & { hoteTailscale: string }>({

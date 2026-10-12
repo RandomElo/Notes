@@ -61,7 +61,7 @@ function rangSous(milieux: number[], pointeur: number): number {
 }
 
 /**
- * Poignées de ligne et de colonne d'un tableau (README §6), comme dans Notion :
+ * Poignées de ligne et de colonne d'un tableau (docs/spec/editeur.md), comme dans Notion :
  * au survol d'une cellule, une poignée à gauche de sa ligne et une au-dessus de
  * sa colonne. Un clic sélectionne toute la ligne ou la colonne et ouvre son
  * menu (mettre en en-tête, insérer, supprimer) ; un glissement la déplace.

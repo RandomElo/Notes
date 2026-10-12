@@ -137,7 +137,7 @@ const fichierDuJournal = 'mise-a-jour.json';
 
 /**
  * Mises à jour automatiques de LanguageTool et de son Java (choix d'Eloi,
- * README §11). Au plus une fois par jour : la nouvelle version est
+ * docs/spec/correction.md). Au plus une fois par jour : la nouvelle version est
  * téléchargée à côté, essayée sur un port à part, puis mise à la place de
  * l'ancienne et le serveur relancé. Si l'essai échoue, rien ne change ; si le
  * serveur ne redémarre pas, l'ancienne version revient. Java est vérifié par

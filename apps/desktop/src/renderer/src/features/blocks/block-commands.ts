@@ -8,7 +8,7 @@ import type { BlockRange } from './block-ranges';
 import { BlockSelection } from './block-selection';
 
 /**
- * Commandes sur les blocs (README §6). Chacune rend la transaction à
+ * Commandes sur les blocs (docs/spec/editeur.md). Chacune rend la transaction à
  * appliquer, ou null si elle n'a rien à faire. Elles s'appliquent aux blocs
  * sélectionnés ou, sans sélection de blocs, au bloc où se trouve le curseur.
  */

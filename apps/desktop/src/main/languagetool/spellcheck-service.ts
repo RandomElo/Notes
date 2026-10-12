@@ -1,5 +1,7 @@
 import { rm } from 'node:fs/promises';
 import type { SpellcheckState, SpellcheckStep } from '../../shared/ipc-contract';
+import { lireCapacite, raisonDeRefus } from './capacity';
+import type { MachineCapacity } from './capacity';
 import { LanguageToolInstaller, estInstalle } from './installer';
 import { LanguageToolServer } from './server';
 import type { ServerState } from './server';
@@ -22,10 +24,12 @@ export interface SpellcheckServiceDependencies {
    * n'est installé ni lancé, Notes s'adresse à lui.
    */
   adresseExterne?: string;
+  /** Mémoire et place libre du poste (essais) ; par défaut, celles du poste réel. */
+  capacite?: (dossier: string) => Promise<MachineCapacity>;
 }
 
 /**
- * Correction orthographique côté main (README §11) : installe LanguageTool à
+ * Correction orthographique côté main (docs/spec/correction.md) : installe LanguageTool à
  * la demande, le fait démarrer avec la session, le lance au démarrage de Notes
  * s'il ne tourne pas (sans jamais l'arrêter en quittant : l'extension du
  * navigateur s'en sert aussi), et tient l'état montré par les réglages.
@@ -37,6 +41,8 @@ export class SpellcheckService {
   private etapes: SpellcheckStep[] = [];
   private erreur: string | null = null;
   private versions: InstalledVersions | null = null;
+  /** Pourquoi le poste ne permet pas d'installer LanguageTool, null s'il le permet. */
+  private refus: string | null = null;
   private readonly miseAJour: LanguageToolUpdater;
   private minuteurDesMisesAJour: ReturnType<typeof setInterval> | undefined;
 
@@ -93,10 +99,19 @@ export class SpellcheckService {
       return;
     }
     this.installation = (await estInstalle(this.dependances.dossier)) ? 'installee' : 'absente';
+    if (this.installation === 'absente') {
+      this.refus = await this.verifierLePoste();
+    }
     this.annoncer();
     if (this.installation === 'installee') {
       await this.servir();
     }
+  }
+
+  /** Pourquoi le poste ne permet pas l'installation, null s'il la permet. Une capacité illisible ne bloque rien. */
+  private async verifierLePoste(): Promise<string | null> {
+    const lire = this.dependances.capacite ?? lireCapacite;
+    return lire(this.dependances.dossier).then(raisonDeRefus, () => null);
   }
 
   /** Notes quitte : une installation en cours s'arrête. Le serveur, lui, continue de tourner. */
@@ -135,12 +150,13 @@ export class SpellcheckService {
       erreur: this.erreur,
       versions: this.versions === null ? null : { languagetool: this.versions.languagetool, java: versionLisibleDeJava(this.versions.java) },
       miseAJour: this.miseAJour.etat(),
+      refus: this.installation === 'absente' ? this.refus : null,
     };
   }
 
   /** Lance l'installation et rend aussitôt l'état ; l'avancement est annoncé à mesure. */
   installer(): SpellcheckState {
-    if (this.installation === 'absente' && this.dependances.adresseExterne === undefined) {
+    if (this.installation === 'absente' && this.refus === null && this.dependances.adresseExterne === undefined) {
       this.installation = 'en_cours';
       this.erreur = null;
       void this.installateur.installer().then(async (erreur) => {
@@ -169,6 +185,7 @@ export class SpellcheckService {
         await rm(this.dependances.dossier, { recursive: true, force: true });
         this.installation = 'absente';
         this.erreur = null;
+        this.refus = await this.verifierLePoste();
       } catch {
         this.erreur = `Le dossier ${this.dependances.dossier} n'a pas pu être supprimé.`;
       }

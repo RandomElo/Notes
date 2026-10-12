@@ -50,7 +50,7 @@ function preparerSession(): void {
 }
 
 /**
- * Imprime en PDF le document HTML autonome d'une page (README §9), dans une
+ * Imprime en PDF le document HTML autonome d'une page (docs/spec/export.md), dans une
  * fenêtre cachée, sans script ni accès au réseau : le HTML vient du rendu de
  * l'application, mais son texte vient des fichiers de l'utilisateur.
  *

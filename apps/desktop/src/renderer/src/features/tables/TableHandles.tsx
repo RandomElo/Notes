@@ -61,8 +61,11 @@ interface Glissement {
   bouge: boolean;
 }
 
+/** Distance glissée vers la droite pour ajouter une colonne. */
+const pasDeColonne = 80;
+
 /**
- * Poignées des bords droit et bas d'un tableau (README §6) : tirées, elles
+ * Poignées des bords droit et bas d'un tableau (docs/spec/editeur.md) : tirées, elles
  * ajoutent des colonnes ou des lignes, et en retirent en revenant, pendant le
  * geste. Seule une colonne ou une ligne vide est retirée. Un simple clic en
  * ajoute une. Chacune n'apparaît que quand la souris s'approche de son bord.
@@ -108,7 +111,6 @@ export function TableHandles({ editor }: { editor: Editor }) {
   const { position } = actif;
   const cadre = table.getBoundingClientRect();
   const noeud = editor.state.doc.nodeAt(position);
-  const colonnes = noeud?.firstChild?.childCount ?? 1;
   const lignes = noeud?.childCount ?? 1;
 
   const commencer = (sens: Glissement['sens']) => (evenement: ReactPointerEvent<HTMLButtonElement>) => {
@@ -118,7 +120,8 @@ export function TableHandles({ editor }: { editor: Editor }) {
       sens,
       position,
       depart: sens === 'colonne' ? evenement.clientX : evenement.clientY,
-      pas: Math.max(24, sens === 'colonne' ? cadre.width / colonnes : cadre.height / lignes),
+      // Le tableau garde toute la largeur quoi qu'on ajoute : une colonne de plus tous les 80 px glissés, pas la largeur d'une colonne.
+      pas: sens === 'colonne' ? pasDeColonne : Math.max(24, cadre.height / lignes),
       fait: 0,
       bouge: false,
     };

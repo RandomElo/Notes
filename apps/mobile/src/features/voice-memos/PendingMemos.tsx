@@ -6,7 +6,7 @@ import { useMemos } from './MemosContext';
 
 /**
  * Sur l'accueil, les mémos enregistrés qui ne sont pas encore sur le NAS
- * (README §13). Rien quand tout est parti. Toucher un mémo propose de le jeter.
+ * (docs/spec/memos.md). Rien quand tout est parti. Toucher un mémo propose de le jeter.
  */
 export function PendingMemos() {
   const { attente, envoi, jeter } = useMemos();

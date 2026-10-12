@@ -26,6 +26,8 @@ import { AiPanel } from './features/ai/AiPanel';
 import { AiUsageScreen } from './features/ai/AiUsageScreen';
 import { useMemos } from './features/voice-memos/useMemos';
 import { ajouterRecente } from './features/mentions/recent-pages';
+import { ajouterALaPageOuverte, peutAjouter } from './features/markdown-drop/append-target';
+import { MarkdownDropDialog } from './features/markdown-drop/MarkdownDropDialog';
 import { SpellcheckPanel } from './features/spellcheck/SpellcheckPanel';
 import { useSpellcheck } from './features/spellcheck/useSpellcheck';
 import { TabBar } from './features/tabs/TabBar';
@@ -53,7 +55,7 @@ function ongletsDeDepart(): TabsState {
 /** Disposition générale : arborescence à gauche, éditeur de la page ouverte ou réglages au centre. */
 export function App() {
   const vault = useVault();
-  // Mémos vocaux (README §13) : la page « Mémos vocaux » peut être masquée de l'arborescence sur ce poste.
+  // Mémos vocaux (docs/spec/memos.md) : la page « Mémos vocaux » peut être masquée de l'arborescence sur ce poste.
   const memos = useMemos();
   const memosMasques = memos.etat?.masquee === true;
   const vaultAffiche = useMemo(() => (memosMasques ? { ...vault, arbre: vault.arbre.filter((noeud) => noeud.role !== 'memos') } : vault), [vault, memosMasques]);
@@ -63,9 +65,9 @@ export function App() {
   const [reglagesOuverts, definirReglagesOuverts] = useState(false);
   // L'éditeur de thème est un écran à part, auquel on arrive depuis les réglages.
   const [themeOuvert, definirThemeOuvert] = useState(false);
-  // La corbeille remplace la page au centre, comme les réglages (README §10).
+  // La corbeille remplace la page au centre, comme les réglages (docs/spec/corbeille.md).
   const [corbeilleOuverte, definirCorbeilleOuverte] = useState(false);
-  // L'historique des fonctions IA remplace aussi la page au centre (README §12).
+  // L'historique des fonctions IA remplace aussi la page au centre (docs/spec/ia.md).
   const [historiqueIaOuvert, definirHistoriqueIaOuvert] = useState(false);
   const ouvrirHistoriqueIa = useCallback(() => {
     definirHistoriqueIaOuvert(true);
@@ -77,6 +79,8 @@ export function App() {
   // Page de l'onglet affiché, changée sans chercher dans les autres onglets (abandon d'une page neuve).
   const definirSelection = useCallback((cle: string | null) => definirOnglets((etat) => remplacer(etat, cle)), [definirOnglets]);
   const [recentes, definirRecentes] = useStoredState<string[]>('notes.recentes', [], estListeDeTextes);
+  // Fichiers Markdown déposés dans la fenêtre, en attente de la réponse : pages ou ajout à la page ouverte.
+  const [depot, definirDepot] = useState<{ fichiers: string[]; noms: string[]; ajoutPossible: boolean } | null>(null);
   const [barreVisible, definirBarreVisible] = useStoredState<boolean>('notes.barre-laterale', true, estBooleen);
   const [sommaireVisible, definirSommaireVisible] = useStoredState<boolean>('notes.sommaire', true, estBooleen);
   const [listeDeplies, definirListeDeplies] = useStoredState<string[]>('notes.deplies', [], estListeDeTextes);
@@ -248,7 +252,7 @@ export function App() {
     return () => window.removeEventListener('keydown', surTouche);
   }, [creer, vault.etat, vault.arbre, pageDeReference]);
 
-  // Raccourcis de l'application (annexe du README). En capture : l'éditeur ne doit pas les prendre pour lui.
+  // Raccourcis de l'application (docs/raccourcis.md). En capture : l'éditeur ne doit pas les prendre pour lui.
   // Ils ne valent pas dans une fenêtre de recherche ou de sommaire, qui a ses propres touches.
   useEffect(() => {
     const surTouche = (evenement: KeyboardEvent) => {
@@ -288,6 +292,34 @@ export function App() {
     window.addEventListener('keydown', surTouche, true);
     return () => window.removeEventListener('keydown', surTouche, true);
   }, [changerDOnglets, definirBarreVisible, definirSommaireVisible]);
+
+  // Un fichier Markdown déposé n'importe où dans la fenêtre : la question s'ouvre (docs/spec/interface.md).
+  // Les images déposées dans la page restent à l'éditeur, qui les copie lui-même.
+  useEffect(() => {
+    const survol = (evenement: DragEvent): void => {
+      if (evenement.dataTransfer?.types.includes('Files') === true) {
+        evenement.preventDefault();
+      }
+    };
+    const depose = (evenement: DragEvent): void => {
+      const fichiers = [...(evenement.dataTransfer?.files ?? [])].filter((fichier) => /\.(md|markdown)$/i.test(fichier.name));
+      if (fichiers.length === 0) {
+        return;
+      }
+      evenement.preventDefault();
+      evenement.stopPropagation();
+      const chemins = fichiers.map((fichier) => api.cheminDuFichier(fichier)).filter((chemin) => chemin !== '');
+      if (chemins.length > 0) {
+        definirDepot({ fichiers: chemins, noms: fichiers.map((fichier) => fichier.name), ajoutPossible: peutAjouter() });
+      }
+    };
+    window.addEventListener('dragover', survol, true);
+    window.addEventListener('drop', depose, true);
+    return () => {
+      window.removeEventListener('dragover', survol, true);
+      window.removeEventListener('drop', depose, true);
+    };
+  }, []);
 
   // Page demandée par la barre de recherche du poste (`--page=<id>`), au lancement ou Notes déjà ouverte.
   useEffect(() => {
@@ -539,6 +571,42 @@ export function App() {
           y={choixDIcone.y}
           surChoix={(choix) => vault.changerIcone(choixDIcone.chemin, choix.genre === 'image' ? { octets: choix.octets } : { icone: choix.icone })}
           surFermeture={fermerChoixDIcone}
+        />
+      )}
+      {depot !== null && vault.etat?.dossier != null && (
+        <MarkdownDropDialog
+          noms={depot.noms}
+          pageOuverte={!reglagesOuverts && noeudSelectionne?.importe === true ? noeudSelectionne.titre : null}
+          ajoutPossible={depot.ajoutPossible && !reglagesOuverts}
+          surCreation={async () => {
+            const parent = !reglagesOuverts && noeudSelectionne?.importe === true ? noeudSelectionne.chemin : '';
+            const resultat = await api.creerPagesDepuisMarkdown({ fichiers: depot.fichiers, parent });
+            if (!resultat.ok) {
+              return resultat.erreur.message;
+            }
+            await vault.recharger();
+            definirDepot(null);
+            const premiere = resultat.pages[0];
+            if (premiere !== undefined) {
+              selectionner(premiere.id);
+            }
+            return null;
+          }}
+          surAjout={async () => {
+            if (noeudSelectionne === null) {
+              return 'Aucune page n’est ouverte.';
+            }
+            const resultat = await api.markdownAAjouter({ fichiers: depot.fichiers, page: noeudSelectionne.chemin });
+            if (!resultat.ok) {
+              return resultat.erreur.message;
+            }
+            if (!ajouterALaPageOuverte(resultat.markdown)) {
+              return 'La page ouverte ne peut pas recevoir ce texte (lecture seule ou mode liste).';
+            }
+            definirDepot(null);
+            return null;
+          }}
+          surAnnulation={() => definirDepot(null)}
         />
       )}
       {!reglagesOuverts && (

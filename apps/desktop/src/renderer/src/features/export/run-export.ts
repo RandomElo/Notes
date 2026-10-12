@@ -104,7 +104,7 @@ const aUnePageGardee =
 const encodeur = new TextEncoder();
 
 /**
- * L'archive ZIP de la page et de ses sous-pages (README §9, choix d'Eloi) :
+ * L'archive ZIP de la page et de ses sous-pages (docs/spec/export.md, choix d'Eloi) :
  * pages web reliées par une navigation, images et feuille de style communes
  * dans `assets/`. Les pages décochées dans la fenêtre d'export n'y sont pas.
  */
@@ -166,7 +166,7 @@ async function fichiersDeLArchive(noeud: TreeNode, exclues: ReadonlySet<string>,
 }
 
 /**
- * Exporte une page (README §9) : enregistre d'abord ce qui est en attente, lit
+ * Exporte une page (docs/spec/export.md) : enregistre d'abord ce qui est en attente, lit
  * la page sur le disque, prépare le fichier, puis le main demande où l'écrire.
  * « exclues » : chemins des sous-pages décochées, pour l'archive.
  */

@@ -5,7 +5,7 @@ import type { FileInfo } from '@capacitor/filesystem';
 import { depuisBase64, versBase64 } from './base64';
 
 /**
- * `LocalFs` sur le stockage privé de l'application (README §16) : le cache du
+ * `LocalFs` sur le stockage privé de l'application (docs/spec/securite.md) : le cache du
  * vault vit dans `racine`, sous le dossier de données de l'application, que
  * les autres applications ne voient pas. Dans un navigateur (mode
  * démonstration), le même plugin range tout dans IndexedDB.

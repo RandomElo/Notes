@@ -8,7 +8,7 @@ interface ThemeNoticeProps {
 }
 
 /**
- * Avertissement non bloquant (README §8) : le fichier de thème contient des
+ * Avertissement non bloquant (docs/spec/theme.md) : le fichier de thème contient des
  * réglages ignorés. Il n'empêche rien, se ferme, et revient si le fichier
  * change et reste fautif.
  */

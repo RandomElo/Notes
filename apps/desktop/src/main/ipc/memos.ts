@@ -30,7 +30,7 @@ export interface MemosHandlersDependencies {
 const tailleMaxDUnMemo = 200 * 1024 * 1024;
 
 /**
- * Handlers des canaux « memos: » (README §13). Les entrées viennent du
+ * Handlers des canaux « memos: » (docs/spec/memos.md). Les entrées viennent du
  * renderer : seul un fichier audio directement dans `.notes/memos/` est
  * accepté, rien d'autre du dossier des notes n'est lu ni déplacé par ici.
  */
@@ -53,7 +53,7 @@ export function creerHandlersMemos({ vault, enSerie, reglages, whisper, ia, conv
         telechargementAutomatiqueFait = true;
         whisper.installerModele();
       }
-      // La page apparaît avec le premier mémo (README §13).
+      // La page apparaît avec le premier mémo (docs/spec/memos.md).
       const page = memos.length > 0 ? await pageDesMemos(contexte) : await trouverPageDesMemos(contexte);
       let masques = (await reglages.lire()).memosMasques;
       if (masques !== null && !pageDesMemosMasquee(masques, memos)) {
@@ -137,7 +137,7 @@ export function creerHandlersMemos({ vault, enSerie, reglages, whisper, ia, conv
     },
 
     /**
-     * Durées estimées avant de transcrire (README §13) : durée de chaque audio
+     * Durées estimées avant de transcrire (docs/spec/memos.md) : durée de chaque audio
      * lue par ffmpeg, calage des transcriptions de ce poste, historique de l'IA.
      */
     estimer: async (demande: unknown): Promise<MemoEstimate> => {

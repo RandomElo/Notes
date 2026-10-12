@@ -11,7 +11,7 @@ type Etat =
   | { etat: 'fini'; converties: number; erreurs: string[] };
 
 /**
- * Conversion des images déjà dans le dossier des notes (README §6) : chaque
+ * Conversion des images déjà dans le dossier des notes (docs/spec/editeur.md) : chaque
  * image en PNG, JPEG ou AVIF qu'une page affiche est convertie en WebP
  * compressé, réduite à 1920 px, et la page renvoie à la nouvelle. L'ancien
  * fichier reste : il passe dans les images inutilisées, qu'on supprime soi-même.

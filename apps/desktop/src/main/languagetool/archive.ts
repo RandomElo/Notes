@@ -8,7 +8,7 @@ import yauzl from 'yauzl';
 import type { Entry, ZipFile } from 'yauzl';
 
 /**
- * Décompression des archives de LanguageTool (README §11), en JavaScript pur :
+ * Décompression des archives de LanguageTool (docs/spec/correction.md), en JavaScript pur :
  * rien n'est demandé au système (`unzip`, `tar`). Un chemin qui sortirait du
  * dossier de destination est refusé. La progression compte les octets de
  * l'archive déjà lus.

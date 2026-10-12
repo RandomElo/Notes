@@ -27,7 +27,7 @@ const colonnes = 9;
 const maxIcones = 360;
 
 /**
- * Choix de l'icône d'une page (README §6) : emoji cherché en français, icône
+ * Choix de l'icône d'une page (docs/spec/editeur.md) : emoji cherché en français, icône
  * Lucide cherchée par un mot français ou son nom anglais, ou image recadrée.
  * Au clavier : la recherche garde le focus, les flèches parcourent la grille,
  * Entrée choisit, Échap ferme.

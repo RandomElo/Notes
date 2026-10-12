@@ -6,7 +6,7 @@ import { vueDeLaPageOuverte } from './spellcheck-extension';
 import { useMagasinDeCorrection } from './spellcheck-store';
 
 /**
- * Nombre de fautes de la page ouverte, dans la barre de statut (README §11).
+ * Nombre de fautes de la page ouverte, dans la barre de statut (docs/spec/correction.md).
  * Rien sans page ouverte ou sans correction prête. Un clic ouvre la liste des
  * fautes, pour les corriger d'affilée.
  */

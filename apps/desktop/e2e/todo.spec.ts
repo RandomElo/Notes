@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { actionDePage, attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparer } from './app';
 
-// Mode liste de tâches (J14, README §14) : une seule liste par page, sans titres, façon Keep.
+// Mode liste de tâches (J14, docs/spec/liste-de-taches.md) : une seule liste par page, sans titres, façon Keep.
 
 const enTeteProjets = '---\nid: 0199a0b0-0000-7000-8000-000000000002\ntitle: Projets\ncreated: 2026-10-01T08:00:00.000Z\nupdated: 2026-10-01T08:00:00.000Z\n---\n';
 

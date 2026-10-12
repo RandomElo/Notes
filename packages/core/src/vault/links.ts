@@ -4,7 +4,7 @@ import type { VaultContext } from './context';
 import type { TreeNode } from './tree';
 
 /**
- * Liens entre pages (README §4) : `[Titre](notes://uuid)` dans le corps. Pour
+ * Liens entre pages (docs/spec/stockage.md) : `[Titre](notes://uuid)` dans le corps. Pour
  * core le corps reste un texte : les mentions s'y repèrent par leur forme,
  * sans lire le Markdown. Ce qui est dans un bloc de code n'est que du texte et
  * ne compte pas, sauf dans un bloc `notes-callout`, dont le texte en contient.

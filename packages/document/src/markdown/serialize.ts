@@ -63,7 +63,11 @@ function blocsAEcrire(document: ProseMirrorNode): ProseMirrorNode[] {
   const blocs: ProseMirrorNode[] = [];
   document.forEach((bloc) => {
     // Un paragraphe sans texte (vide, ou fait d'espaces et de sauts de ligne) n'a pas d'écriture en Markdown.
-    if (!(bloc.type.name === 'paragraph' && estSansTexte(bloc))) {
+    if (bloc.type.name === 'table' && bloc.attrs['largeurs'] !== null) {
+      // La largeur des colonnes vit dans l'en-tête de la page, pas dans le Markdown : un tableau
+      // dont seules les largeurs ont changé est inchangé pour le fichier.
+      blocs.push(bloc.type.create({ ...bloc.attrs, largeurs: null }, bloc.content, bloc.marks));
+    } else if (!(bloc.type.name === 'paragraph' && estSansTexte(bloc))) {
       blocs.push(bloc);
     }
   });

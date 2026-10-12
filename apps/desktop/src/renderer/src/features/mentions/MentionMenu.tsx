@@ -12,7 +12,7 @@ const maxResultats = 30;
 const maxRecentes = 8;
 
 /**
- * Choix d'une page au « @ » (README §6) : les pages récentes, puis celles dont
+ * Choix d'une page au « @ » (docs/spec/editeur.md) : les pages récentes, puis celles dont
  * le titre correspond à ce qui est tapé, recherche floue sans accents. Flèches
  * pour choisir, Entrée ou Tab pour valider, Échap pour fermer. Le focus reste
  * dans l'éditeur.

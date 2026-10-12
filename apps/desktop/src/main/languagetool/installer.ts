@@ -44,7 +44,7 @@ function messageDErreur(erreur: unknown): string {
 }
 
 /**
- * Installe LanguageTool, son Java et les n-grammes (README §11). Tout se
+ * Installe LanguageTool, son Java et les n-grammes (docs/spec/correction.md). Tout se
  * prépare dans `<dossier>.installation`, renommé à la fin : un dossier
  * `LanguageTool` présent est toujours une installation complète. Une
  * installation annulée ou ratée ne laisse rien derrière elle.

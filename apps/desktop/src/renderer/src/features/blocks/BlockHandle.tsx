@@ -49,7 +49,7 @@ function blocSousLePointeur(view: EditorView, x: number, y: number): number | nu
 }
 
 /**
- * Poignée des blocs (README §6) : à gauche du bloc survolé, sinon du premier
+ * Poignée des blocs (docs/spec/editeur.md) : à gauche du bloc survolé, sinon du premier
  * bloc sélectionné. On la tire pour déplacer le bloc (ou toute la sélection
  * s'il en fait partie), on clique dessus pour ouvrir son menu. Elle double la
  * gestion au clavier, elle ne la remplace pas.

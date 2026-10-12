@@ -9,7 +9,7 @@ import type { PageLocation } from '../vault/operations';
 import { estIgnore } from '../vault/tree';
 
 /**
- * Mémos vocaux (README §13). Le téléphone dépose un fichier audio dans
+ * Mémos vocaux (docs/spec/memos.md). Le téléphone dépose un fichier audio dans
  * `.notes/memos/`, la sync l'amène sur le PC ; il y attend d'être transcrit.
  * Chaque mémo accepté devient une sous-page de la page « Mémos vocaux »,
  * reconnue à son en-tête (`role: memos`), puis l'audio part à la corbeille.
@@ -133,7 +133,7 @@ export async function creerPageDeMemo(contexte: VaultContext, memo: Pick<VoiceMe
 /**
  * La page « Mémos vocaux » est-elle masquée sur ce poste ? Masquer retient les
  * mémos présents à ce moment ; un mémo qui n'y était pas la fait réapparaître
- * (README §13). `vus` est null quand elle n'est pas masquée.
+ * (docs/spec/memos.md). `vus` est null quand elle n'est pas masquée.
  */
 export function pageDesMemosMasquee(vus: readonly string[] | null, enAttente: readonly VoiceMemo[]): boolean {
   return vus !== null && enAttente.every((memo) => vus.includes(memo.nom));

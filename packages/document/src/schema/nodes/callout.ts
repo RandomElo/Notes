@@ -18,7 +18,7 @@ export function iconeDuCallout(attributs: { type: unknown; icon: unknown }): str
 }
 
 /**
- * Callout (README §4) : un encadré coloré avec une icône, qui contient des
+ * Callout (docs/spec/stockage.md) : un encadré coloré avec une icône, qui contient des
  * paragraphes mis en forme. Écrit dans le fichier comme un bloc fencé
  * `notes-callout` en YAML (voir markdown/callout.ts). « type » et « icon »
  * restent null quand le fichier ne les donne pas, pour être réécrits pareil.

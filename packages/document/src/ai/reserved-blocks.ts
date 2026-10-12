@@ -1,5 +1,5 @@
 /**
- * Blocs que le modèle ne voit pas (README §12) : blocs de code, callouts (bloc
+ * Blocs que le modèle ne voit pas (docs/spec/ia.md) : blocs de code, callouts (bloc
  * fencé `notes-callout`) et images seules sur leur ligne. Ils partent au
  * modèle sous la forme d'un repère `[[BLOC-n]]`, qu'on remplace au retour par
  * le texte d'origine, octet pour octet : le modèle ne peut ni les abîmer ni

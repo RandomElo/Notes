@@ -13,7 +13,7 @@ import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
 /**
- * Mot de passe du NAS (README §16) : chiffré en AES-GCM par une clé générée
+ * Mot de passe du NAS (docs/spec/securite.md) : chiffré en AES-GCM par une clé générée
  * dans l'Android Keystore, qui ne sort jamais du coffre, et rangé chiffré
  * dans les préférences privées de l'application. Il n'est jamais écrit en
  * clair, jamais journalisé, jamais rendu à la WebView.

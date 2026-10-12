@@ -6,7 +6,7 @@ import { api } from '../../lib/ipc';
 type Recherche = { etat: 'pas-faite' } | { etat: 'en-cours' } | { etat: 'faite'; mentions: BrokenMention[] };
 
 /**
- * Mentions cassées (README §6) : les liens vers une page qui n'existe pas (ou
+ * Mentions cassées (docs/spec/editeur.md) : les liens vers une page qui n'existe pas (ou
  * plus) dans le dossier des notes, page par page, avec de quoi ouvrir la page
  * qui les contient. Elles s'y affichent barrées.
  */

@@ -1,7 +1,7 @@
 import type { GpuInfo } from './hardware';
 
 /**
- * Choix du modèle local selon la carte graphique (README §12, choix d'Eloi du
+ * Choix du modèle local selon la carte graphique (docs/spec/ia.md, choix d'Eloi du
  * 2026-10-05) : Notes regarde la carte, garde les modèles installés qui
  * tiennent entièrement dans sa mémoire vidéo et sont assez gros pour un
  * résultat correct, et prend le meilleur. Si aucun ne convient, l'IA locale

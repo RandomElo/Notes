@@ -64,7 +64,7 @@ function CetteMachine({ etat }: { etat: AiState }) {
 }
 
 /**
- * Fonctions IA dans les réglages (README §12) : ce que la carte permet, Ollama,
+ * Fonctions IA dans les réglages (docs/spec/ia.md) : ce que la carte permet, Ollama,
  * modèle par fonction, consignes. Tout est propre à ce poste.
  */
 export function AiPanel({ surHistorique }: { surHistorique: () => void }) {

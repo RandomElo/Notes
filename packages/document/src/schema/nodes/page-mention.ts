@@ -20,7 +20,7 @@ export interface PageMentionAttributes {
 }
 
 /**
- * Mention d'une page (README §6) : dans le fichier, un lien Markdown standard
+ * Mention d'une page (docs/spec/editeur.md) : dans le fichier, un lien Markdown standard
  * `[Titre](notes://uuid)`. À l'écran, l'icône et le titre courant de la page,
  * résolus par l'application ; ici, seulement les attributs et une forme HTML
  * pour le presse-papiers. Un lien `notes://` dont le texte est mis en forme

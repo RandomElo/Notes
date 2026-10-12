@@ -34,7 +34,7 @@ export interface ImageAttributes {
 }
 
 /**
- * Image (README §6) : un paragraphe du fichier qui ne contient qu'une image
+ * Image (docs/spec/editeur.md) : un paragraphe du fichier qui ne contient qu'une image
  * devient ce bloc. Une image au milieu du texte reste un bloc brut. Le rendu
  * à l'écran (adresse locale, visionneuse) est un affichage de l'application :
  * ici, seulement les attributs et une forme HTML pour le presse-papiers.

@@ -1,5 +1,5 @@
 /**
- * Le thème : tout ce qui se règle dans `.notes/theme.toml` (README §8). Les
+ * Le thème : tout ce qui se règle dans `.notes/theme.toml` (docs/spec/theme.md). Les
  * clés sont celles du fichier TOML, telles quelles, pour qu'on retrouve dans le
  * code ce qu'on lit dans le fichier.
  */

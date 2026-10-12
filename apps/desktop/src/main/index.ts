@@ -20,6 +20,7 @@ import { creerHandlersTheme } from './ipc/theme';
 import { creerHandlersCorrection } from './ipc/spellcheck';
 import { creerHandlersCorbeille } from './ipc/trash';
 import { creerHandlersVault } from './ipc/vault';
+import { creerHandlersDepotMarkdown } from './ipc/markdown-drop';
 import { creerHandlersSync } from './ipc/sync';
 import { creerHandlersFenetre } from './ipc/window';
 import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
@@ -186,7 +187,7 @@ async function choisirDestinationDExport(nomPropose: string, format: { extension
 function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
   handlers.reinitialiser();
   fenetre = new BrowserWindow({
-    // Icône de la barre des tâches (README §17) ; celle de l'AppImage vient d'electron-builder.
+    // Icône de la barre des tâches (docs/spec/packaging.md) ; celle de l'AppImage vient d'electron-builder.
     icon: join(dossierRessources(), 'icon', '256x256.png'),
     width: 1100,
     height: 760,
@@ -244,7 +245,7 @@ function demarrer(): void {
 
       const donnees = app.getPath('userData');
       const reglages = new SettingsStore(join(donnees, 'settings.json'));
-      // Toute modification du dossier des notes est montrée au renderer et part au NAS peu après (README §5).
+      // Toute modification du dossier des notes est montrée au renderer et part au NAS peu après (docs/spec/sync.md).
       let surModificationLocale = (): void => undefined;
       const vault = new VaultService(reglages, () => {
         fenetre?.webContents.send(evenements.vaultModifie);
@@ -284,7 +285,7 @@ function demarrer(): void {
       }, 1_000);
       app.on('will-quit', () => clearInterval(surveillanceReseau));
       vault.surChangementDeDossier(() => void sync.reconfigurer());
-      // Dernier cycle à la fermeture (README §5) : la fenêtre est déjà fermée, l'application attend la fin de la sync.
+      // Dernier cycle à la fermeture (docs/spec/sync.md) : la fenêtre est déjà fermée, l'application attend la fin de la sync.
       let syncTerminee = false;
       app.on('before-quit', (evenement) => {
         if (syncTerminee) {
@@ -299,9 +300,11 @@ function demarrer(): void {
 
       const detourage = new BackgroundRemoval(join(dossierRessources(), 'background-removal'));
       app.on('will-quit', () => detourage.arreter());
-      // Correction orthographique (README §11) : LanguageTool installé par Notes à côté de l'AppImage, démarré avec la session.
+      // Correction orthographique (docs/spec/correction.md) : LanguageTool installé par Notes à côté de l'AppImage, démarré avec la session.
       // Hors AppImage, NOTES_LANGUAGETOOL_ADRESSE désigne un serveur déjà lancé (essais de bout en bout).
       const adresseExterne = app.isPackaged ? undefined : process.env['NOTES_LANGUAGETOOL_ADRESSE'];
+      const brutDeMemoire = app.isPackaged ? undefined : process.env['NOTES_MEMOIRE_ESSAI'];
+      const memoireDEssai = brutDeMemoire === undefined || brutDeMemoire === '' ? undefined : Number(brutDeMemoire);
       const correction = new SpellcheckService({
         dossier: dossierDeLanguageTool(process.env, homedir()),
         demarrageDeSession: cheminDuDemarrage(process.env['XDG_CONFIG_HOME'] || join(homedir(), '.config')),
@@ -309,6 +312,8 @@ function demarrer(): void {
         telecharger: (adresse, signal) => session.fromPartition('telechargements-languagetool').fetch(adresse, { signal }),
         surEtat: (etat) => fenetre?.webContents.send(evenements.etatCorrectionModifie, etat),
         ...(adresseExterne === undefined || adresseExterne === '' ? {} : { adresseExterne }),
+        // Hors AppImage, NOTES_MEMOIRE_ESSAI simule un poste à cette mémoire (essais de bout en bout).
+        ...(memoireDEssai === undefined ? {} : { capacite: async () => ({ memoire: memoireDEssai, processeurs: 16, libre: null }) }),
       });
       void correction.demarrer();
       // Notes quitte : seule une installation en cours s'arrête, LanguageTool continue pour l'extension du navigateur.
@@ -326,7 +331,7 @@ function demarrer(): void {
         return noms.filter((nom): nom is string => typeof nom === 'string' && nom !== '');
       };
       const obtenirCartes = (): Promise<GpuInfo[]> => (cartesDuPoste ??= cartesDEssai() ?? detecterCartes(sourcesDuPoste(nomsDesCartes)));
-      // Mémos vocaux (README §13) : serveur whisper.cpp livré dans l'AppImage, modèle téléchargé à la demande à côté d'elle.
+      // Mémos vocaux (docs/spec/memos.md) : serveur whisper.cpp livré dans l'AppImage, modèle téléchargé à la demande à côté d'elle.
       // Hors AppImage, NOTES_WHISPER_ADRESSE désigne un serveur déjà lancé (essais de bout en bout).
       const adresseWhisper = app.isPackaged ? undefined : process.env['NOTES_WHISPER_ADRESSE'];
       const whisper = new WhisperService({
@@ -348,10 +353,10 @@ function demarrer(): void {
       const handlersVault = creerHandlersVault({ vault, file: fileDuVault, choisirDossier: () => choisirDossierVault(vault.etat().dossierPropose) });
       const handlersFenetre = creerHandlersFenetre(() => fenetre, handlersVault.attendre);
       const handlersCorbeille = creerHandlersCorbeille({ vault, file: fileDuVault, avecNas: (action) => sync.avecNas(action) });
-      // Purge de la corbeille au démarrage (README §10) : celle du poste ici, celle du NAS au premier cycle.
+      // Purge de la corbeille au démarrage (docs/spec/corbeille.md) : celle du poste ici, celle du NAS au premier cycle.
       void handlersCorbeille.purgerAuDemarrage();
       vault.surChangementDeDossier(() => void handlersCorbeille.purgerAuDemarrage());
-      // Fonctions IA (README §12) : Ollama sur le poste, modèle choisi selon la carte graphique.
+      // Fonctions IA (docs/spec/ia.md) : Ollama sur le poste, modèle choisi selon la carte graphique.
       const ia = new AiService({
         // La carte ne change pas pendant une session : lue une fois, à la première demande.
         cartes: obtenirCartes,
@@ -366,6 +371,7 @@ function demarrer(): void {
       enregistrerCanaux({
         fenetre: handlersFenetre,
         vault: handlersVault,
+        depot: creerHandlersDepotMarkdown({ vault, enSerie: handlersVault.enSerie }),
         theme: creerHandlersTheme({ vault, ouvrirFichier: (chemin) => shell.openPath(chemin) }),
         nas: creerHandlersNas({
           reglages,

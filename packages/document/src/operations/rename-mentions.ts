@@ -19,7 +19,7 @@ export function mentionsARenommer(document: ProseMirrorNode, id: string, titre: 
 
 /**
  * Corps d'une page dont les mentions de la page « id » portent le texte
- * « titre » (README §6, une page renommée). Seuls les blocs qui contiennent
+ * « titre » (docs/spec/editeur.md, une page renommée). Seuls les blocs qui contiennent
  * une telle mention sont réécrits, le reste du fichier ne change pas d'un
  * octet. null si la page ne la mentionne pas ou si tout est déjà à jour.
  */

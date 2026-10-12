@@ -1,4 +1,4 @@
-import { contextBridge, ipcRenderer } from 'electron';
+import { contextBridge, ipcRenderer, webUtils } from 'electron';
 import { canaux, evenements } from '../shared/ipc-contract';
 import type { AiProgress } from '../shared/ai-contract';
 import type { WhisperState } from '../shared/memos-contract';
@@ -47,6 +47,11 @@ const api: NotesApi = {
   importer: (demande) => ipcRenderer.invoke(canaux.importer, demande),
   lirePage: (demande) => ipcRenderer.invoke(canaux.lirePage, demande),
   enregistrerPage: (demande) => ipcRenderer.invoke(canaux.enregistrerPage, demande),
+  enregistrerLargeursDesTableaux: (demande) => ipcRenderer.invoke(canaux.enregistrerLargeursDesTableaux, demande),
+  // Le chemin d'un fichier déposé ne se lit plus sur l'objet File : seul le preload peut le demander.
+  cheminDuFichier: (fichier) => webUtils.getPathForFile(fichier),
+  creerPagesDepuisMarkdown: (demande) => ipcRenderer.invoke(canaux.creerPagesDepuisMarkdown, demande),
+  markdownAAjouter: (demande) => ipcRenderer.invoke(canaux.markdownAAjouter, demande),
   listerConflits: (demande) => ipcRenderer.invoke(canaux.listerConflits, demande),
   lireConflit: (demande) => ipcRenderer.invoke(canaux.lireConflit, demande),
   resoudreConflit: (demande) => ipcRenderer.invoke(canaux.resoudreConflit, demande),

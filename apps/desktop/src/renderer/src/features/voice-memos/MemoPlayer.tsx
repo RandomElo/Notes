@@ -27,7 +27,7 @@ interface MemoPlayerProps {
 }
 
 /**
- * Lecteur d'un mémo vocal (README §13). Les octets viennent du main ; ils
+ * Lecteur d'un mémo vocal (docs/spec/memos.md). Les octets viennent du main ; ils
  * sont lus par une adresse `blob:` propre à la page, rendue à sa fermeture.
  * Un format que Chromium ne lit pas (AMR, WMA…) se rejoue en WAV.
  */

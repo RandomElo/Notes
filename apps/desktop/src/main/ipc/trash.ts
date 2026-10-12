@@ -34,7 +34,7 @@ export interface TrashHandlersDependencies {
 const maxPagesParSuppression = 500;
 
 /**
- * Handlers des canaux « corbeille: » (README §10). Ce qui touche la corbeille
+ * Handlers des canaux « corbeille: » (docs/spec/corbeille.md). Ce qui touche la corbeille
  * du poste passe par la file du vault ; la corbeille du NAS passe par la
  * connexion de la sync. Les entrées viennent du renderer : rien n'est supposé valide.
  */

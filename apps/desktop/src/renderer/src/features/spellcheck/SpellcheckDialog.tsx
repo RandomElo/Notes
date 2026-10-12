@@ -27,7 +27,7 @@ interface SpellcheckDialogProps {
 }
 
 /**
- * Toutes les fautes de la page ouverte (README §11), ouvertes d'un clic sur le
+ * Toutes les fautes de la page ouverte (docs/spec/correction.md), ouvertes d'un clic sur le
  * compteur de la barre de statut : chacune dans sa phrase, avec ce que dit la
  * règle, les suggestions, « Ignorer » et « Ajouter au dictionnaire ». La liste
  * suit la page : une faute corrigée en disparaît, le focus passe à la suivante.

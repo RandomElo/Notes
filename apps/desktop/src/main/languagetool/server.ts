@@ -45,7 +45,7 @@ function lancerDetache(script: string): void {
 }
 
 /**
- * Le serveur LanguageTool installé par Notes (README §11). Il tourne pour
+ * Le serveur LanguageTool installé par Notes (docs/spec/correction.md). Il tourne pour
  * toute la session, pas seulement pour Notes : l'extension LanguageTool du
  * navigateur s'en sert aussi. La session le lance au login ; Notes le lance si
  * elle ne le trouve pas, et le relance s'il s'est arrêté. Notes ne l'arrête

@@ -13,7 +13,7 @@ interface ImageLinkPromptProps {
 }
 
 /**
- * Question posée quand on colle le lien d'une image d'Internet (README §6) :
+ * Question posée quand on colle le lien d'une image d'Internet (docs/spec/editeur.md) :
  * la télécharger dans le dossier de la page, ou garder le lien en texte.
  * Rien n'est chargé d'Internet sans cette réponse. `Échap` garde le lien.
  */

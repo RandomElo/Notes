@@ -108,7 +108,7 @@ interface MemoReviewProps {
 }
 
 /**
- * Transcription d'un mémo (README §13, choix d'Eloi du 2026-10-07) : d'un coup,
+ * Transcription d'un mémo (docs/spec/memos.md, choix d'Eloi du 2026-10-07) : d'un coup,
  * Whisper puis le modèle de mise en forme, puis la transcription brute face à
  * la mise en forme. Accepter crée la sous-page et met l'audio à la corbeille ;
  * rejeter laisse le mémo en attente.

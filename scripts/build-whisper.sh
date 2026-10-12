@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compile le serveur whisper.cpp livré dans l'AppImage (README §13) : la
+# Compile le serveur whisper.cpp livré dans l'AppImage (docs/spec/memos.md) : la
 # transcription des mémos vocaux tourne sur la carte graphique par Vulkan
 # (Radeon comme NVIDIA), sans rien à installer sur le poste. Le binaire de
 # l'image Docker officielle ne convient pas : compilé pour un processeur avec

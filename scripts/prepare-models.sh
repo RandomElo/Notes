@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Prépare ce qu'il faut au détourage des icônes (README §6), là où
+# Prépare ce qu'il faut au détourage des icônes (docs/spec/editeur.md), là où
 # l'application desktop le cherche (en développement comme au packaging) :
 # le modèle silueta (U²-Net allégé, rembg, licence Apache 2.0), téléchargé
 # une fois et vérifié par son empreinte, et le moteur ONNX en WebAssembly

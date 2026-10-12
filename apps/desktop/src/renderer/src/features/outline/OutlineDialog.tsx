@@ -15,7 +15,7 @@ interface OutlineDialogProps {
 }
 
 /**
- * Sommaire complet de la page (README §7) : tous les niveaux de titre en
+ * Sommaire complet de la page (docs/spec/interface.md) : tous les niveaux de titre en
  * arbre, avec un filtre insensible aux accents. Un titre trouvé garde ses
  * titres parents, en plus discret, pour savoir où il se trouve.
  */
@@ -120,7 +120,7 @@ export function OutlineDialog({ titre, entrees, courant, surChoix, surFermeture 
             className="placeholder:text-discret h-11 min-w-0 flex-1 bg-transparent text-sm outline-0"
           />
         </div>
-        <ul ref={liste} id="sommaire-titres" role="listbox" aria-label="Titres" className="overflow-y-auto p-1.5">
+        <ul ref={liste} id="sommaire-titres" role="listbox" aria-label="Titres" className="overflow-y-auto overscroll-contain p-1.5">
           {entrees.length === 0 && (
             <li className="text-discret flex items-center gap-2 px-2 py-3 text-sm">
               <List className="size-4" aria-hidden="true" />

@@ -1,6 +1,6 @@
 # Raccourcis clavier
 
-Tous les raccourcis de l'application desktop, version 0.17.5. Le téléphone n'a pas de raccourci clavier ; ses champs reprennent la saisie Markdown et la fermeture des paires ci-dessous.
+Tous les raccourcis de l'application desktop, version 0.18.0. Le téléphone n'a pas de raccourci clavier ; ses champs reprennent la saisie Markdown et la fermeture des paires ci-dessous.
 
 Notes n'a plus de recherche à elle depuis la 0.17.4 (ni `Ctrl+K`, ni `Ctrl+Alt+Espace`) : les pages se cherchent avec la barre de recherche du poste.
 
@@ -25,7 +25,7 @@ Notes n'a plus de recherche à elle depuis la 0.17.4 (ni `Ctrl+K`, ni `Ctrl+Alt+
 
 ## Sommaire complet
 
-Le sommaire complet de la page (icône au-dessus du sommaire latéral, ou menu « ⋮ ») se pilote au clavier : flèches, `Entrée` pour aller au titre, `Échap`.
+Le sommaire complet de la page (menu « ⋮ », « Sommaire de la page ») se pilote au clavier : flèches, `Entrée` pour aller au titre, `Échap`.
 
 ## Arborescence
 
@@ -117,6 +117,8 @@ La paire ne s'ouvre que devant la fin de la ligne, une espace ou une ponctuation
 | `Ctrl+←` / `Ctrl+→` bref | Mot précédent / suivant |
 | `Ctrl+←` / `Ctrl+→` tenu | Cellule précédente / suivante |
 | `Entrée` | Cellule du dessous, nouvelle ligne sous la dernière |
+| `Ctrl+Entrée` / `Maj+Entrée` | Saut de ligne dans la cellule (`<br>` dans le fichier) |
+| Glisser la bordure entre deux colonnes | Régler la largeur des colonnes |
 | `↓` dans la dernière ligne | Sortir du tableau |
 | Grille de `/tableau` : flèches, `Entrée`, `Échap` | Choisir la taille, valider, abandonner |
 

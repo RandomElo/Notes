@@ -2,7 +2,7 @@ import { AiError, erreurDeConnexion, lignesDuFlux } from './chat';
 import type { ChatRequest, ChatResult } from './chat';
 
 /**
- * Client d'Ollama (README §12), servi sur le poste par le service systemd
+ * Client d'Ollama (docs/spec/ia.md), servi sur le poste par le service systemd
  * qu'installe son script officiel. API documentée : `/api/tags` pour les
  * modèles installés, `/api/show` pour leur architecture, `/api/ps` pour leur
  * place en mémoire vidéo, `/api/chat` en flux NDJSON.

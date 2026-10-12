@@ -24,7 +24,7 @@ function couleur(valeur: string): string {
   return (nomsDeCouleur as readonly string[]).includes(valeur) ? `var(${variableDeCouleur[valeur as ColorName]})` : valeur;
 }
 
-/** Le thème en variables CSS, à poser sur la racine du document (README §8). */
+/** Le thème en variables CSS, à poser sur la racine du document (docs/spec/theme.md). */
 export function variablesDuTheme(theme: Theme): Record<string, string> {
   const variables: Record<string, string> = {};
   for (const nom of nomsDeCouleur) {
@@ -92,7 +92,7 @@ export interface PageOverrides {
 /**
  * Surcharges d'une page (`theme_overrides` du front-matter). Seules les
  * couleurs de la palette se surchargent, pas la typographie ni les tailles,
- * pour que toutes les pages gardent la même allure (README §8).
+ * pour que toutes les pages gardent la même allure (docs/spec/theme.md).
  *
  * Une variable CSS qui renvoie à une autre est résolue là où elle est posée :
  * celles du thème qui renvoient à la palette sont donc reposées avec les

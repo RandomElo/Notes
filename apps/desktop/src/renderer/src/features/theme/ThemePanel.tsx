@@ -23,7 +23,7 @@ const classeDeBouton = 'inline-flex h-8 items-center justify-center gap-2 rounde
 type Enregistrement = { etat: 'repos' } | { etat: 'attente' } | { etat: 'fait' } | { etat: 'echec'; message: string };
 
 /**
- * Réglages du thème (README §8). Chaque réglage s'applique tout de suite à
+ * Réglages du thème (docs/spec/theme.md). Chaque réglage s'applique tout de suite à
  * l'écran, puis est écrit dans `.notes/theme.toml`, qui reste la référence et
  * se modifie aussi à la main.
  */

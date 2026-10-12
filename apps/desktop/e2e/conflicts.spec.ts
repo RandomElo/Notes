@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { editeur, fermer, lancer, lireCorps, lireVault, ouvrirPage, preparer } from './app';
 
-// Écran de résolution des conflits (README §5), sur une page qui a une version mise de côté.
+// Écran de résolution des conflits (docs/spec/sync.md), sur une page qui a une version mise de côté.
 
 const corpsA = 'Sortie longue dimanche : 18 km, puis footing.\n\n- Jeudi : 3 × 3 km\n\nFin\n';
 const corpsB = 'Sortie longue dimanche : 20 km, puis footing.\n\n* Jeudi : 2 × 5 km\n\nFin\n';

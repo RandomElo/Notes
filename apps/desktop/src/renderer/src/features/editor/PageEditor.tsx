@@ -1,6 +1,6 @@
 import { natureDIcone } from '@notes/core';
 import type { PageMode, TreeNode } from '@notes/core';
-import { convertirEnListe, ouvrirNouvelleTache, ecrireMarkdown, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
+import { avecLargeursDesTableaux, convertirEnListe, ouvrirNouvelleTache, ecrireMarkdown, largeursDesTableaux, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
 import type { ImageAttributes, OutlineEntry } from '@notes/document';
 import { SubpagesBlock, classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
 import { Node as NoeudTiptap } from '@tiptap/core';
@@ -17,6 +17,8 @@ import type { MemosState } from '../../../../shared/memos-contract';
 import { api } from '../../lib/ipc';
 import { estBooleen, useStoredState } from '../../state/useStoredState';
 import { AiDialog } from '../ai/AiDialog';
+import { blocsSelectionnes } from '../ai/selected-blocks';
+import type { BlockRange } from '../ai/selected-blocks';
 import { MemoList } from '../voice-memos/MemoList';
 import { BlockHandle } from '../blocks/BlockHandle';
 import { BlockKeys } from '../blocks/block-extension';
@@ -51,6 +53,8 @@ import type { SlashActions } from '../slash-menu/slash-extension';
 import { TableGridPicker } from '../tables/TableGridPicker';
 import { RowColumnGrips } from '../tables/RowColumnGrips';
 import { TableHandles } from '../tables/TableHandles';
+import { ColumnResize } from '../tables/column-resize';
+import { inscrireCibleDAjout } from '../markdown-drop/append-target';
 import { TableKeys } from '../tables/table-keys';
 import { OutlineDialog } from '../outline/OutlineDialog';
 import { OutlineRail } from '../outline/OutlineRail';
@@ -106,6 +110,7 @@ function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage
     SlashKeys,
     MentionKeys,
     TableKeys,
+    ColumnResize,
     CodePaste,
     ImageFiles.configure({ chemin, surErreur: surErreurDImage, surLienDImage }),
     ImageCopy.configure({ chemin, surErreur: surErreurDImage }),
@@ -123,7 +128,7 @@ function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage
   ];
 }
 
-type Chargement = { etat: 'lecture' } | { etat: 'pret'; corps: string; surcharges: Record<string, string> } | { etat: 'erreur'; message: string };
+type Chargement = { etat: 'lecture' } | { etat: 'pret'; corps: string; surcharges: Record<string, string>; largeurs: number[][] } | { etat: 'erreur'; message: string };
 
 interface PageEditorProps {
   /** La page ouverte. Le composant est recréé quand on change de page (clé = identifiant). */
@@ -149,7 +154,7 @@ interface PageEditorProps {
   surExport: () => void;
   /** Passe la page en mode liste de tâches, ou l'en sort. Rend le message d'erreur, null sinon. */
   surMode: (mode: PageMode | null) => Promise<string | null>;
-  /** Mémos en attente, pour la page « Mémos vocaux » seulement (README §13) ; null pour toute autre page. */
+  /** Mémos en attente, pour la page « Mémos vocaux » seulement (docs/spec/memos.md) ; null pour toute autre page. */
   memos: MemosState | null;
   surMemos: (etat: MemosState) => void;
 }
@@ -170,6 +175,8 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   const sommaire = useOutline(editeur);
   const [sommaireOuvert, definirSommaireOuvert] = useState(false);
   const [iaOuverte, definirIaOuverte] = useState(false);
+  // Blocs sélectionnés à l'ouverture des fonctions IA : elles ne portent que sur eux. null : toute la page.
+  const [zoneIa, definirZoneIa] = useState<BlockRange | null>(null);
   // Menu « ⋮ » du haut de la page, ouvert sous son bouton.
   const [menu, definirMenu] = useState<{ x: number; y: number } | null>(null);
   const boutonMenu = useRef<HTMLButtonElement>(null);
@@ -204,7 +211,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
     let actif = true;
     void api.lirePage({ chemin: cheminDeDepart.current }).then((lu) => {
       if (actif) {
-        definirChargement(lu.ok ? { etat: 'pret', corps: lu.corps, surcharges: lu.surcharges } : { etat: 'erreur', message: lu.erreur.message });
+        definirChargement(lu.ok ? { etat: 'pret', corps: lu.corps, surcharges: lu.surcharges, largeurs: lu.largeursDesTableaux } : { etat: 'erreur', message: lu.erreur.message });
       }
     });
     return () => {
@@ -226,7 +233,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
 
   return (
     <div data-zone-page style={couleurs as CSSProperties} className="bg-fond text-texte -mr-6 -ml-12 flex min-h-full pr-6 pl-12">
-      <article className="mx-auto max-w-(--ui-largeur-contenu) min-w-0 flex-1 pb-24">
+      <article className="mx-auto max-w-(--ui-largeur-contenu) min-w-0 flex-1 pb-[40vh]">
         {/* Reste visible quand la page défile : c'est là que s'affiche le résultat de l'enregistrement. */}
         <div className="bg-fond sticky top-0 z-10 -mx-2 flex items-center justify-between gap-4 px-2 py-2">
           <p className="text-discret min-w-0 truncate text-xs">{noeud.chemin.split('/').join(' / ')}</p>
@@ -284,6 +291,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
         {chargement.etat === 'pret' && (
           <EditorSurface
             corps={chargement.corps}
+            largeurs={chargement.largeurs}
             id={noeud.id ?? ''}
             chemin={noeud.chemin}
             surOuvrirPage={surOuvrirPage}
@@ -315,7 +323,14 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
               ? []
               : ([
                   { libelle: modeListe ? 'Quitter le mode liste' : 'Passer en liste de tâches', icone: ListChecks, action: () => void basculerModeListe() },
-                  { libelle: 'Fonctions IA', icone: Sparkles, action: () => definirIaOuverte(true) },
+                  {
+                    libelle: 'Fonctions IA',
+                    icone: Sparkles,
+                    action: () => {
+                      definirZoneIa(editeur === null ? null : blocsSelectionnes(editeur.state));
+                      definirIaOuverte(true);
+                    },
+                  },
                 ] satisfies MenuItem[])),
             { libelle: 'Exporter la page', icone: Download, action: surExport },
           ]}
@@ -324,17 +339,24 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           surAnnulation={() => boutonMenu.current?.focus()}
         />
       )}
-      {sommaireVisible && <OutlineRail entrees={sommaire.entrees} courant={sommaire.courant} surChoix={allerA} surSommaireComplet={() => definirSommaireOuvert(true)} />}
+      {sommaireVisible && <OutlineRail entrees={sommaire.entrees} courant={sommaire.courant} surChoix={allerA} />}
       {iaOuverte && editeur !== null && (
         <AiDialog
           titre={noeud.titre}
-          lireCorps={lireLeCorps}
+          lireCorps={zoneIa === null ? lireLeCorps : () => ecrireMarkdown(editeur.state.doc.cut(zoneIa.from, zoneIa.to))}
+          surLaSelection={zoneIa !== null}
           surAcceptation={(markdown) => {
             if (editeur.isDestroyed) {
               return;
             }
             // Une seule transaction, gardée dans l'historique : Ctrl+Z rend la page d'avant. L'enregistrement suit comme pour une frappe.
-            editeur.commands.setContent(lireMarkdown(markdown).document.toJSON() as object, { emitUpdate: true });
+            if (zoneIa === null) {
+              editeur.commands.setContent(lireMarkdown(markdown).document.toJSON() as object, { emitUpdate: true });
+            } else {
+              // Seuls les blocs sélectionnés sont remplacés ; la fenêtre, modale, a empêché toute frappe entre-temps.
+              const contenu = editeur.schema.nodeFromJSON(lireMarkdown(markdown).document.toJSON()).content;
+              editeur.view.dispatch(editeur.state.tr.replaceWith(zoneIa.from, zoneIa.to, contenu));
+            }
           }}
           surFermeture={() => {
             definirIaOuverte(false);
@@ -360,6 +382,8 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
 
 interface EditorSurfaceProps {
   corps: string;
+  /** Largeur des colonnes de chaque tableau, lue dans l'en-tête de la page (`table_widths`). */
+  largeurs: number[][];
   /** Identifiant de la page : son éditeur suit le renommage des pages qu'elle mentionne. */
   id: string;
   surOuvrirPage: (id: string, nouvelOnglet: boolean) => void;
@@ -381,12 +405,12 @@ interface EditorSurfaceProps {
   surEditeur: (editeur: Editor | null) => void;
   /** Donne à la page de quoi lire son corps en Markdown, pour les fonctions IA. */
   surLecteurDeCorps: (lecteur: (() => string) | null) => void;
-  /** La page est en mode liste de tâches (README §14). */
+  /** La page est en mode liste de tâches (docs/spec/liste-de-taches.md). */
   modeListe: boolean;
   surModeListe: () => void;
 }
 
-function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur, surLecteurDeCorps, modeListe, surModeListe }: EditorSurfaceProps) {
+function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur, surLecteurDeCorps, modeListe, surModeListe }: EditorSurfaceProps) {
   const [erreurDImage, definirErreurDImage] = useState<string | null>(null);
   // Position où ouvrir la grille de taille d'un tableau (`/tableau`), null quand elle est fermée.
   const [grille, definirGrille] = useState<number | null>(null);
@@ -394,6 +418,11 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
   // Lien d'image collé, en attente de la réponse : télécharger ou garder le lien.
   const [lienColle, definirLienColle] = useState<{ adresse: string; position: number } | null>(null);
   const depart = useMemo(() => lireMarkdown(corps), [corps]);
+  // Les largeurs de l'en-tête, posées une fois sur les tableaux du document de départ (le Markdown n'en dit rien).
+  const largeursDeDepart = useRef(largeurs);
+  const documentDeDepart = useMemo(() => avecLargeursDesTableaux(depart.document, largeursDeDepart.current), [depart]);
+  // Dernières largeurs connues du fichier : une bordure glissée, un tableau ajouté ou retiré les change.
+  const largeursEnregistrees = useRef(JSON.stringify(largeursDesTableaux(documentDeDepart)));
   // « Terminé » replié ou non, retenu page par page : une préférence d'affichage, pas le contenu.
   const [replie, definirReplie] = useStoredState(`notes.termine-replie.${id}`, false, estBooleen);
   const modeListeActuel = useRef({ modeListe, surModeListe });
@@ -436,6 +465,7 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
             chemin: cheminActuel.current,
             corps: nouveau,
             corpsDeBase,
+            ...(editeurActuel.current === null ? {} : { largeursDesTableaux: largeursDesTableaux(editeurActuel.current.state.doc) }),
           }),
         surEtat,
         // Une version gardée à côté se signale par le bandeau des conflits, relu au changement du dossier.
@@ -461,13 +491,17 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
 
   const editeur = useEditor({
     extensions,
-    content: depart.document.toJSON() as object,
+    content: documentDeDepart.toJSON() as object,
     editorProps: {
       attributes: {
         class: `${classeDePage} min-h-64`,
         'aria-label': 'Contenu de la page',
         spellcheck: 'false',
       },
+      // La ligne en cours ne descend jamais dans le dernier tiers de la fenêtre : la page défile avant (docs/spec/editeur.md).
+      // En haut, de quoi rester sous la barre collante de la page.
+      scrollThreshold: { top: 64, bottom: Math.round(window.innerHeight / 3), left: 0, right: 0 },
+      scrollMargin: { top: 64, bottom: Math.round(window.innerHeight / 3), left: 0, right: 0 },
       // Flèche haut tout au début du contenu : le curseur remonte dans le titre de la page.
       handleKeyDown: (vue, evenement) => {
         const { selection, doc } = vue.state;
@@ -484,7 +518,13 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
         return true;
       },
     },
-    onUpdate: () => {
+    onUpdate: ({ editor: modifie }) => {
+      // Largeurs changées sans que le corps change (bordure glissée, Ctrl+Z) : elles partent seules dans l'en-tête.
+      const largeursActuelles = largeursDesTableaux(modifie.state.doc);
+      if (JSON.stringify(largeursActuelles) !== largeursEnregistrees.current) {
+        largeursEnregistrees.current = JSON.stringify(largeursActuelles);
+        void api.enregistrerLargeursDesTableaux({ chemin: cheminActuel.current, largeursDesTableaux: largeursActuelles });
+      }
       sauvegarde.signalerModification();
       surFrappe();
     },
@@ -531,6 +571,21 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
       }),
     [editeur, id],
   );
+
+  // Le texte d'un fichier Markdown déposé dans la fenêtre peut s'ajouter à la fin de cette page (docs/spec/interface.md),
+  // pas en lecture seule ni en mode liste, où tout bloc devient une tâche.
+  useEffect(() => {
+    if (lectureSeule || modeListe) {
+      return undefined;
+    }
+    return inscrireCibleDAjout((markdown) => {
+      if (editeur.isDestroyed) {
+        return;
+      }
+      const contenu = editeur.schema.nodeFromJSON(lireMarkdown(markdown).document.toJSON()).content;
+      editeur.view.dispatch(editeur.state.tr.insert(editeur.state.doc.content.size, contenu).scrollIntoView());
+    });
+  }, [editeur, lectureSeule, modeListe]);
 
   // L'état de repli n'est lu qu'à l'activation : ensuite, c'est le bouton de la section qui le change dans l'éditeur.
   const replieRetenu = useRef(replie);
@@ -590,7 +645,10 @@ function EditorSurface({ corps, id, surOuvrirPage, chemin, surEtat, surSousPage,
           const relu = lireMarkdown(lu.corps);
           source.current = relu.source;
           sauvegarde.remplacerBase(lu.corps);
-          editeur.commands.setContent(relu.document.toJSON() as object, {
+          // Les largeurs des tableaux viennent avec la nouvelle version : sans elles, la frappe suivante les effacerait de l'en-tête.
+          const document = avecLargeursDesTableaux(relu.document, lu.largeursDesTableaux);
+          largeursEnregistrees.current = JSON.stringify(largeursDesTableaux(document));
+          editeur.commands.setContent(document.toJSON() as object, {
             emitUpdate: false,
           });
         });

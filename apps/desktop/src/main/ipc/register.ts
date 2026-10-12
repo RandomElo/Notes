@@ -12,11 +12,13 @@ import type { creerHandlersSync } from './sync';
 import type { creerHandlersTheme } from './theme';
 import type { creerHandlersCorbeille } from './trash';
 import type { creerHandlersVault } from './vault';
+import type { creerHandlersDepotMarkdown } from './markdown-drop';
 import type { creerHandlersFenetre } from './window';
 
 export interface IpcDependencies {
   nas: ReturnType<typeof creerHandlersNas>;
   vault: ReturnType<typeof creerHandlersVault>;
+  depot: ReturnType<typeof creerHandlersDepotMarkdown>;
   fenetre: ReturnType<typeof creerHandlersFenetre>;
   theme: ReturnType<typeof creerHandlersTheme>;
   sync: ReturnType<typeof creerHandlersSync>;
@@ -39,7 +41,7 @@ export interface IpcDependencies {
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, memos, lancement, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, memos, lancement, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -79,6 +81,9 @@ export function enregistrerCanaux({ nas, vault, fenetre, theme, sync, images, li
   brancher(canaux.importer, (demande) => vault.importer(demande));
   brancher(canaux.lirePage, (demande) => vault.lirePage(demande));
   brancher(canaux.enregistrerPage, (demande) => vault.enregistrerPage(demande));
+  brancher(canaux.enregistrerLargeursDesTableaux, (demande) => vault.enregistrerLargeursDesTableaux(demande));
+  brancher(canaux.creerPagesDepuisMarkdown, (demande) => depot.creerPages(demande));
+  brancher(canaux.markdownAAjouter, (demande) => depot.texteAAjouter(demande));
   brancher(canaux.listerConflits, (demande) => vault.listerConflits(demande));
   brancher(canaux.lireConflit, (demande) => vault.lireConflit(demande));
   brancher(canaux.resoudreConflit, (demande) => vault.resoudreConflit(demande));

@@ -3,7 +3,7 @@ import { VaultError } from './context';
 import type { VaultContext } from './context';
 
 /**
- * Dictionnaire personnel de la correction orthographique (README §11) : un mot
+ * Dictionnaire personnel de la correction orthographique (docs/spec/correction.md) : un mot
  * par ligne dans `.notes/dictionary.txt`, synchronisé avec le reste. Même forme
  * pour les remarques ignorées, plus bas. Lisible et
  * modifiable à la main ; une ligne qui commence par `#` est un commentaire.
@@ -74,7 +74,7 @@ export async function ajouterAuDictionnaire(contexte: VaultContext, mot: string)
 }
 
 /**
- * Remarques écartées par « Ignorer » (README §11), gardées pour toujours et
+ * Remarques écartées par « Ignorer » (docs/spec/correction.md), gardées pour toujours et
  * sur tous les appareils : une ligne par remarque dans
  * `.notes/spelling-ignored.txt`, la règle de LanguageTool puis le passage
  * concerné (`A_ACCENT a`). La remarque n'est plus montrée nulle part.

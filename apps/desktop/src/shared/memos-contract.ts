@@ -1,5 +1,5 @@
 /**
- * Mémos vocaux (README §13) : ce que le main et le renderer s'échangent. Les
+ * Mémos vocaux (docs/spec/memos.md) : ce que le main et le renderer s'échangent. Les
  * canaux sont dans `ipc-contract.ts`, avec les autres.
  */
 
@@ -48,7 +48,7 @@ export type MemoConversion = { ok: true; wav: Uint8Array; duree: number } | { ok
 export type MemoAcceptance = { ok: true; chemin: string; id: string } | { ok: false; message: string };
 
 /**
- * Durées estimées avant de transcrire (README §13) : par mémo, la transcription
+ * Durées estimées avant de transcrire (docs/spec/memos.md) : par mémo, la transcription
  * et la mise en forme ; null quand on ne peut pas l'estimer (durée de l'audio
  * illisible, IA locale absente ou jamais utilisée sur ce poste).
  */

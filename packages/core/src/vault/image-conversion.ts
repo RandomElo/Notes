@@ -8,7 +8,7 @@ import type { VaultContext } from './context';
 import { estIgnore } from './tree';
 
 /**
- * Conversion des images en WebP (README §6, décision du 2026-10-03) : toute
+ * Conversion des images en WebP (docs/spec/editeur.md, décision du 2026-10-03) : toute
  * image reçue est enregistrée en WebP compressé, et les images déjà dans le
  * dossier des notes se convertissent à la demande. La conversion elle-même
  * (décodage, réduction, compression) est faite par l'application, qui a un

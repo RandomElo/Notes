@@ -1,11 +1,11 @@
-import { Extension } from '@tiptap/core';
+import { Extension, mergeAttributes } from '@tiptap/core';
 import { Table as Tableau, TableCell as Cellule, TableHeader as CelluleDEntete, TableRow as Ligne } from '@tiptap/extension-table';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Plugin } from '@tiptap/pm/state';
 
 /**
- * Tableaux GFM (README §6) : mise en page seulement. Une cellule contient un
- * seul paragraphe, sans saut de ligne (Markdown n'en a pas dans un tableau).
+ * Tableaux GFM (docs/spec/editeur.md) : mise en page seulement. Une cellule contient un
+ * seul paragraphe ; ses sauts de ligne s'écrivent `<br>` dans le fichier.
  * La première ligne est toujours l'en-tête, comme dans le fichier.
  * L'alignement est celui de la colonne : chaque cellule le porte, et la ligne
  * de séparation du fichier l'écrit (`:--`, `:-:`, `--:`).
@@ -14,7 +14,26 @@ import { Plugin } from '@tiptap/pm/state';
 export const alignements = ['left', 'center', 'right'] as const;
 export type TableAlign = (typeof alignements)[number];
 
-export const Table = Tableau.configure({ resizable: false, allowTableNodeSelection: false });
+/**
+ * Le tableau prend toute la largeur, colonnes fixes : elles ne bougent pas
+ * pendant la frappe. `largeurs` (pourcentages, une par colonne) vient de
+ * l'en-tête de la page (`table_widths`), pas du Markdown ; sans elles, les
+ * colonnes sont égales. Rendu sans vue maison (`View: null`) : le même
+ * `<colgroup>` partout, éditeur, téléphone et export.
+ */
+export const Table = Tableau.extend({
+  addAttributes() {
+    return { ...this.parent?.(), largeurs: { default: null, rendered: false } };
+  },
+  renderHTML({ node, HTMLAttributes }) {
+    const largeurs = node.attrs['largeurs'] as number[] | null;
+    const colonnes = node.firstChild?.childCount ?? 0;
+    const valables = largeurs !== null && largeurs.length === colonnes;
+    const cols = Array.from({ length: colonnes }, (_, index) => ['col', valables ? { style: `width: ${largeurs[index]}%` } : {}]);
+    // L'enveloppe `tableWrapper` est celle de TipTap : défilement, sélection du bloc et poignées s'y accrochent.
+    return ['div', { class: 'tableWrapper' }, ['table', mergeAttributes(this.options.HTMLAttributes, HTMLAttributes), ['colgroup', ...cols], ['tbody', 0]]];
+  },
+}).configure({ resizable: false, allowTableNodeSelection: false, View: null });
 
 export const TableRow = Ligne;
 

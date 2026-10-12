@@ -15,7 +15,7 @@ function enKebab(nom: string): string {
 export const nomsLucide: string[] = Object.keys(icons).map(enKebab).sort();
 
 /**
- * Icônes qui correspondent à la recherche (README §6) : par un mot français
+ * Icônes qui correspondent à la recherche (docs/spec/editeur.md) : par un mot français
  * de la table (« maison » trouve `house`), ou directement par le nom anglais.
  * Les correspondances françaises passent devant.
  */

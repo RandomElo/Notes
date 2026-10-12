@@ -27,4 +27,21 @@ describe('tableau', () => {
     });
     expect(aligns).toEqual(['right', null, 'right', null]);
   });
+
+  it('lit et écrit `<br>` comme un saut de ligne dans une cellule, et seulement là', () => {
+    const { document, source } = lireMarkdown('| a | b |\n| --- | --- |\n| un<br>deux | x |\n\nTexte <br> brut.\n');
+    const cellule = document.firstChild!.child(1).child(0).firstChild!;
+    expect(cellule.childCount).toBe(3);
+    expect(cellule.child(1).type.name).toBe('hardBreak');
+    expect(document.lastChild!.textContent).toBe('Texte <br> brut.');
+    // La cellule modifiée garde son saut de ligne en `<br>`.
+    let position = -1;
+    document.descendants((noeud, pos) => {
+      if (noeud.isText && noeud.text === 'x') {
+        position = pos;
+      }
+    });
+    const nouveau = new Transform(document).insert(position + 1, document.type.schema.text('y')).doc;
+    expect(ecrireMarkdown(nouveau, source)).toBe('| a          | b   |\n| ---------- | --- |\n| un<br>deux | xy  |\n\nTexte <br> brut.\n');
+  });
 });

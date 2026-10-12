@@ -36,7 +36,7 @@ export function libelleDeTempsRestant(ms: number): string {
 }
 
 /**
- * Temps restant d'un appel à l'IA (README §12). Avant les premiers mots, et
+ * Temps restant d'un appel à l'IA (docs/spec/ia.md). Avant les premiers mots, et
  * tant qu'ils sont peu nombreux, c'est l'estimation moins le temps écoulé ;
  * ensuite, la part déjà reçue donne la vitesse réelle de cet appel.
  */

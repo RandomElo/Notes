@@ -2,8 +2,8 @@ import type { RemoteFsErrorCode } from '../fs/remote-fs';
 import type { CycleReport } from './engine';
 
 /**
- * État de la sync affiché dans la barre de statut (README §5). « desactivee »
- * s'ajoute aux cinq états du README : NAS pas réglé ou mot de passe à saisir.
+ * État de la sync affiché dans la barre de statut (docs/spec/sync.md). « desactivee »
+ * s'ajoute aux cinq états de docs/spec/sync.md : NAS pas réglé ou mot de passe à saisir.
  */
 export type SyncStatusKind = 'desactivee' | 'en_cours' | 'synchronise' | 'en_attente' | 'injoignable' | 'conflit';
 

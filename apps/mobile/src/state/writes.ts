@@ -2,7 +2,7 @@ import { LocalFsError, RemoteFsError, VaultError } from '@notes/core';
 import type { DirectWriteResult } from '@notes/core';
 
 /*
- * Messages des modifications faites sur le téléphone (README §15). Rien
+ * Messages des modifications faites sur le téléphone (docs/spec/android.md). Rien
  * n'est gardé pour plus tard : un refus dit pourquoi, et la page reste
  * comme sur le NAS.
  */

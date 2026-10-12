@@ -49,7 +49,7 @@ private class AutreMachine : Exception()
 
 /**
  * Une session SMB vers le NAS, gardée ouverte tant que l'application tourne
- * (README §5) et rouverte d'elle-même après une coupure. Règle 10 du projet :
+ * (docs/spec/sync.md) et rouverte d'elle-même après une coupure. Règle 10 du projet :
  * SMB 3.1.1 seul, signature exigée, chiffrement imposé par le client ; si
  * l'un des trois manque, la connexion est refusée, sans repli.
  *
@@ -243,7 +243,7 @@ class SmbSession(private val identites: IdentitesConnues? = null) {
                 fichier.inputStream.use { it.readBytes() }
             }
 
-        /** Écrit dans un fichier temporaire du même dossier, puis le renomme : l'autre appareil ne lit jamais un fichier à moitié écrit (README §5). */
+        /** Écrit dans un fichier temporaire du même dossier, puis le renomme : l'autre appareil ne lit jamais un fichier à moitié écrit (docs/spec/sync.md). */
         fun ecrire(disque: DiskShare, chemin: String, contenu: ByteArray) {
             val dossier = chemin.substringBeforeLast('/', "")
             val nom = chemin.substringAfterLast('/')

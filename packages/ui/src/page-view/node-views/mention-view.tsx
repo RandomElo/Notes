@@ -34,7 +34,7 @@ export interface MentionViewOptions {
 const sansAnnuaire = { lire: () => undefined, abonner: () => () => undefined };
 
 /**
- * Une mention à l'écran (README §6) : l'icône et le titre courant de la
+ * Une mention à l'écran (docs/spec/editeur.md) : l'icône et le titre courant de la
  * page, pas le texte du fichier. Si la page n'existe pas, le texte du fichier
  * barré. Tout est posé comme texte par React, rien n'est interprété.
  */

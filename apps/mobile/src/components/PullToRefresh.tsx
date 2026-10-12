@@ -3,7 +3,7 @@ import type { ReactNode, TouchEvent } from 'react';
 
 const seuil = 70;
 
-/** Tirer la liste vers le bas, depuis son haut, relance une sync (README §5). */
+/** Tirer la liste vers le bas, depuis son haut, relance une sync (docs/spec/sync.md). */
 export function PullToRefresh({ onRefresh, children }: { onRefresh: () => void; children: ReactNode }) {
   const depart = useRef<number | null>(null);
   const [tire, definirTire] = useState(0);

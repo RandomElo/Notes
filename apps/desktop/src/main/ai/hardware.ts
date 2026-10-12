@@ -4,7 +4,7 @@ import { join } from 'node:path';
 
 /**
  * Carte graphique du poste, pour décider si un modèle local peut tourner
- * (README §12). Rien n'est installé pour ça : une Radeon se lit dans `/sys`,
+ * (docs/spec/ia.md). Rien n'est installé pour ça : une Radeon se lit dans `/sys`,
  * une NVIDIA par son pilote (`/proc/driver/nvidia`, puis `nvidia-smi`, livré
  * avec lui, s'il est là). Le nom vient de Chromium (`app.getGPUInfo`).
  */

@@ -1,6 +1,6 @@
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 
-/** Un titre de la page, pour le sommaire (README §7). */
+/** Un titre de la page, pour le sommaire (docs/spec/interface.md). */
 export interface OutlineEntry {
   /** Niveau du titre dans le contenu, de 1 à 5. */
   niveau: number;

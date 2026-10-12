@@ -10,7 +10,7 @@ export type EtatNas =
   | { genre: 'refuse'; message: string }
   | { genre: 'erreur'; message: string };
 
-/** Codes qui ne se règlent pas en réessayant : on ne fait pas verrouiller le compte par le NAS (README §5). */
+/** Codes qui ne se règlent pas en réessayant : on ne fait pas verrouiller le compte par le NAS (docs/spec/sync.md). */
 export const codesBloquants: ReadonlySet<RemoteFsErrorCode> = new Set(['identifiants_refuses', 'partage_introuvable', 'chiffrement_absent', 'acces_refuse']);
 
 const messagesDeRefus: Partial<Record<RemoteFsErrorCode, string>> = {

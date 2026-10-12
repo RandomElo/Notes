@@ -61,7 +61,7 @@ const codesFatals = new Set(['injoignable', 'identifiants_refuses', 'partage_int
 class Reporte extends Error {}
 
 /**
- * Un cycle complet (README §5) : relevé des deux côtés, comparaison à
+ * Un cycle complet (docs/spec/sync.md) : relevé des deux côtés, comparaison à
  * l'index, transferts, mise à jour de l'index. Rien n'est jamais écrasé sans
  * que l'autre version soit gardée : quand les deux côtés divergent, la
  * version du NAS est sauvegardée à côté du fichier local, puis celle du poste

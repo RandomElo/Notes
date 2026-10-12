@@ -26,7 +26,7 @@ const boutonAccent = `${bouton} bg-accent/20 hover:bg-accent/35 focus-visible:bg
 const boutonDanger = `${bouton} bg-erreur/20 hover:bg-erreur/35 focus-visible:bg-erreur/45`;
 
 /**
- * Corbeille (README §10), à la place de la page : liste des entrées du poste
+ * Corbeille (docs/spec/corbeille.md), à la place de la page : liste des entrées du poste
  * et du NAS, aperçu en lecture seule de celle qu'on choisit, restaurer,
  * supprimer définitivement ou tout vider (avec confirmation, à côté du bouton).
  */

@@ -41,7 +41,7 @@ export function insererTableau(editor: Editor, position: number, colonnes: numbe
 }
 
 /**
- * Grille de taille du tableau (README §6) : on survole le nombre de colonnes
+ * Grille de taille du tableau (docs/spec/editeur.md) : on survole le nombre de colonnes
  * et de lignes voulu, le tableau est inséré au clic. Au clavier : flèches,
  * Entrée, Échap.
  */

@@ -5,6 +5,9 @@ describe('page d’un site', () => {
   it('lit le titre, og:title d’abord', () => {
     expect(titreDeLaPage('<html><head><title>  Le   Monde &amp; Co &#233;\n</title></head>')).toBe('Le Monde & Co é');
     expect(titreDeLaPage('<title>x</title><meta property="og:title" content="Titre &quot;OG&quot;">')).toBe('Titre "OG"');
+    expect(titreDeLaPage('<title>Course | </title>')).toBe('Course');
+    expect(titreDeLaPage('<title> — Accueil · </title>')).toBe('Accueil');
+    expect(titreDeLaPage('<title> | </title>')).toBeNull();
     expect(titreDeLaPage('<p>rien</p>')).toBeNull();
     expect(titreDeLaPage('<title><script>alert(1)</script></title>')).toBe('<script>alert(1)</script>');
   });

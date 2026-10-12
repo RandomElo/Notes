@@ -1,5 +1,4 @@
 import type { OutlineEntry } from '@notes/document';
-import { List } from 'lucide-react';
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { libelleDuTitre } from './useOutline';
 
@@ -30,18 +29,16 @@ interface OutlineRailProps {
   entrees: readonly OutlineEntry[];
   courant: number;
   surChoix: (entree: OutlineEntry) => void;
-  /** Ouvre le sommaire complet (icône au-dessus des traits). */
-  surSommaireComplet: () => void;
 }
 
 /**
- * Sommaire latéral permanent (README §7), à droite de la page : au repos, un
+ * Sommaire latéral permanent (docs/spec/interface.md), à droite de la page : au repos, un
  * trait par titre, celui où en est la lecture à la couleur d'accent ; au
  * survol ou au focus, les titres en clair. Hauteur limitée : quand les titres
  * ne tiennent pas, traits et liste défilent pour garder le titre en cours au
  * milieu, si bien qu'au survol son nom s'affiche à la hauteur de son trait.
  */
-export function OutlineRail({ entrees, courant, surChoix, surSommaireComplet }: OutlineRailProps) {
+export function OutlineRail({ entrees, courant, surChoix }: OutlineRailProps) {
   const [ouvert, definirOuvert] = useState(false);
   const montrees = entrees.map((entree, rang) => ({ entree, rang }));
   const allume = courant;
@@ -79,18 +76,8 @@ export function OutlineRail({ entrees, courant, surChoix, surSommaireComplet }: 
     return null;
   }
   return (
-    // L'icône du sommaire complet juste au-dessus des traits, alignée sur leur bord droit (demande d'Eloi), hors de la
-    // zone de survol : la liste qui s'ouvre au survol des traits ne la recouvre pas.
+    // Le sommaire complet s'ouvre par le menu « ⋮ » de la page : pas d'icône ici.
     <div className="sticky top-14 -mr-4 ml-2 flex w-6 shrink-0 flex-col items-end self-start">
-      <button
-        type="button"
-        onClick={surSommaireComplet}
-        aria-label="Sommaire de la page"
-        title="Sommaire de la page"
-        className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte -mr-1 flex size-6 items-center justify-center rounded outline-0"
-      >
-        <List className="size-4" aria-hidden="true" />
-      </button>
       <nav
         aria-label="Sommaire"
         className="relative w-6"
@@ -106,7 +93,7 @@ export function OutlineRail({ entrees, courant, surChoix, surSommaireComplet }: 
         <div
           ref={traits}
           aria-hidden={ouvert}
-          className={`relative flex flex-col items-end gap-2 overflow-hidden py-2 ${hauteurMax} ${estompage(caches)}`}
+          className={`relative flex flex-col items-end gap-2 overflow-hidden overscroll-contain py-2 ${hauteurMax} ${estompage(caches)}`}
           onScroll={relireCaches}
         >
           {montrees.map(({ entree, rang }) => (
@@ -121,7 +108,7 @@ export function OutlineRail({ entrees, courant, surChoix, surSommaireComplet }: 
         </div>
         <ul
           ref={liste}
-          className={`border-bordure bg-surface absolute top-0 right-0 w-64 overflow-y-auto rounded-lg border p-1.5 shadow-xl ${hauteurMax} ${ouvert ? '' : 'sr-only'}`}
+          className={`border-bordure bg-surface absolute top-0 right-0 w-64 overflow-y-auto overscroll-contain rounded-lg border p-1.5 shadow-xl ${hauteurMax} ${ouvert ? '' : 'sr-only'}`}
         >
           {montrees.map(({ entree, rang }) => (
             <li key={entree.position} data-allume={rang === allume ? true : undefined}>

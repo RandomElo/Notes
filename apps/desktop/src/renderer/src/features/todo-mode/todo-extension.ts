@@ -7,7 +7,7 @@ import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { EditorView } from '@tiptap/pm/view';
 
 /*
- * Mode liste de tâches dans l'éditeur (README §14) : la page n'est qu'une
+ * Mode liste de tâches dans l'éditeur (docs/spec/liste-de-taches.md) : la page n'est qu'une
  * liste de tâches, sans titres ; tout ce qu'on écrit y devient une tâche, un
  * bloc (code, tableau…) se range sous une tâche ; une tâche cochée descend
  * dans la section « Terminé » (titre et repli en décorations, rien dans le

@@ -35,7 +35,7 @@ import yaml from 'highlight.js/lib/languages/yaml';
 import { createLowlight } from 'lowlight';
 
 /**
- * Coloration des blocs de code (README §6) avec lowlight, la grammaire de
+ * Coloration des blocs de code (docs/spec/editeur.md) avec lowlight, la grammaire de
  * highlight.js, pour une liste courte de langages choisie par Eloi. Ce sont des
  * décorations : le texte du bloc ne change pas, rien n'est écrit dans le
  * fichier. Un langage hors de la liste reste écrit tel quel dans le fichier,

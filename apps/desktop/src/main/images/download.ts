@@ -21,7 +21,7 @@ function nomDansLAdresse(url: URL): string | null {
 
 /**
  * Télécharge une image d'Internet que l'utilisateur a collée et accepté de
- * garder dans la page (README §6). Seulement http et https, sans cookies,
+ * garder dans la page (docs/spec/editeur.md). Seulement http et https, sans cookies,
  * dans un délai et une taille bornés. Les octets doivent être ceux d'une
  * image reconnue : ce que dit le serveur ne suffit pas.
  */

@@ -32,7 +32,7 @@ function heure(iso: string | null): string {
 }
 
 /**
- * Écran de résolution d'un conflit (README §5) : la page (A) et la version
+ * Écran de résolution d'un conflit (docs/spec/sync.md) : la page (A) et la version
  * mise de côté (B) face à face dans la page, bloc par bloc. Rien n'est écrit
  * avant « Valider », qui enregistre la page et supprime la version mise de côté.
  */

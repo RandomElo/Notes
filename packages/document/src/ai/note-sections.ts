@@ -1,7 +1,7 @@
 import { decouperFences } from './reserved-blocks';
 
 /**
- * Mise au propre section par section (README §12). Un modèle local de 8
+ * Mise au propre section par section (docs/spec/ia.md). Un modèle local de 8
  * milliards de paramètres, à qui l'on donne toute une page, la recopie presque
  * telle quelle ; sur une section seule, il suit la consigne (essais du
  * 2026-10-12 sur des notes de cours). Les titres ne passent pas par le

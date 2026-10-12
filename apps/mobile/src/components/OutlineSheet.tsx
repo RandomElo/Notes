@@ -4,7 +4,7 @@ import { Sheet } from './Sheet';
 /** Taille du texte selon le niveau du titre, comme dans la page : un titre 1 plus grand qu'un titre 3. */
 const tailles = ['', 'text-lg font-semibold', 'text-base font-semibold', 'text-[0.95rem] font-medium', 'text-sm', 'text-sm'];
 
-/** Sommaire en version modale (README §15) : les titres de la page, avec leurs « # », un toucher y emmène. */
+/** Sommaire en version modale (docs/spec/android.md) : les titres de la page, avec leurs « # », un toucher y emmène. */
 export function OutlineSheet({ entrees, choisir, fermer }: { entrees: readonly OutlineEntry[]; choisir: (rang: number) => void; fermer: () => void }) {
   return (
     <Sheet titre="Sommaire" fermer={fermer}>

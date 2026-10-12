@@ -78,7 +78,7 @@ export function lireDemande(demande: unknown): ExportRequest | null {
   return null;
 }
 
-/** Handlers des canaux « export: » (README §9). */
+/** Handlers des canaux « export: » (docs/spec/export.md). */
 export function creerHandlersExport({ choisirDestination, imprimer, ecrire, montrer, ouvrir, lireImage }: ExportHandlersDependencies) {
   // Seuls les fichiers que l'utilisateur vient d'exporter peuvent être montrés.
   const exportes = new Set<string>();

@@ -198,7 +198,7 @@ function Appels({ appels }: { appels: AiRun[] }) {
   );
 }
 
-/** Historique des fonctions IA (README §12), ouvert depuis les réglages. */
+/** Historique des fonctions IA (docs/spec/ia.md), ouvert depuis les réglages. */
 export function AiUsageScreen() {
   const [vue, definirVue] = useState<AiUsageView | null>(null);
   const [periode, definirPeriode] = useStoredState<UsagePeriod>('notes.ia.periode', 'jour', estPeriode);

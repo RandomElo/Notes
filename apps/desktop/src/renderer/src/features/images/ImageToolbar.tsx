@@ -21,7 +21,7 @@ interface ImageToolbarProps {
 }
 
 /**
- * Barre d'outils d'une image sélectionnée (README §6) : taille (Petit, Moyen,
+ * Barre d'outils d'une image sélectionnée (docs/spec/editeur.md) : taille (Petit, Moyen,
  * Grand ; une autre largeur se règle par les bords de l'image, voir
  * ImageResizeHandles), alignement, texte alternatif et légende, visionneuse. Grand (toute la page) et le centrage sont les valeurs par
  * défaut : rien n'est écrit dans le fichier pour elles.

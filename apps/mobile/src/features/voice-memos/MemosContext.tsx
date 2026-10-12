@@ -37,7 +37,7 @@ export function useMemos(): MemosValue {
 }
 
 /**
- * Mémos vocaux du téléphone (J17, README §13). Un mémo terminé attend dans le
+ * Mémos vocaux du téléphone (J17, docs/spec/memos.md). Un mémo terminé attend dans le
  * dossier privé de l'application ; il part dans `.notes/memos/` aussitôt si
  * le NAS répond, sinon à la première sync qui le joint. L'enregistrement
  * continue écran éteint (service Android) : son état est relu au retour dans

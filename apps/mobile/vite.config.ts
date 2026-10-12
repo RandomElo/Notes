@@ -7,7 +7,7 @@ import type { Plugin } from 'vite';
 const { version } = JSON.parse(readFileSync(new URL('./package.json', import.meta.url), 'utf8')) as { version: string };
 
 /**
- * CSP stricte de la WebView (README §16), posée à la construction seulement :
+ * CSP stricte de la WebView (docs/spec/securite.md), posée à la construction seulement :
  * le serveur de développement a besoin de scripts en ligne. Rien de distant :
  * les images viennent du cache en adresses `blob:`.
  */

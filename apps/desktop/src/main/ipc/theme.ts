@@ -4,7 +4,7 @@ import { texteDuTheme, texteDuThemeParDefaut, verifierTheme } from '@notes/ui/th
 import type { ThemeActionResult, ThemeFile } from '../../shared/ipc-contract';
 import type { VaultService } from '../vault/vault-service';
 
-/** Dossier des réglages rangés dans le vault, et le fichier de thème qu'il contient (README §8). */
+/** Dossier des réglages rangés dans le vault, et le fichier de thème qu'il contient (docs/spec/theme.md). */
 const dossierDesReglages = '.notes';
 const fichierDeTheme = `${dossierDesReglages}/theme.toml`;
 

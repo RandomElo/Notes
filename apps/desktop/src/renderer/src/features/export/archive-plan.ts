@@ -24,7 +24,7 @@ function nomDeLElement(noeud: TreeNode): string {
 const joindre = (dossier: string, nom: string): string => (dossier === '' ? nom : `${dossier}/${nom}`);
 
 /**
- * Plan de l'archive d'une page et de ses sous-pages (README §9, choix d'Eloi) :
+ * Plan de l'archive d'une page et de ses sous-pages (docs/spec/export.md, choix d'Eloi) :
  * à la racine, `assets/` (images, feuille de style) et le fichier de la page ;
  * à côté de chaque fichier, un dossier à son nom avec ses sous-pages, et ainsi
  * de suite. Deux éléments au même nom dans un dossier (une note `x.md` à côté

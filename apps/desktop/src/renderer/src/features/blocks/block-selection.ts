@@ -5,7 +5,7 @@ import { estUnite, plageDEnfants } from './block-ranges';
 import type { BlockRange } from './block-ranges';
 
 /**
- * Sélection d'un ou plusieurs blocs frères entiers (README §6). « ancre » et
+ * Sélection d'un ou plusieurs blocs frères entiers (docs/spec/editeur.md). « ancre » et
  * « tete » sont les positions de début du bloc d'où part la sélection et de
  * celui jusqu'où elle s'étend : Maj+flèche déplace la tête, l'ancre reste.
  */

@@ -1,0 +1,18 @@
+# Export
+
+Desktop uniquement.
+
+| Format | Portée | Images | Apparence | Usage |
+|---|---|---|---|---|
+| PDF | Page seule | Oui | Élevée | Impression, envoi formel |
+| Markdown | Page seule | Non (mention texte) | Nulle | Interopérabilité |
+| HTML autonome | Page seule | Oui (base64) | Maximale | Partage par fichier |
+| ZIP | Page et descendants | Oui | Selon format interne | Archivage |
+
+- PDF : la page est rendue hors écran avec les vues de l'éditeur, puis imprimée par Chromium (`printToPDF`) dans une fenêtre cachée, sans script ni réseau. Couleurs adaptées au papier : fond blanc et texte sombre ; les couleurs du thème (titres, accent, natures des callouts, puces) gardent leur teinte et sont foncées juste assez pour atteindre un contraste de 4,5:1 sur le blanc pour le texte, 3:1 pour les traits (vérifié par test). Les blocs de code gardent le fond sombre du thème et leurs couleurs. Titre de la page en tête, son icône à gauche sur la même ligne. Sommaire en tête quand la page est longue (au moins six titres de niveau 1 à 3, dont trois sous-parties), limité aux titres `#`, `##` et `###`, chaque entrée un lien vers son titre, de la couleur des liens. Règles de saut de page : titres jamais seuls en bas, code, images, tableaux et callouts non coupés quand ils tiennent sur une page (tableaux : en-tête répété si la coupure est inévitable), orphelines et veuves gérées. Pied de page : titre et numéro de page (« 3 / 12 »), sans auteur. Papier A4. Options : marges (étroites 12 mm, normales 20 mm, larges 30 mm), icônes ou non (de la page, des mentions, favicons des sites).
+- Markdown : front-matter retiré par défaut, gardé tel quel sur option, mentions de page écrites en texte simple (leur titre), images remplacées par une mention textuelle en italique (`*Image : texte alternatif, légende*`, le nom du fichier sans description), liens `notes://` mis en forme réduits à leur texte, jamais de citation : un callout s'écrit en paragraphes simples, son icône au début du premier. Une mention de site devient un lien Markdown normal.
+- HTML autonome : CSS et images inlinés en base64, coloration syntaxique précalculée, sommaire avec ancres (même règle que le PDF : six titres dont trois sous-parties ; ouvert, repliable), icône de la page à gauche du titre, aux couleurs du thème tel qu'à l'écran. Aucun script, et une politique de sécurité qui interdit tout chargement. Format recommandé pour partager en conservant l'apparence exacte.
+- ZIP : la page et ses sous-pages en pages web, reliées par une navigation en tête de chacune ; une mention d'une page de l'archive mène à elle. À la racine de l'archive : `assets/images/` (toutes les images, une fois chacune), `assets/html/style.css` (la feuille de style commune), et le fichier de la page (`Projets.html`) ; à côté de chaque fichier, un dossier à son nom avec ses sous-pages (`Projets/Refonte.html`, `Projets/Refonte/Étape 1.html`). Dans la fenêtre d'export, la liste des pages se coche et se décoche : décocher une page décoche ses sous-pages, qu'on peut recocher une à une ; une page décochée qui garde une sous-page reste dans la navigation, sans lien.
+- Accès : « Exporter la page » dans le menu « ⋮ » en haut de la page ouverte, sans raccourci, et pas dans le menu de l'arborescence. Une fenêtre choisit le format dans un menu déroulant (PDF, Markdown, HTML, Archive ZIP), dessiné comme le choix du type de bloc de la barre d'outils, avec une ligne d'explication et seulement les options du format choisi, puis la boîte « Enregistrer sous » du système. Le fichier écrit s'ouvre aussitôt avec le programme du système (lecteur PDF, navigateur, éditeur), pour voir le résultat.
+
+

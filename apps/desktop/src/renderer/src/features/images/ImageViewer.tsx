@@ -9,7 +9,7 @@ interface ImageViewerProps {
   surFermeture: () => void;
 }
 
-/** Visionneuse plein écran (README §6) : l'image entière sur fond sombre. Échap, le bouton ou un clic à côté la ferment. */
+/** Visionneuse plein écran (docs/spec/editeur.md) : l'image entière sur fond sombre. Échap, le bouton ou un clic à côté la ferment. */
 export function ImageViewer({ attributs, adresse, surFermeture }: ImageViewerProps) {
   const fenetre = useRef<HTMLDivElement>(null);
 

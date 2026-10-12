@@ -2,7 +2,7 @@ import { App } from '@capacitor/app';
 import { Network } from '@capacitor/network';
 
 /**
- * Ce qui doit relancer une sync (README §5) : le retour au premier plan et un
+ * Ce qui doit relancer une sync (docs/spec/sync.md) : le retour au premier plan et un
  * changement de réseau (wifi retrouvé, passage en 4G). L'application ne pilote
  * pas Tailscale : elle constate seulement si le NAS répond.
  */

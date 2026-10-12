@@ -4,7 +4,7 @@ import type { PageMeta, PageMode, PageRole } from './types';
 
 /**
  * Front-matter YAML d'une page. Les clés du fichier sont en anglais (id,
- * title, icon, created, updated, mode), comme décrit au §4 du README.
+ * title, icon, created, updated, mode), comme décrit dans docs/spec/stockage.md.
  *
  * Règle : on ne réécrit que ce qu'on change. Les clés inconnues, les
  * commentaires et l'ordre des clés d'un front-matter existant sont conservés.
@@ -116,6 +116,30 @@ export function lireSurcharges(enTete: string | null): Record<string, string> {
   return surcharges;
 }
 
+/** Au plus ce nombre de tableaux et de colonnes par tableau : un en-tête démesuré n'est pas lu. */
+const maxTableaux = 200;
+const maxColonnes = 50;
+
+/**
+ * Largeur des colonnes de chaque tableau (`table_widths`, docs/spec/stockage.md) :
+ * une liste par tableau, dans l'ordre de la page, en pourcentages entiers de la
+ * largeur du tableau. Une liste vide, ou mal formée, laisse les colonnes égales.
+ */
+export function lireLargeursDesTableaux(enTete: string | null): number[][] {
+  const champs = (enTete === null ? null : lireChampsTexte(enTete)) ?? {};
+  const brut = champs['table_widths'];
+  if (!Array.isArray(brut)) {
+    return [];
+  }
+  return brut.slice(0, maxTableaux).map((tableau: unknown) => {
+    if (!Array.isArray(tableau) || tableau.length > maxColonnes) {
+      return [];
+    }
+    const largeurs = tableau.map((valeur: unknown) => Number(valeur));
+    return largeurs.every((largeur) => Number.isInteger(largeur) && largeur > 0 && largeur <= 100) ? largeurs : [];
+  });
+}
+
 /**
  * Champs texte déjà présents dans un front-matter incomplet (page venue d'un
  * autre outil), pour les garder à l'import plutôt que de les écraser.
@@ -146,6 +170,8 @@ export interface FrontMatterChanges {
   modifieLe?: string;
   mode?: PageMode | null;
   role?: PageRole | null;
+  /** Largeurs des colonnes des tableaux ; une liste sans aucune largeur retire la clé. */
+  largeursDesTableaux?: number[][] | null;
 }
 
 const cles: Record<keyof FrontMatterChanges, string> = {
@@ -156,6 +182,7 @@ const cles: Record<keyof FrontMatterChanges, string> = {
   modifieLe: 'updated',
   mode: 'mode',
   role: 'role',
+  largeursDesTableaux: 'table_widths',
 };
 
 /**
@@ -172,8 +199,15 @@ export function modifierEnTete(enTete: string | null, changements: FrontMatterCh
       continue;
     }
     const valeur = changements[champ];
-    if (valeur === null || valeur === undefined) {
+    if (valeur === null || valeur === undefined || (Array.isArray(valeur) && valeur.every((tableau) => tableau.length === 0))) {
       document.delete(cle);
+    } else if (Array.isArray(valeur)) {
+      // Une ligne par tableau, ses largeurs entre crochets : `- [30, 70]`.
+      const noeud = document.createNode(valeur);
+      for (const tableau of noeud.items) {
+        (tableau as { flow?: boolean }).flow = true;
+      }
+      document.set(cle, noeud);
     } else {
       document.set(cle, valeur);
     }

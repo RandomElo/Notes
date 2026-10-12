@@ -100,7 +100,7 @@ function valeurDeLaPalette(nom: ColorName, theme: Theme, surcharges: Record<stri
 const estDeLaPalette = (valeur: string): valeur is ColorName => (nomsDeCouleur as readonly string[]).includes(valeur);
 
 /**
- * Les variables du papier (README §9) : fond blanc et texte sombre, et toutes
+ * Les variables du papier (docs/spec/export.md) : fond blanc et texte sombre, et toutes
  * les couleurs du thème qui s'affichent sur ce fond (titres, accent, natures
  * des callouts, puces) foncées juste assez pour être lisibles : 4,5:1 pour
  * le texte, 3:1 pour les traits. Les blocs de code gardent leur fond sombre

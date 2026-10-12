@@ -1,5 +1,5 @@
 /**
- * Ce que l'installation de la correction orthographique télécharge (README §11).
+ * Ce que l'installation de la correction orthographique télécharge (docs/spec/correction.md).
  * Chaque fichier est à une version fixée et vérifié par son empreinte SHA-256
  * avant d'être décompressé : une archive modifiée en route n'est jamais ouverte.
  * Changer une version, c'est changer l'adresse, la taille et l'empreinte ensemble,

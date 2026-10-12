@@ -17,7 +17,7 @@ export interface MarkdownExportOptions {
   /**
    * Adresse à écrire pour une image de la page, ou null pour la remplacer par
    * une mention textuelle. Absent : toutes les images sont remplacées (export
-   * d'une page seule, README §9).
+   * d'une page seule, docs/spec/export.md).
    */
   adresseDImage?: (src: string) => string | null;
   /** Front-matter de la page (bloc YAML sans ses délimiteurs) à garder en tête, ou null pour le retirer. */
@@ -25,7 +25,7 @@ export interface MarkdownExportOptions {
 }
 
 /**
- * Le Markdown d'export d'une page (README §9), lisible par n'importe quel outil :
+ * Le Markdown d'export d'une page (docs/spec/export.md), lisible par n'importe quel outil :
  * mentions de page en texte simple (le titre du moment), mentions de site en
  * liens ordinaires, liens `notes://` réduits à leur texte, callouts en
  * paragraphes avec leur icône devant, images en mention textuelle ou vers une

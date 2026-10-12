@@ -33,10 +33,10 @@ import { ecrireCopie, fichierDeLArborescence, lireCopie } from './tree-snapshot'
 import type { EtatNas } from './sync-status';
 import { messageDErreur, messageDuResultat, messageHorsReseau } from './writes';
 
-/** Le verrou d'une saisie en cours est rafraîchi bien avant ses 90 s de vie (README §5). */
+/** Le verrou d'une saisie en cours est rafraîchi bien avant ses 90 s de vie (docs/spec/sync.md). */
 const intervalleDuVerrouMs = 30_000;
 
-/** Toutes les 30 s au premier plan (README §5). */
+/** Toutes les 30 s au premier plan (docs/spec/sync.md). */
 export const intervalleDeSyncMs = 30_000;
 const fichierDeLIndex = 'cache-index.json';
 
@@ -67,10 +67,10 @@ interface NotesValue {
   lireFichier(chemin: string): Promise<Uint8Array>;
   /** Date de la dernière modification de chaque page sur le NAS, par dossier (pages récentes de l'accueil). */
   datesDesPages(): Promise<Map<string, number>>;
-  /** Vrai quand le NAS répond : les contrôles de modification sont actifs (README §15). */
+  /** Vrai quand le NAS répond : les contrôles de modification sont actifs (docs/spec/android.md). */
   modifiable: boolean;
   /**
-   * Modifie une page directement sur le NAS (README §5). Vrai si c'est fait
+   * Modifie une page directement sur le NAS (docs/spec/sync.md). Vrai si c'est fait
    * (ou qu'il n'y avait rien à changer) ; sinon le message est montré, et le
    * cache a la version du NAS.
    */

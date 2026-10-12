@@ -9,7 +9,7 @@ import { api } from '../../lib/ipc';
 import { estBlocAVerifier, rienAVerifier, texteDuBloc } from './block-text';
 import { correctionPrete, fauteAMontrer, magasinDeCorrection } from './spellcheck-store';
 
-/** Temps sans frappe avant de vérifier les blocs modifiés (README §11). */
+/** Temps sans frappe avant de vérifier les blocs modifiés (docs/spec/correction.md). */
 export const delaiDeVerificationMs = 800;
 /** Blocs vérifiés en même temps : une page entière ne doit pas noyer le serveur. */
 const verificationsSimultanees = 3;
@@ -188,7 +188,7 @@ function verifier(vue: EditorView, prochainId: () => number): void {
 }
 
 /**
- * Correction orthographique dans l'éditeur (README §11) : chaque bloc modifié
+ * Correction orthographique dans l'éditeur (docs/spec/correction.md) : chaque bloc modifié
  * est vérifié 800 ms après la dernière frappe, jamais la page entière d'un
  * coup sauf à l'ouverture. Rouge pour l'orthographe, bleu pour le reste. Les
  * soulignements ne sont que de l'affichage : le document n'est pas modifié.

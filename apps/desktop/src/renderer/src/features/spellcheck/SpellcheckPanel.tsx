@@ -65,7 +65,7 @@ function Etapes({ etat }: { etat: SpellcheckState }) {
 }
 
 /**
- * Correction orthographique dans les réglages (README §11) : installer
+ * Correction orthographique dans les réglages (docs/spec/correction.md) : installer
  * LanguageTool d'un clic, suivre les étapes, puis voir s'il tourne. Notes le
  * lance elle-même à chaque ouverture.
  */
@@ -109,12 +109,19 @@ export function SpellcheckPanel() {
                 {etat.erreur}
               </p>
             )}
-            <div className="flex justify-end">
-              <button type="button" onClick={() => mettreAJour(api.installerCorrection())} className={boutonPrincipal}>
-                <Download className="size-4" aria-hidden="true" />
-                {etat.erreur === null ? 'Installer la correction orthographique' : "Réessayer l'installation"}
-              </button>
-            </div>
+            {etat.refus !== null ? (
+              // Le poste ne suit pas : pas de bouton, la raison (docs/spec/correction.md).
+              <p role="status" className="text-discret">
+                {etat.refus} L'écriture reste possible, sans correction.
+              </p>
+            ) : (
+              <div className="flex justify-end">
+                <button type="button" onClick={() => mettreAJour(api.installerCorrection())} className={boutonPrincipal}>
+                  <Download className="size-4" aria-hidden="true" />
+                  {etat.erreur === null ? 'Installer la correction orthographique' : "Réessayer l'installation"}
+                </button>
+              </div>
+            )}
           </>
         )}
 

@@ -3,7 +3,7 @@ import type { TreeNode } from '@notes/core';
 
 /*
  * Pages créées sur le téléphone sans NAS (choix d'Eloi du 2026-10-10, seule
- * exception avec les mémos vocaux à « rien sans le NAS », README §15) : elles
+ * exception avec les mémos vocaux à « rien sans le NAS », docs/spec/android.md) : elles
  * attendent dans les fichiers de l'application, hors du cache, et sont créées
  * sur le NAS dès qu'il répond. D'ici là, elles sont dans l'arborescence et
  * s'écrivent (choix d'Eloi, 2026-10-11) : leur contenu attend avec elles, et

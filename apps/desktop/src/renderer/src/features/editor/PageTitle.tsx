@@ -13,7 +13,7 @@ interface PageTitleProps {
 }
 
 /**
- * Titre de la page, modifiable sur place (README §6). C'est le niveau 1 de la
+ * Titre de la page, modifiable sur place (docs/spec/editeur.md). C'est le niveau 1 de la
  * page. Il est enregistré quand on le quitte : la page est renommée, son
  * dossier aussi. Échap annule la saisie.
  */

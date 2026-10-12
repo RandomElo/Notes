@@ -2,7 +2,7 @@ import { estSauvegardeDeConflit } from '../sync/conflict';
 import type { VaultContext } from '../vault/context';
 
 /**
- * Historique des appels aux fonctions IA (README §12), dans
+ * Historique des appels aux fonctions IA (docs/spec/ia.md), dans
  * `.notes/ai-usage.json`, synchronisé. Un enregistrement par appel : il sert
  * aux totaux (dépense du jour, graphiques) et à caler les estimations sur ce
  * que le modèle a vraiment consommé. Rien du contenu des pages n'y est écrit.

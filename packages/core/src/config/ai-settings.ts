@@ -1,5 +1,5 @@
 /**
- * Réglages des fonctions IA (README §12), propres au poste : chaque machine a
+ * Réglages des fonctions IA (docs/spec/ia.md), propres au poste : chaque machine a
  * sa carte graphique, donc son adresse et ses modèles. Tout passe par Ollama
  * (LiteLLM abandonné le 2026-10-09). Les anciennes clés `adresseLitellm`,
  * `tarifs` et `seuilMensuelUsd` d'un `settings.json` sont ignorées.

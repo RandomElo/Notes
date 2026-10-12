@@ -1,7 +1,7 @@
 import { joindreChemins } from '../fs/paths';
 import type { LocalFs } from '../fs/local-fs';
 import { nomDuFichierDeConflit } from '../page/conflict';
-import { assemblerPage, decouperPage, lireSurcharges } from '../page/front-matter';
+import { assemblerPage, decouperPage, lireLargeursDesTableaux, lireSurcharges } from '../page/front-matter';
 import { cheminDuFichierPage, modifierMetaDansTexte } from '../page/page-file';
 import { VaultError } from './context';
 import type { VaultContext } from './context';
@@ -24,8 +24,10 @@ export interface PageContent {
   corps: string;
   /** Surcharges de thème du front-matter (`theme_overrides`), non vérifiées. */
   surcharges: Record<string, string>;
-  /** Le front-matter tel qu'il est écrit, sans ses délimiteurs, ou null : l'export Markdown peut le garder (README §9). */
+  /** Le front-matter tel qu'il est écrit, sans ses délimiteurs, ou null : l'export Markdown peut le garder (docs/spec/export.md). */
   enTete: string | null;
+  /** Largeur des colonnes de chaque tableau, dans l'ordre de la page (`table_widths`). */
+  largeursDesTableaux: number[][];
 }
 
 /** Le corps d'un élément de l'arborescence et ses surcharges de thème, lus en une fois. Ne modifie rien. */
@@ -36,7 +38,7 @@ export async function lireContenu(fs: LocalFs, chemin: string): Promise<PageCont
     throw new VaultError('introuvable', 'Cette page est introuvable.');
   }
   const morceaux = decouperPage(await fs.lireTexte(fichier));
-  return { corps: morceaux.corps, surcharges: lireSurcharges(morceaux.enTete), enTete: morceaux.enTete };
+  return { corps: morceaux.corps, surcharges: lireSurcharges(morceaux.enTete), enTete: morceaux.enTete, largeursDesTableaux: lireLargeursDesTableaux(morceaux.enTete) };
 }
 
 export interface SaveRequest {
@@ -44,6 +46,8 @@ export interface SaveRequest {
   corps: string;
   /** Le corps tel qu'il a été lu avant modification : sert à voir si le fichier a changé entre-temps. */
   corpsDeBase: string;
+  /** Largeur des colonnes de chaque tableau du corps, dans l'ordre. Absent : l'en-tête n'y touche pas. */
+  largeursDesTableaux?: number[][];
 }
 
 export interface SaveResult {
@@ -61,11 +65,12 @@ export interface SaveResult {
  * (modifié par un autre outil ou par la sync), sa version est d'abord gardée à
  * côté, dans `page.conflit-[date].md`.
  */
-export async function enregistrerCorps(contexte: VaultContext, chemin: string, { corps, corpsDeBase }: SaveRequest): Promise<SaveResult> {
+export async function enregistrerCorps(contexte: VaultContext, chemin: string, { corps, corpsDeBase, largeursDesTableaux }: SaveRequest): Promise<SaveResult> {
   const { fs } = contexte;
   const { texte } = await chargerPage(fs, chemin);
   const morceaux = decouperPage(texte);
-  if (morceaux.corps === corps) {
+  const memesLargeurs = largeursDesTableaux === undefined || memesListes(lireLargeursDesTableaux(morceaux.enTete), largeursDesTableaux);
+  if (morceaux.corps === corps && memesLargeurs) {
     return { ecrit: false, conflit: null };
   }
 
@@ -82,6 +87,36 @@ export async function enregistrerCorps(contexte: VaultContext, chemin: string, {
     // Un fichier qui s'arrêtait juste après le front-matter : il faut une fin de ligne avant le corps.
     apresFermeture: morceaux.apresFermeture === '' && corps !== '' ? morceaux.finDeLigne : morceaux.apresFermeture,
   });
-  await fs.ecrireTexte(cheminDuFichierPage(chemin), modifierMetaDansTexte(assemble, { modifieLe: dateIso(contexte) }));
+  await fs.ecrireTexte(
+    cheminDuFichierPage(chemin),
+    modifierMetaDansTexte(assemble, { modifieLe: dateIso(contexte), ...(memesLargeurs ? {} : { largeursDesTableaux: largeursDesTableaux ?? null }) }),
+  );
   return { ecrit: true, conflit };
+}
+
+/** Deux listes de largeurs identiques ; une liste vide vaut une liste absente en fin. */
+function memesListes(a: number[][], b: number[][]): boolean {
+  const sansFin = (listes: number[][]): number[][] => {
+    const copie = [...listes];
+    while (copie.length > 0 && copie[copie.length - 1]!.length === 0) {
+      copie.pop();
+    }
+    return copie;
+  };
+  return JSON.stringify(sansFin(a)) === JSON.stringify(sansFin(b));
+}
+
+/**
+ * Change seulement la largeur des colonnes des tableaux d'une page (une bordure
+ * glissée dans l'éditeur) : le corps ne bouge pas. Rien n'est écrit si elles
+ * n'ont pas changé.
+ */
+export async function enregistrerLargeursDesTableaux(contexte: VaultContext, chemin: string, largeursDesTableaux: number[][]): Promise<boolean> {
+  const { fs } = contexte;
+  const { texte } = await chargerPage(fs, chemin);
+  if (memesListes(lireLargeursDesTableaux(decouperPage(texte).enTete), largeursDesTableaux)) {
+    return false;
+  }
+  await fs.ecrireTexte(cheminDuFichierPage(chemin), modifierMetaDansTexte(texte, { modifieLe: dateIso(contexte), largeursDesTableaux }));
+  return true;
 }

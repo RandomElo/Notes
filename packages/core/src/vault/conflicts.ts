@@ -9,7 +9,7 @@ import type { VaultContext } from './context';
 import { chargerPage } from './operations';
 
 /**
- * Les versions d'une page mises de côté (`page.conflit-[date].md`, README §5)
+ * Les versions d'une page mises de côté (`page.conflit-[date].md`, docs/spec/sync.md)
  * et leur résolution : la page reçoit le résultat choisi, puis la sauvegarde
  * est supprimée. Rien n'est supprimé avant que la page soit écrite.
  */

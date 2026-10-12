@@ -4,7 +4,7 @@ import type { PageMargins } from '../../../../shared/ipc-contract';
 export const formatsDExport = ['pdf', 'markdown', 'html', 'zip'] as const;
 export type ExportFormat = (typeof formatsDExport)[number];
 
-/** Les choix de la fenêtre d'export, retenus d'un export à l'autre (README §9). */
+/** Les choix de la fenêtre d'export, retenus d'un export à l'autre (docs/spec/export.md). */
 export interface ExportOptions {
   format: ExportFormat;
   /** PDF : marges, icônes (de la page, des mentions, des sites). Le papier est toujours en A4. */

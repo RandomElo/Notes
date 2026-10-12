@@ -2,7 +2,7 @@ import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { TextSelection } from '@tiptap/pm/state';
 
 /**
- * Clic dans la zone vide sous le dernier bloc (README §6) : le curseur va dans
+ * Clic dans la zone vide sous le dernier bloc (docs/spec/editeur.md) : le curseur va dans
  * un paragraphe vide à la fin de la page, créé s'il le faut. Un paragraphe vide
  * n'a pas d'écriture en Markdown : le fichier ne change pas tant qu'on n'y tape rien.
  */

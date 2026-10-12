@@ -5,17 +5,23 @@ import type { EditorState, Transaction } from '@tiptap/pm/state';
 import type { EditorView } from '@tiptap/pm/view';
 import { celluleDuCurseur, celluleVoisine, entreeDansUneCellule } from './table-commands';
 
-/** Au-delà de cette durée, `Ctrl+←/→` tenu passe d'une cellule à l'autre au lieu d'un mot à l'autre (README, annexe). */
+/** Au-delà de cette durée, `Ctrl+←/→` tenu passe d'une cellule à l'autre au lieu d'un mot à l'autre (docs/raccourcis.md). */
 export const appuiLongMs = 350;
 
 const dansUnTableau = (etat: EditorState): boolean => celluleDuCurseur(etat) !== null;
 
 /**
- * Raccourcis des tableaux (README, annexe « Tableaux »). Tab et Maj+Tab
+ * Raccourcis des tableaux (docs/raccourcis.md, « Tableaux »). Tab et Maj+Tab
  * viennent de l'extension de TipTap. Ici : Entrée descend d'une cellule (et
  * ajoute une ligne sous la dernière), Ctrl+↑/↓ change de cellule, Ctrl+←/→
  * saute un mot en appui bref et une cellule en appui long.
  */
+/** Un saut de ligne à la place de la sélection, dans la cellule. */
+function sautDeLigne(etat: EditorState): Transaction | null {
+  const saut = etat.schema.nodes['hardBreak'];
+  return saut === undefined ? null : etat.tr.replaceSelectionWith(saut.create()).scrollIntoView();
+}
+
 export const TableKeys = Extension.create({
   name: 'toucheDesTableaux',
   // Avant la gestion des blocs et le texte : dans une cellule, ces touches sont pour le tableau.
@@ -36,8 +42,9 @@ export const TableKeys = Extension.create({
       };
     return {
       Enter: jouer(entreeDansUneCellule),
-      // Pas de saut de ligne dans une cellule : Markdown n'en a pas dans un tableau.
-      'Shift-Enter': ({ editor }) => dansUnTableau(editor.state),
+      // Saut de ligne dans la cellule, écrit `<br>` dans le fichier (docs/spec/editeur.md).
+      'Mod-Enter': jouer(sautDeLigne),
+      'Shift-Enter': jouer(sautDeLigne),
       'Mod-ArrowUp': jouer(celluleVoisine('haut')),
       'Mod-ArrowDown': jouer(celluleVoisine('bas')),
     };

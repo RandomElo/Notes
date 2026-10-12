@@ -5,10 +5,10 @@ import { api } from '../../lib/ipc';
 type Recherche = { etat: 'pas-faite' } | { etat: 'en-cours' } | { etat: 'faite'; images: string[] };
 
 /**
- * Images inutilisées (README §6) : les fichiers des dossiers `assets/` dont
+ * Images inutilisées (docs/spec/editeur.md) : les fichiers des dossiers `assets/` dont
  * la page ne parle plus, après une image retirée du texte. Rien ne part tout
  * seul : on les montre dans le gestionnaire de fichiers, ou on les met à la
- * corbeille une par une (README §10).
+ * corbeille une par une (docs/spec/corbeille.md).
  */
 export function UnusedImages() {
   const [recherche, definirRecherche] = useState<Recherche>({ etat: 'pas-faite' });

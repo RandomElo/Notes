@@ -42,15 +42,35 @@ function souligne(md: MarkdownIt): void {
 }
 
 /**
+ * `<br>` (ou `<br/>`, `<br />`) : retour à la ligne dans une cellule de
+ * tableau, la convention de GitHub et d'Obsidian. Le jeton ne devient un saut
+ * de ligne que dans une cellule (nodes.ts) ; ailleurs, il reste du texte.
+ */
+function retourDansCellule(md: MarkdownIt): void {
+  md.inline.ruler.before('autolink', 'retour_dans_cellule', (etat, silencieux) => {
+    const trouve = /^<br\s*\/?>/i.exec(etat.src.slice(etat.pos, etat.posMax));
+    if (trouve === null) {
+      return false;
+    }
+    if (!silencieux) {
+      etat.push('br_html', 'br', 0).content = trouve[0];
+    }
+    etat.pos += trouve[0].length;
+    return true;
+  });
+}
+
+/**
  * L'analyseur Markdown : CommonMark, plus le barré, les tableaux (reconnus pour
- * être gardés tels quels), le surlignage `==texte==` et le souligné
- * `<u>texte</u>`. Le reste du HTML est désactivé : il reste du texte, il n'est
- * jamais interprété.
+ * être gardés tels quels), le surlignage `==texte==`, le souligné
+ * `<u>texte</u>` et `<br>` dans une cellule. Le reste du HTML est désactivé :
+ * il reste du texte, il n'est jamais interprété.
  */
 export const analyseur = new MarkdownIt('commonmark', { html: false, linkify: false, typographer: false })
   .enable(['strikethrough', 'table'])
   .use(surlignage)
-  .use(souligne);
+  .use(souligne)
+  .use(retourDansCellule);
 
 /** Jeton de markdown-it. */
 export type Jeton = ReturnType<typeof analyseur.parse>[number];

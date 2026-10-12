@@ -3,8 +3,8 @@ import { finDeLigneDe } from '../markdown/lines';
 import { lireMarkdown } from '../markdown/parse';
 
 /**
- * Comparaison de deux versions d'une page pour l'écran des conflits (README
- * §5). A est la page, B la version mise de côté. Les blocs de premier niveau
+ * Comparaison de deux versions d'une page pour l'écran des conflits
+ * (docs/spec/sync.md). A est la page, B la version mise de côté. Les blocs de premier niveau
  * sont appariés sur leur texte exact : rien n'est réécrit, chaque bloc garde
  * son Markdown d'origine.
  */

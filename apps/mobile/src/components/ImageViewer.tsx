@@ -12,7 +12,7 @@ interface Vue {
 
 const neutre: Vue = { echelle: 1, x: 0, y: 0 };
 
-/** Visionneuse plein écran (README §15) : pincer pour zoomer, glisser pour se déplacer, toucher deux fois pour zoomer ou revenir. */
+/** Visionneuse plein écran (docs/spec/android.md) : pincer pour zoomer, glisser pour se déplacer, toucher deux fois pour zoomer ou revenir. */
 export function ImageViewer({ adresse, legende, fermer }: { adresse: string; legende: string; fermer: () => void }) {
   const [vue, definirVue] = useState<Vue>(neutre);
   const geste = useRef<{ distance: number; echelle: number; x: number; y: number; vue: Vue } | null>(null);

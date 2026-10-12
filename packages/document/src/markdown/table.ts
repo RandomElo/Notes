@@ -12,15 +12,18 @@ import { schema } from '../schema/extensions';
  * | Go      |  2009 |
  */
 
+/** Tient la place d'un saut de ligne pendant l'écriture du paragraphe, remplacé ensuite par `<br>` (caractère d'usage privé). */
+const repereDeRetour = '\uE001';
+
 /**
- * Une cellule tient sur une ligne : ses retours à la ligne et sauts forcés
- * deviennent des espaces avant l'écriture.
+ * Une cellule tient sur une ligne : un saut forcé (Ctrl+Entrée) s'écrit
+ * `<br>`, un retour à la ligne du texte devient une espace.
  */
 function surUneLigne(paragraphe: ProseMirrorNode): ProseMirrorNode {
   const enfants: ProseMirrorNode[] = [];
   paragraphe.forEach((enfant) => {
     if (enfant.type.name === 'hardBreak') {
-      enfants.push(schema.text(' '));
+      enfants.push(schema.text(repereDeRetour));
     } else if (enfant.isText && (enfant.text ?? '').includes('\n')) {
       enfants.push(schema.text((enfant.text ?? '').replace(/\n/g, ' '), enfant.marks));
     } else {
@@ -56,7 +59,7 @@ export function ecrireTableau(tableau: ProseMirrorNode, ecrireParagraphe: (parag
     const cellules: string[] = [];
     ligne.forEach((cellule) => {
       const paragraphe = cellule.firstChild;
-      const texte = paragraphe === null ? '' : ecrireParagraphe(surUneLigne(paragraphe)).replace(/\n/g, ' ').trim();
+      const texte = paragraphe === null ? '' : ecrireParagraphe(surUneLigne(paragraphe)).replace(/\n/g, ' ').trim().replaceAll(repereDeRetour, '<br>');
       cellules.push(echapperLesBarres(texte));
     });
     lignes.push(cellules);

@@ -14,7 +14,7 @@ interface LanguagePickerProps {
 const affichesAuPlus = 60;
 
 /**
- * Liste des langages d'un bloc de code, avec recherche (README §6). La
+ * Liste des langages d'un bloc de code, avec recherche (docs/spec/editeur.md). La
  * recherche ignore accents et casse et trouve aussi les alias (`ts`, `yml`).
  * Flèches pour choisir, Entrée pour valider, Échap pour fermer.
  */

@@ -26,7 +26,7 @@ import { BulletList, NestedTaskItem, OrderedList, TaskList } from './nodes/lists
 import { RawBlock } from './nodes/raw-block';
 import { Table, TableCell, TableHeader, TableHeaderRow, TableRow } from './nodes/table';
 
-/** Niveaux de titre de l'application (README §6). Un titre de niveau 6 reste un bloc brut. */
+/** Niveaux de titre de l'application (docs/spec/editeur.md). Un titre de niveau 6 reste un bloc brut. */
 export const niveauxDeTitre = [1, 2, 3, 4, 5] as const;
 
 /**

@@ -30,6 +30,9 @@ export const canaux = {
   importer: 'vault:importer',
   lirePage: 'vault:lire-page',
   enregistrerPage: 'vault:enregistrer-page',
+  enregistrerLargeursDesTableaux: 'vault:enregistrer-largeurs-des-tableaux',
+  creerPagesDepuisMarkdown: 'depot:creer-pages',
+  markdownAAjouter: 'depot:texte-a-ajouter',
   listerConflits: 'vault:lister-conflits',
   lireConflit: 'vault:lire-conflit',
   resoudreConflit: 'vault:resoudre-conflit',
@@ -147,7 +150,7 @@ export interface SpellcheckStep {
   total: number;
 }
 
-/** Correction orthographique (README §11) : LanguageTool installé par Notes, lancé par elle. */
+/** Correction orthographique (docs/spec/correction.md) : LanguageTool installé par Notes, lancé par elle. */
 export interface SpellcheckState {
   installation: 'absente' | 'en_cours' | 'installee';
   serveur: 'arrete' | 'demarrage' | 'pret' | 'erreur';
@@ -162,6 +165,8 @@ export interface SpellcheckState {
   /** Versions installées, lisibles (`6.6`, `17.0.20.1`). null sans installation. */
   versions: { languagetool: string; java: string } | null;
   miseAJour: SpellcheckUpdate;
+  /** Pourquoi ce poste ne peut pas installer LanguageTool (mémoire, disque), null s'il le peut. */
+  refus: string | null;
 }
 
 /** Mises à jour automatiques de LanguageTool et de son Java. */
@@ -214,7 +219,10 @@ export type VaultOperationResult =
 export type VaultFailure = Extract<VaultOperationResult, { ok: false }>;
 
 /** Corps Markdown d'une page (sans son front-matter) et ses surcharges de thème non vérifiées, ou l'erreur. */
-export type PageReadResult = { ok: true; corps: string; surcharges: Record<string, string>; enTete: string | null } | VaultFailure;
+/** Fichiers Markdown déposés : les pages créées (et l'arborescence à jour), ou le texte à ajouter à la page ouverte. */
+export type MarkdownDropResult = { ok: true; pages: PageLocation[]; arbre: TreeNode[] | null; markdown: string } | VaultFailure;
+
+export type PageReadResult = { ok: true; corps: string; surcharges: Record<string, string>; enTete: string | null; largeursDesTableaux: number[][] } | VaultFailure;
 
 /** Le fichier de thème du dossier des notes, tel qu'il est sur le disque. */
 export interface ThemeFile {
@@ -269,14 +277,14 @@ export type TrashRestoreResult = { ok: true; page: { chemin: string; id: string 
 
 export type TrashActionResult = { ok: true } | VaultFailure;
 
-/** Formats de papier et marges d'un export PDF (README §9). */
+/** Formats de papier et marges d'un export PDF (docs/spec/export.md). */
 export const formatsDePapier = ['A4', 'A5', 'Letter'] as const;
 export type PaperFormat = (typeof formatsDePapier)[number];
 export const margesDePage = ['etroites', 'normales', 'larges'] as const;
 export type PageMargins = (typeof margesDePage)[number];
 
 /**
- * Un export à enregistrer (README §9). « nom » : nom de fichier proposé, sans
+ * Un export à enregistrer (docs/spec/export.md). « nom » : nom de fichier proposé, sans
  * extension. Le main demande où l'enregistrer, puis convertit (PDF, ZIP) et écrit.
  */
 export type ExportRequest =
@@ -383,6 +391,14 @@ export interface NotesApi {
   lirePage(demande: { chemin: string }): Promise<PageReadResult>;
   /** Enregistre le corps d'une page importée, sans jamais écraser une version modifiée ailleurs. */
   enregistrerPage(demande: { chemin: string } & SaveRequest): Promise<PageSaveResult>;
+  /** Chemin sur le disque d'un fichier déposé dans la fenêtre (glisser-déposer). Vide s'il n'en a pas. */
+  cheminDuFichier(fichier: File): string;
+  /** Une sous-page de « parent » (vide : la racine) par fichier Markdown déposé, images comprises. */
+  creerPagesDepuisMarkdown(demande: { fichiers: string[]; parent: string }): Promise<MarkdownDropResult>;
+  /** Le texte des fichiers Markdown déposés, à ajouter à la fin de la page ; leurs images sont copiées dans son dossier. */
+  markdownAAjouter(demande: { fichiers: string[]; page: string }): Promise<MarkdownDropResult>;
+  /** Change seulement la largeur des colonnes des tableaux d'une page (en-tête), le corps ne bouge pas. */
+  enregistrerLargeursDesTableaux(demande: { chemin: string; largeursDesTableaux: number[][] }): Promise<{ ok: true } | VaultFailure>;
   /** Versions en conflit gardées à côté d'une page (`page.conflit-[date].md`). Liste vide si la page n'en a pas. */
   listerConflits(demande: { chemin: string }): Promise<string[]>;
   /** Lit une page et une de ses versions en conflit. Ne modifie rien. */
@@ -456,7 +472,7 @@ export interface NotesApi {
   /** Octets d'une image du dossier des notes (chemin relatif à lui), pour la mettre dans un export. */
   lireImageDExport(demande: { chemin: string }): Promise<ExportImageResult>;
 
-  /** Met des pages à la corbeille, chacune avec sa descendance (README §10). */
+  /** Met des pages à la corbeille, chacune avec sa descendance (docs/spec/corbeille.md). */
   mettreALaCorbeille(demande: { chemins: string[] }): Promise<VaultOperationResult>;
   /** Met une image d'un dossier `assets/` à la corbeille (image inutilisée). */
   mettreImageALaCorbeille(demande: { chemin: string }): Promise<TrashActionResult>;

@@ -4,7 +4,7 @@ import { VaultError } from './context';
 import type { VaultContext } from './context';
 
 /**
- * Favicons des mentions de site (README §6) : une image PNG par site, dans
+ * Favicons des mentions de site (docs/spec/editeur.md) : une image PNG par site, dans
  * `.notes/favicons/`, gardée une fois pour toutes et synchronisée avec le
  * reste. L'affichage ne va jamais la chercher sur Internet.
  */

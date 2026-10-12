@@ -10,7 +10,7 @@ import { magasinDeCorrection } from './spellcheck-store';
 const selecteurDesFautes = '.faute-orthographe, .faute-grammaire';
 
 /**
- * Bulle d'un mot souligné (README §11), ouverte d'un clic : ce que dit la
+ * Bulle d'un mot souligné (docs/spec/correction.md), ouverte d'un clic : ce que dit la
  * règle, les suggestions (un clic remplace le mot), « Ignorer » jusqu'à la
  * fermeture de Notes, et pour l'orthographe « Ajouter au dictionnaire ».
  */

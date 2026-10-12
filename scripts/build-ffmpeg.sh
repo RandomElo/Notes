@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Compile le ffmpeg livré dans l'AppImage (README §13) : il décode les mémos
+# Compile le ffmpeg livré dans l'AppImage (docs/spec/memos.md) : il décode les mémos
 # vocaux que Chromium ne sait pas lire (AMR des enregistreurs Android, WMA,
 # AIFF, APE...) en WAV 16 kHz mono pour la transcription et l'écoute. Rien à
 # installer sur le poste (règle 9).

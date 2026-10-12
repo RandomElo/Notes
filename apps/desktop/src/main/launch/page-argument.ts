@@ -3,7 +3,7 @@ import { estId } from '@notes/core';
 /**
  * `--page=<id>` : la page à ouvrir au lancement. C'est ainsi que la barre de
  * recherche du poste (`../BarreRecherche`) ouvre une page de Notes, qu'elle
- * soit lancée ou non (README §7). Rien d'autre n'est lu sur la ligne de
+ * soit lancée ou non (docs/spec/interface.md). Rien d'autre n'est lu sur la ligne de
  * commande ; un identifiant mal formé est ignoré.
  */
 const prefixe = '--page=';

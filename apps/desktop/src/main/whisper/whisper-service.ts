@@ -25,7 +25,7 @@ export interface WhisperServiceOptions {
 }
 
 /**
- * Transcription des mémos (README §13) : Notes s'occupe de tout (choix
+ * Transcription des mémos (docs/spec/memos.md) : Notes s'occupe de tout (choix
  * d'Eloi, 2026-10-07). Le serveur est dans l'AppImage ; le modèle se
  * télécharge une fois, à la demande ; le serveur se lance à la première
  * transcription et s'arrête de lui-même après quelques minutes.

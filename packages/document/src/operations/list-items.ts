@@ -9,7 +9,7 @@ import { ecrireMarkdown } from '../markdown/serialize';
 
 /**
  * Ajoute une tâche non cochée en tête de la dernière liste de tâches de la
- * page (le champ d'ajout rapide du mode liste, README §14), ou dans une
+ * page (le champ d'ajout rapide du mode liste, docs/spec/liste-de-taches.md), ou dans une
  * nouvelle liste en fin de page s'il n'y en a pas. Le texte est pris tel
  * quel, sans Markdown. Rend la position de la fin de son texte, ou null si le
  * texte est vide.

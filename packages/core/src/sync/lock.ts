@@ -5,7 +5,7 @@ import { versOctets, versTexte } from '../fs/utf8';
 import { nomDuVerrou } from './scan';
 
 /**
- * Verrou d'une page sur le NAS (README §5) : un fichier `.lock` dans le
+ * Verrou d'une page sur le NAS (docs/spec/sync.md) : un fichier `.lock` dans le
  * dossier de la page, qui dit quel appareil l'édite et depuis quand il a
  * donné signe de vie. Il n'est jamais copié dans le vault local.
  */
@@ -98,7 +98,7 @@ export type TakeResult = { ok: true } | { ok: false; nom: string };
 /**
  * Verrous tenus par cet appareil. Le desktop pose le verrou à la première
  * frappe, l'entretient tant qu'on écrit, et le relâche une fois la page
- * poussée, dès qu'on la quitte ou après 10 s sans frappe (README §5). `distant` est la vue du
+ * poussée, dès qu'on la quitte ou après 10 s sans frappe (docs/spec/sync.md). `distant` est la vue du
  * dossier du vault sur le NAS : les chemins sont ceux des pages.
  */
 export class LockManager {

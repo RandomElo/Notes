@@ -2,7 +2,7 @@ import type { MemoEstimate } from '../../../../shared/memos-contract';
 import { libelleDeDuree, libelleDeTempsRestant } from '../ai/ai-labels';
 
 /**
- * Temps restant d'une transcription de mémos (README §13, demande d'Eloi du
+ * Temps restant d'une transcription de mémos (docs/spec/memos.md, demande d'Eloi du
  * 2026-10-11) : transcription puis mise en forme, d'après les estimations du
  * main. `complet` est faux quand une partie n'a pas pu être estimée (IA locale
  * jamais utilisée) : le temps affiché le dit.

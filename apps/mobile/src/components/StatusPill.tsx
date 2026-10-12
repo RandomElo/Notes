@@ -3,7 +3,7 @@ import { useEffect, useState } from 'react';
 import { useNotes } from '../state/NotesContext';
 import { libelleDeLEtat } from '../state/sync-status';
 
-/** État du NAS et dernière sync (README §15) ; toucher relance une sync. */
+/** État du NAS et dernière sync (docs/spec/android.md) ; toucher relance une sync. */
 export function StatusPill() {
   const { etat, reglages, synchroniser } = useNotes();
   const [maintenant, definirMaintenant] = useState(() => Date.now());

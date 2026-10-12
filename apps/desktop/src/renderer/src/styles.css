@@ -256,3 +256,9 @@ body {
   content: '';
   pointer-events: none;
 }
+
+/* Bordure entre deux colonnes d'un tableau, saisissable à la souris (features/tables/column-resize.ts). */
+body.redimension-colonne,
+body.redimension-colonne * {
+  cursor: col-resize;
+}

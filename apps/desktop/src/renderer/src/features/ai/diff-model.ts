@@ -1,7 +1,7 @@
 import { diffLines, diffWordsWithSpace } from 'diff';
 
 /**
- * Vue de comparaison avant/après d'une proposition de l'IA (README §12) :
+ * Vue de comparaison avant/après d'une proposition de l'IA (docs/spec/ia.md) :
  * lignes alignées, et dans une ligne modifiée, les mots qui changent.
  */
 

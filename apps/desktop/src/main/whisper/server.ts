@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import { availableParallelism } from 'node:os';
 
 /**
- * Serveur whisper.cpp livré dans l'AppImage (README §13), lancé par Notes à
+ * Serveur whisper.cpp livré dans l'AppImage (docs/spec/memos.md), lancé par Notes à
  * la première transcription, sur 127.0.0.1 et un port libre, et arrêté après
  * quelques minutes sans demande : la mémoire vidéo revient alors à Ollama.
  * Il ne reçoit aucune variable du poste, sauf de quoi trouver le pilote Vulkan.

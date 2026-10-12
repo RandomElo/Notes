@@ -55,7 +55,7 @@ function cibleDeLElement(editor: Editor, element: Element): Cible | null {
 }
 
 /**
- * Infobulle d'un lien ou d'une mention (README §6), au survol ou quand le
+ * Infobulle d'un lien ou d'une mention (docs/spec/editeur.md), au survol ou quand le
  * curseur y entre au clavier : l'adresse ou la page, et de quoi la modifier,
  * la copier ou la retirer. Le bouton « Lien » de la barre d'outils ouvre son
  * formulaire sur la sélection.

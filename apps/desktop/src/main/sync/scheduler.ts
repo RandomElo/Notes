@@ -4,7 +4,7 @@ import type { LockView } from '../../shared/ipc-contract';
 import type { SettingsStore } from '../settings/settings-store';
 import type { CompanionCredentials } from '../smb/protocol';
 
-/** Intervalle entre deux cycles (README §5). */
+/** Intervalle entre deux cycles (docs/spec/sync.md). */
 const intervalleParDefautMs = 5_000;
 /** Après une modification du dossier des notes, le cycle part ce délai plus tard : une rafale d'écritures n'en lance qu'un. */
 const delaiApresModificationParDefautMs = 1_000;
@@ -50,7 +50,7 @@ interface Session {
 /**
  * Déclenche la sync du desktop : au démarrage, toutes les 5 s, une seconde
  * après chaque modification du dossier des notes, à la demande et à la
- * fermeture (README §5). Un seul cycle à la fois. Garde la connexion
+ * fermeture (docs/spec/sync.md). Un seul cycle à la fois. Garde la connexion
  * au NAS ouverte entre deux cycles et tient les verrous de page.
  */
 export class SyncScheduler {
@@ -68,7 +68,7 @@ export class SyncScheduler {
   private arrete = false;
   /** Le poste n'a plus de réseau : aucun cycle avant son retour. */
   private horsLigne = false;
-  /** La corbeille du NAS est purgée une fois par lancement, au premier cycle réussi (README §10). */
+  /** La corbeille du NAS est purgée une fois par lancement, au premier cycle réussi (docs/spec/corbeille.md). */
   private corbeillePurgee = false;
   private readonly maintenant: () => number;
 

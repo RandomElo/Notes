@@ -6,7 +6,7 @@ import { normaliserListe } from './todo-mode';
 
 /**
  * Applique une opération ciblée au corps Markdown d'une page, sans éditeur
- * (le téléphone, README §15). Les blocs non touchés gardent leur texte
+ * (le téléphone, docs/spec/android.md). Les blocs non touchés gardent leur texte
  * d'origine. En mode liste, la page est ensuite remise en règle comme le
  * fait l'éditeur du desktop. Rend le nouveau corps, ou null si rien n'a
  * changé.

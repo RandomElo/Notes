@@ -1,7 +1,7 @@
 import { ecrireMarkdown, sectionTerminee, texteDeLItem } from '@notes/document';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 
-/** Une tâche telle que la montre la liste façon Keep (README §14, §15). */
+/** Une tâche telle que la montre la liste façon Keep (docs/spec/liste-de-taches.md, docs/spec/android.md). */
 export interface LigneDeTache {
   /** Position de la tâche dans le document, pour les opérations. */
   position: number;

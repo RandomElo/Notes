@@ -31,7 +31,7 @@ const titre = (niveau: 1 | 2 | 3 | 4 | 5, icone: LucideIcon): SlashCommand => ({
 });
 
 /**
- * Commandes du menu « / » (README §6). Citation et séparateur n'y sont pas :
+ * Commandes du menu « / » (docs/spec/editeur.md). Citation et séparateur n'y sont pas :
  * Eloi n'en veut pas.
  */
 export const commandes: SlashCommand[] = [

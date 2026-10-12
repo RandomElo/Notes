@@ -1,5 +1,5 @@
 /**
- * Mots français vers mots anglais des noms d'icônes Lucide (README §6) : les
+ * Mots français vers mots anglais des noms d'icônes Lucide (docs/spec/editeur.md) : les
  * icônes n'ont que des noms anglais. Chaque mot français renvoie à un ou
  * plusieurs mots qu'on trouve dans les noms (`book-open`, `house`).
  * Liste tenue à la main, pensée pour des notes : maison, travail, sport,

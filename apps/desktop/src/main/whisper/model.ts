@@ -11,7 +11,7 @@ export interface ModelFile {
 }
 
 /**
- * Modèle de transcription des mémos vocaux (README §13) : large-v3-turbo de
+ * Modèle de transcription des mémos vocaux (docs/spec/memos.md) : large-v3-turbo de
  * Whisper, quantifié en 5 bits pour whisper.cpp. 574 Mo, environ 0,8 Go de
  * mémoire vidéo : il tient à côté du modèle d'Ollama sur une carte de 8 Go.
  * Téléchargé une fois depuis le dépôt de whisper.cpp chez Hugging Face,

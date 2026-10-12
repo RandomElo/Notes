@@ -6,7 +6,7 @@ import android.os.Build
 import java.io.File
 
 /**
- * L'enregistrement d'un mémo vocal (README §13) : AAC dans un `.m4a`, mono,
+ * L'enregistrement d'un mémo vocal (docs/spec/memos.md) : AAC dans un `.m4a`, mono,
  * 16 kHz, assez pour la voix. Un seul à la fois, partagé entre le plugin (la
  * WebView) et le service de premier plan (la notification). Le fichier est
  * écrit dans `memos-en-cours/`, puis rangé dans `memos/` une fois terminé :

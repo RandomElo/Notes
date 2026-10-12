@@ -4,7 +4,7 @@ import { estEnAttente } from '../state/pending-pages';
 import { PageIcon } from './PageIcon';
 
 /**
- * Arborescence des pages (README §15), sur l'écran d'accueil : on déplie, on
+ * Arborescence des pages (docs/spec/android.md), sur l'écran d'accueil : on déplie, on
  * ouvre, rien ne se déplace. Le « + » d'une page en crée une dessous.
  */
 export function PageTree({

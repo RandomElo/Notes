@@ -1,6 +1,6 @@
 import { createServer } from 'node:http';
 import type { AddressInfo } from 'node:net';
-import { readdir, readFile } from 'node:fs/promises';
+import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
@@ -410,5 +410,47 @@ test('une image copiée d’une page et collée dans une autre y est copiée et 
   expect((await readdir(join(vault, 'Courses', 'assets'))).length).toBe(1);
   const image = editeur(page).locator('figure[data-image] img').last();
   await expect.poll(() => image.evaluate((element: { naturalWidth: number }) => element.naturalWidth)).toBeGreaterThan(0);
+  await fermer(session);
+});
+
+test('tableau : colonnes fixes réglées en glissant leur bordure, gardées dans l’en-tête ; Ctrl+Entrée coupe une cellule en `<br>`', async () => {
+  const preparation = await preparer();
+  const fichier = join(preparation.vault, 'Bienvenue', 'page.md');
+  const enTete = (await readFile(fichier, 'utf8')).split('\n---\n')[0];
+  await writeFile(fichier, `${enTete}\n---\n| Colonne A | Colonne B |\n| --- | --- |\n| long | court |\n`);
+  const session = await lancer(preparation);
+  const { page } = session;
+  await ouvrirPage(page, 'Bienvenue');
+  const tableau = editeur(page).locator('table');
+  // Sans largeurs, deux colonnes égales sur toute la largeur.
+  const [a, b] = await tableau.locator('tr').first().locator('th').evaluateAll((cellules) => cellules.map((cellule) => cellule.getBoundingClientRect().width));
+  expect(Math.abs(a! - b!)).toBeLessThan(2);
+
+  // Ctrl+Entrée dans une cellule : un saut de ligne, écrit `<br>` dans le fichier.
+  // La page place d'abord le curseur au début, juste après son chargement : le second clic vient après.
+  await editeur(page).getByText('court').click();
+  await page.waitForTimeout(300);
+  await editeur(page).getByText('court').click();
+  await page.keyboard.press('End');
+  await page.keyboard.press('Control+Enter');
+  await page.keyboard.type('suite', { delay: 15 });
+  await attendreEnregistrement(page);
+  await expect.poll(() => readFile(fichier, 'utf8')).toContain('court<br>suite');
+
+  // La bordure entre les deux colonnes se glisse : 75 % et 25 %, dans l'en-tête de la page, corps inchangé.
+  const entete = tableau.locator('th').first();
+  const cadre = (await entete.boundingBox())!;
+  const largeurDuTableau = (await tableau.boundingBox())!.width;
+  await page.mouse.move(cadre.x + cadre.width - 2, cadre.y + cadre.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(cadre.x + cadre.width - 2 + largeurDuTableau / 4, cadre.y + cadre.height / 2, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(() => readFile(fichier, 'utf8')).toContain('table_widths:\n  - [75, 25]\n');
+  expect(await readFile(fichier, 'utf8')).toContain('| long      | court<br>suite |');
+
+  // Rouverte, la page garde ses largeurs.
+  await ouvrirPage(page, 'Courses');
+  await ouvrirPage(page, 'Bienvenue');
+  await expect(editeur(page).locator('col').first()).toHaveAttribute('style', /width: 75%/);
   await fermer(session);
 });

@@ -21,7 +21,7 @@
 }
 
 /*
- * Hiérarchie des titres (README §6 et §8). Le niveau 1 est le titre de la
+ * Hiérarchie des titres (docs/spec/editeur.md et docs/spec/theme.md). Le niveau 1 est le titre de la
  * page, affiché par l'application au-dessus du contenu : dans le texte, `#`
  * est le premier niveau en dessous. Taille, graisse, italique, trait et
  * couleur de chaque niveau viennent du thème.
@@ -97,7 +97,7 @@
   text-underline-offset: 0.15em;
 }
 
-/* Un lien s'ouvre d'un clic (README §6). */
+/* Un lien s'ouvre d'un clic (docs/spec/editeur.md). */
 .notes-page a {
   cursor: pointer;
 }
@@ -282,6 +282,15 @@
 .notes-page ol > li::marker {
   color: var(--color-discret);
   font-variant-numeric: tabular-nums;
+}
+
+/* Le numéro, plus large qu'une puce, a autant d'air entre lui et le texte qu'une puce. */
+.notes-page ol {
+  padding-left: 1.8em;
+}
+
+.notes-page ol > li {
+  padding-left: 0.3em;
 }
 
 .notes-page li + li {
@@ -481,15 +490,16 @@
 
 .notes-page table {
   border-collapse: collapse;
-  min-width: 50%;
+  width: 100%;
   margin: 0;
-  table-layout: auto;
+  /* Colonnes fixes (égales, ou réglées à la souris) : elles ne s'élargissent pas pendant la frappe. */
+  table-layout: fixed;
 }
 
 .notes-page th,
 .notes-page td {
-  min-width: 4em;
   border: 1px solid var(--tableau-bordure);
+  overflow-wrap: anywhere;
   padding: 0.35em 0.7em;
   vertical-align: top;
 }

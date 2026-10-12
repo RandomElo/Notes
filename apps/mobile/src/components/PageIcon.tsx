@@ -36,7 +36,7 @@ interface PageIconProps {
 }
 
 /**
- * Icône d'une page (README §6) : emoji, icône Lucide ou image de la page, à la
+ * Icône d'une page (docs/spec/editeur.md) : emoji, icône Lucide ou image de la page, à la
  * taille de la police du conteneur. Rien de ce qui vient du fichier n'est
  * interprété autrement : une valeur inconnue montre l'icône par défaut.
  */

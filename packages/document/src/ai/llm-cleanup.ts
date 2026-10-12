@@ -1,8 +1,8 @@
 import { decouperFences, remettreEnPlace } from './reserved-blocks';
 
 /**
- * Nettoyage systématique d'une sortie de modèle avant de la proposer (README
- * §12) : fence qui englobe tout, réflexion affichée, préambule et conclusion,
+ * Nettoyage systématique d'une sortie de modèle avant de la proposer
+ * (docs/spec/ia.md) : fence qui englobe tout, réflexion affichée, préambule et conclusion,
  * séparateurs ajoutés, puces, niveaux de titre, emojis et gras ajoutés. Ce qui
  * était déjà dans l'entrée est gardé. Les blocs de code ne sont jamais
  * touchés : ceux de la page sont mis de côté avant l'appel

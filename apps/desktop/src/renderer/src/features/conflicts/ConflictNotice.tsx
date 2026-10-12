@@ -26,7 +26,7 @@ interface ConflictNoticeProps {
   surResolution: (sauvegarde: string) => void;
 }
 
-/** La page a une version mise de côté : on le dit en tête de page, avec de quoi la résoudre (README §5). */
+/** La page a une version mise de côté : on le dit en tête de page, avec de quoi la résoudre (docs/spec/sync.md). */
 export function ConflictNotice({ conflits, surResolution }: ConflictNoticeProps) {
   const premiere = conflits[0];
   if (premiere === undefined) {

@@ -45,7 +45,7 @@ export interface EtatEnregistrement {
   erreur: string | null;
 }
 
-/** Enregistrement des mémos vocaux (README §13). Il continue écran éteint, avec sa notification. */
+/** Enregistrement des mémos vocaux (docs/spec/memos.md). Il continue écran éteint, avec sa notification. */
 export interface Enregistreur {
   /** Lève une erreur au message à montrer (micro refusé, occupé). */
   demarrer(nom: string): Promise<void>;

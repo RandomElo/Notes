@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 import { attendreEnregistrement, editeur, fermer, lancer, ouvrirPage, preparer } from './app';
 
-// La sync elle-même se vérifie sans NAS dans packages/core (sync/*.test.ts) et sur le NAS réel par la recette
-// docs/recettes/J5.md. Ici, ce que l'application montre quand le NAS n'est pas réglé : rien n'est bloqué.
+// La sync elle-même se vérifie sans NAS dans packages/core (sync/*.test.ts) et sur le NAS réel par `npm run test:nas`.
+// Ici, ce que l'application montre quand le NAS n'est pas réglé : rien n'est bloqué.
 
 test('sans NAS réglé, la barre de statut le dit et la page reste modifiable', async () => {
   const session = await lancer(await preparer());
