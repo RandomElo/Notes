@@ -1,10 +1,13 @@
 import { TextSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
+import { BlockSelection } from '../blocks/block-selection';
 import type { Editor } from '@tiptap/react';
 import { Bold, ChevronDown, Code, Italic, Link, Strikethrough, Underline } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { useEffect, useLayoutEffect, useReducer, useRef, useState } from 'react';
 import { CalloutMenu } from '../callout/CalloutMenu';
 import type { LinkStorage } from '../links/link-extension';
+import { useMagasinDeCorrection } from '../spellcheck/spellcheck-store';
 import { slashOuvert } from '../slash-menu/slash-extension';
 import { TableMenu } from '../tables/TableMenu';
 import { changerType, typeCourant, typesDeBloc } from './toolbar-model';
@@ -19,8 +22,8 @@ const marques: { nom: string; libelle: string; raccourci: string; icone: LucideI
 
 /**
  * Barre d'outils flottante (docs/spec/editeur.md) : elle apparaît quand du texte est
- * sélectionné (au clic aussi dans une cellule ou un callout, pour leurs
- * menus), et disparaît à la frappe, au clic ailleurs ou sur Échap. Son contenu dépend du bloc : dans un bloc de code, pas de
+ * sélectionné (au clic aussi dans un callout, pour son
+ * menu, et au clic droit sur des blocs sélectionnés), et disparaît à la frappe, au clic ailleurs ou sur Échap. Son contenu dépend du bloc : dans un bloc de code, pas de
  * mise en forme du texte, seulement la nature du bloc. Dans une cellule, les
  * lignes, colonnes et l'alignement du tableau ; dans un callout, sa nature et
  * son icône.
@@ -31,6 +34,7 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
   const [menuOuvert, definirMenuOuvert] = useState(false);
   const [position, definirPosition] = useState<{ gauche: number; haut: number } | null>(null);
   const barre = useRef<HTMLDivElement>(null);
+  const { bulleOuverte } = useMagasinDeCorrection();
 
   useEffect(() => {
     const zone = editor.view.dom;
@@ -47,7 +51,8 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
     };
     const surSelection = (): void => {
       // Du texte sélectionné, à la souris ou au clavier (Maj+flèches), fait revenir la barre.
-      if (editor.state.selection instanceof TextSelection && !editor.state.selection.empty) {
+      const { selection } = editor.state;
+      if ((selection instanceof TextSelection && !selection.empty) || selection instanceof CellSelection) {
         definirDemandee(true);
       }
     };
@@ -58,6 +63,23 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
         definirMenuOuvert(false);
       }
     };
+    // Clic droit sur des blocs sélectionnés (ou sur du texte sélectionné) : la barre s'ouvre pour tous ces
+    // blocs, nature comprise. Les blocs passent en sélection de texte, du début du premier à la fin du dernier.
+    const menuContextuel = (evenement: MouseEvent): void => {
+      const { state } = editor;
+      const { selection } = state;
+      const vise = editor.view.posAtCoords({ left: evenement.clientX, top: evenement.clientY })?.pos ?? null;
+      if (selection.empty || vise === null || vise < selection.from || vise > selection.to) {
+        return;
+      }
+      evenement.preventDefault();
+      if (selection instanceof BlockSelection) {
+        editor.view.dispatch(state.tr.setSelection(TextSelection.between(state.doc.resolve(selection.from), state.doc.resolve(selection.to))));
+      }
+      editor.view.focus();
+      definirDemandee(true);
+    };
+    zone.addEventListener('contextmenu', menuContextuel);
     zone.addEventListener('mouseup', montrer);
     zone.addEventListener('keydown', surTouche);
     editor.on('selectionUpdate', surSelection);
@@ -66,6 +88,7 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
     window.addEventListener('resize', rafraichir);
     editor.on('transaction', rafraichir);
     return () => {
+      zone.removeEventListener('contextmenu', menuContextuel);
       zone.removeEventListener('mouseup', montrer);
       zone.removeEventListener('keydown', surTouche);
       editor.off('selectionUpdate', surSelection);
@@ -77,12 +100,13 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
   }, [editor]);
 
   const selection = editor.isDestroyed ? null : editor.state.selection;
-  const possible = demandee && selection instanceof TextSelection && editor.isFocused && slashOuvert(editor.state) === null;
+  // Plusieurs cellules sélectionnées (glisser sur le tableau) : la barre vient aussi, avec le menu du tableau.
+  const possible = demandee && (selection instanceof TextSelection || selection instanceof CellSelection) && editor.isFocused && slashOuvert(editor.state) === null;
   const dansUnTableau = possible && editor.isActive('table');
   const dansUnCallout = possible && !dansUnTableau && editor.isActive('callout');
-  // Dans le texte, seulement sur une sélection (demande d'Eloi). Une cellule ou un callout l'ont aussi au clic :
-  // la barre porte leurs menus (lignes et colonnes, nature et icône).
-  const visible = possible && (!selection.empty || dansUnTableau || dansUnCallout);
+  // Dans le texte et dans une cellule, seulement sur une sélection (demande d'Eloi). Un callout l'a aussi au clic :
+  // la barre porte son menu (nature et icône).
+  const visible = possible && (!selection.empty || dansUnCallout);
   const de = visible ? selection.from : null;
   const dansDuCode = visible && selection.$from.parent.type.spec.code === true;
 
@@ -96,7 +120,13 @@ export function FloatingToolbar({ editor }: { editor: Editor }) {
     const { offsetWidth: largeur, offsetHeight: hauteur } = barre.current;
     // Au-dessus de la ligne. Tout en haut de la page, elle passe dessous pour ne pas couvrir le titre.
     const auDessus = debut.top - hauteur - 8;
-    const haut = auDessus < Math.max(zone.top - hauteur, 96) ? debut.bottom + 8 : auDessus;
+    const enDessous = auDessus < Math.max(zone.top - hauteur, 96);
+    // La bulle d'une faute s'ouvre sous le mot : la barre ne se met jamais au même endroit qu'elle (voir `bulleOuverte`).
+    if (enDessous && bulleOuverte) {
+      definirPosition(null);
+      return;
+    }
+    const haut = enDessous ? debut.bottom + 8 : auDessus;
     const gauche = Math.max(zone.left, Math.min(debut.left - 12, zone.right - largeur, window.innerWidth - largeur - 8));
     definirPosition((actuelle) => (actuelle?.gauche === gauche && actuelle.haut === haut ? actuelle : { gauche, haut }));
   });

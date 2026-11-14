@@ -1,3 +1,4 @@
+import { pdfDeLaPage } from '@notes/core';
 import { estAdresseWeb, idDeLienInterne } from '@notes/document';
 import { Extension } from '@tiptap/core';
 import { Plugin, PluginKey } from '@tiptap/pm/state';
@@ -6,10 +7,12 @@ import { lienDImage } from '../images/image-link';
 import { lienA, poserLien } from './link-commands';
 
 export interface LinkOptions {
-  /** Ouvre une page du dossier des notes. « nouvelOnglet » : Ctrl+clic ou clic du milieu. */
+  /** Ouvre une page du dossier des notes. « nouvelOnglet » : clic ou clic du milieu ; Ctrl+clic garde l'onglet affiché. */
   ouvrirPage: (id: string, nouvelOnglet: boolean) => void;
   /** Titre de la page, null si elle n'existe pas : un lien collé vers une page inconnue reste du texte. */
   titreDePage: (id: string) => string | null;
+  /** Ouvre un PDF joint à la page (`assets/<nom>.pdf`). */
+  ouvrirPdf?: (adresse: string) => void;
   /** Une adresse web vient d'être collée seule : elle devient une mention de site si le site répond. */
   surAdresseCollee?: (adresse: string) => void;
 }
@@ -19,13 +22,15 @@ export interface LinkStorage {
   ouvrirFormulaire: (() => void) | null;
 }
 
-/** Ouvre l'adresse d'un lien : une page dans l'application, le reste dans le navigateur (le main ne laisse passer que http, https et mailto). */
+/** Ouvre l'adresse d'un lien : une page dans l'application, un PDF de la page dans la visionneuse, le reste dans le navigateur (le main ne laisse passer que http, https et mailto). */
 export function ouvrirAdresse(adresse: string, nouvelOnglet: boolean, options: LinkOptions): void {
   const id = idDeLienInterne(adresse);
   if (id !== null) {
     options.ouvrirPage(id, nouvelOnglet);
   } else if (estAdresseWeb(adresse)) {
     window.open(adresse, '_blank', 'noopener');
+  } else if (pdfDeLaPage(adresse) !== null) {
+    options.ouvrirPdf?.(adresse);
   }
 }
 
@@ -70,7 +75,7 @@ export const LinkBehaviour = Extension.create<LinkOptions, LinkStorage>({
                 return false;
               }
               evenement.preventDefault();
-              ouvrirAdresse(adresse, evenement.ctrlKey || evenement.metaKey, options);
+              ouvrirAdresse(adresse, !(evenement.ctrlKey || evenement.metaKey), options);
               return true;
             },
             auxclick: (vue, evenement) => {

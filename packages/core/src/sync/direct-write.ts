@@ -2,6 +2,7 @@ import { joindreChemins } from '../fs/paths';
 import { RemoteAsLocalFs } from '../fs/remote-as-local';
 import type { RemoteFs } from '../fs/remote-fs';
 import { versOctets, versTexte } from '../fs/utf8';
+import { lireValeurs } from '../page/database';
 import { assemblerPage, decouperPage } from '../page/front-matter';
 import type { FrontMatterChanges } from '../page/front-matter';
 import type { LocalFs } from '../fs/local-fs';
@@ -48,6 +49,11 @@ export interface PageChange {
   operation: (corps: string) => string | null;
   /** Changements de l'en-tête (icône de la page), appliqués en plus. */
   meta?: FrontMatterChanges;
+  /**
+   * Une valeur d'une ligne de base de données (docs/spec/base-de-donnees.md), mêlée aux valeurs lues sous le verrou :
+   * une autre valeur changée entre-temps n'est pas écrasée. null retire la valeur.
+   */
+  valeurDeBase?: { champ: string; valeur: string | null };
 }
 
 /**
@@ -55,7 +61,7 @@ export interface PageChange {
  * relecture, application, écriture, cache, déverrouillage. Échoue avec
  * l'erreur du NAS s'il ne répond pas, sans rien avoir changé.
  */
-export async function modifierPageSurLeNas(contexte: DirectWriteContext, page: string, { corpsAttendu, operation, meta }: PageChange): Promise<DirectWriteResult> {
+export async function modifierPageSurLeNas(contexte: DirectWriteContext, page: string, { corpsAttendu, operation, meta, valeurDeBase }: PageChange): Promise<DirectWriteResult> {
   const { distant, verrous } = contexte;
   const fichier = cheminDuFichierPage(page);
   const infos = await distant.infos(fichier);
@@ -88,6 +94,15 @@ export async function modifierPageSurLeNas(contexte: DirectWriteContext, page: s
           });
     if (meta !== undefined) {
       modifie = modifierMetaDansTexte(modifie, meta);
+    }
+    if (valeurDeBase !== undefined) {
+      const valeurs = { ...lireValeurs(morceaux.enTete) };
+      if (valeurDeBase.valeur === null) {
+        delete valeurs[valeurDeBase.champ];
+      } else {
+        valeurs[valeurDeBase.champ] = valeurDeBase.valeur;
+      }
+      modifie = modifierMetaDansTexte(modifie, { valeurs });
     }
     if (modifie === texte) {
       return { ok: true, ecrit: false, texte };

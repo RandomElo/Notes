@@ -195,6 +195,21 @@ body {
   text-decoration-color: var(--color-accent);
 }
 
+/* Affichage « discret » (réglages, correction) : trait pointillé de 2 px, aux couleurs adoucies, qui ne retient pas l'œil. */
+body[data-correction='discret'] .faute-orthographe,
+body[data-correction='discret'] .faute-grammaire {
+  text-decoration-style: dotted;
+  text-decoration-thickness: 2px;
+}
+
+body[data-correction='discret'] .faute-orthographe {
+  text-decoration-color: color-mix(in srgb, var(--color-erreur) 60%, transparent);
+}
+
+body[data-correction='discret'] .faute-grammaire {
+  text-decoration-color: color-mix(in srgb, var(--color-accent) 60%, transparent);
+}
+
 /* Mode liste de tâches : titre de la section « Terminé », dans la liste, et tâches cachées quand elle est repliée. */
 .notes-page ul[data-type='taskList'] > li.titre-termine {
   display: block;
@@ -225,8 +240,23 @@ body {
   color: var(--color-texte);
 }
 
-.notes-page li.tache-repliee {
+.notes-page li.tache-repliee,
+.notes-page li.sous-tache-deplacee {
   display: none !important;
+}
+
+/* Sous-tâches cochées sous une tâche à faire, en copie dans « Terminé », sous leurs parents atténués. */
+.notes-page ul[data-type='taskList'] > li.copies-terminees {
+  display: block;
+  user-select: none;
+}
+
+.notes-page li.copies-terminees ul[data-type='taskList'] {
+  margin: 0;
+}
+
+.notes-page li.tache-copie[data-checked='false'] > div > p {
+  color: var(--color-discret);
 }
 
 /* Tâche vide où se trouve le curseur, en mode liste : « Nouvelle tâche ». */
@@ -261,4 +291,48 @@ body {
 body.redimension-colonne,
 body.redimension-colonne * {
   cursor: col-resize;
+}
+
+/*
+ * Curseur penché en italique (features/editor/italic-caret.ts) : le curseur du navigateur est
+ * masqué, un trait incliné prend sa place et clignote comme lui. Rien quand l'éditeur n'a pas le focus.
+ */
+.notes-page.avec-curseur-italique {
+  caret-color: transparent;
+}
+
+.curseur-italique {
+  position: relative;
+}
+
+.ProseMirror-focused .curseur-italique::after {
+  position: absolute;
+  /* Le bas de la boîte vide est celui des jambages : le trait va de là jusqu'au haut des majuscules. */
+  bottom: 0;
+  left: -0.5px;
+  height: 1.15em;
+  border-left: 1.5px solid var(--color-texte);
+  transform: skewX(-12deg);
+  transform-origin: bottom;
+  animation: curseur-clignote 1.06s steps(1) infinite;
+  content: '';
+  pointer-events: none;
+}
+
+@keyframes curseur-clignote {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Recherche dans la page (features/find) : passages trouvés, celui en cours plus soutenu. */
+.notes-page .recherche-trouve {
+  border-radius: 0.15em;
+  background-color: color-mix(in srgb, var(--color-alerte) 30%, transparent);
+}
+
+.notes-page .recherche-courant {
+  border-radius: 0.15em;
+  background-color: color-mix(in srgb, var(--color-alerte) 70%, transparent);
+  color: var(--color-fond);
 }

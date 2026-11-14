@@ -27,6 +27,7 @@ Sections du fichier :
 | `[code]` et `[code.syntax]` | `background`, `font_size`, `line_numbers`, `wrap`, puis `text`, `comment`, `keyword`, `control`, `string`, `regex`, `number`, `function`, `type`, `variable`, `tag`, `attribute` |
 | `[callout]` | `info`, `success`, `warning`, `danger` |
 | `[table]` | `border`, `header_background` |
+| `[database]` | `states` : liste des états des bases de données, `{ name = "Fait", color = "success" }`, 1 à 20 aux noms différents, couleur `#rrggbb` ou nom de la palette ([base-de-donnees](base-de-donnees.md)) |
 | `[ui]` | `content_width`, `sidebar_width`, `radius`, `transition` |
 
 La coloration du code, les callouts et les tableaux se servent de leurs réglages, et le formulaire les montre sous « Autres réglages ». `[code]` a deux réglages de plus : `line_numbers` (faux par défaut) et `wrap` (vrai par défaut depuis 0.5.14).

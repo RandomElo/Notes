@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import icone from '../../../../../resources/icon/64x64.png';
 import { api } from '../../lib/ipc';
+import { VersionHistory } from './VersionHistory';
 
 interface TitleBarProps {
   /** Dossier des notes ouvert, montré au survol du nom de l'application. */
@@ -38,10 +39,11 @@ export function TitleBar({ dossier, children }: TitleBarProps) {
         <div className="flex shrink-0 items-center gap-3" title={dossier === null ? undefined : `Dossier des notes : ${dossier}`}>
           <img src={icone} alt="" className="size-5 shrink-0" draggable={false} />
           <h1 className="shrink-0 text-sm font-semibold">Notes</h1>
-          {version !== '' && <span className="text-discret shrink-0 text-xs whitespace-nowrap">version {version}</span>}
+          {version !== '' && <VersionHistory version={version} />}
         </div>
-        {/* Une marge à droite des onglets reste libre pour déplacer la fenêtre. */}
-        <div className="flex h-full min-w-0 flex-1 pr-12">{children}</div>
+        {/* Une marge à droite des onglets reste libre pour déplacer la fenêtre ; overflow-hidden : les
+            onglets trop nombreux sont rognés ici au lieu de déborder sur le bouton Relancer et les boutons de fenêtre. */}
+        <div className="flex h-full min-w-0 flex-1 overflow-hidden pr-12">{children}</div>
       </div>
 
       {miseAJour && (

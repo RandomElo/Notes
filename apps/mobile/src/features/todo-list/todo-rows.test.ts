@@ -33,6 +33,17 @@ describe('lignes de la liste façon Keep', () => {
     expect(horsListe).toBe('Un paragraphe.\n');
   });
 
+  it('montre une sous-tâche cochée en tête de « Terminé », sous le rappel de ses parents', () => {
+    const { lignes } = lignesDeTaches(documentDuCorps('- [ ] courses\n  - [x] pain\n  - [ ] lait\n- [x] fini\n'));
+    expect(lignes.map((ligne) => [ligne.texteBrut, ligne.profondeur, ligne.coche, ligne.termine, ligne.enTermine, ligne.copie])).toEqual([
+      ['courses', 0, false, false, false, false],
+      ['lait', 1, false, false, false, false],
+      ['courses', 0, false, false, true, true],
+      ['pain', 1, true, true, true, false],
+      ['fini', 0, true, true, true, false],
+    ]);
+  });
+
   it('rend une liste vide pour une page vide', () => {
     expect(lignesDeTaches(documentDuCorps('')).lignes).toEqual([]);
   });

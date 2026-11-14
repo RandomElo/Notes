@@ -5,7 +5,7 @@ import {
   lireArbre,
   listerCorbeille,
   mettreALaCorbeille,
-  mettreImageALaCorbeille,
+  mettreFichierJointALaCorbeille,
   purgerCorbeille,
   rapatrierEntree,
   restaurerEntree,
@@ -86,14 +86,14 @@ export function creerHandlersCorbeille({ vault, file, avecNas, maintenant = Date
       });
     },
 
-    mettreImage: (demande: unknown): Promise<TrashActionResult> => {
+    mettreFichierJoint: (demande: unknown): Promise<TrashActionResult> => {
       const { chemin } = champs(demande);
       if (!estChemin(chemin)) {
         return Promise.resolve(requeteInvalide());
       }
       return enSerie(async () => {
         try {
-          await mettreImageALaCorbeille(vault.contexte(), chemin);
+          await mettreFichierJointALaCorbeille(vault.contexte(), chemin);
           return { ok: true };
         } catch (erreur) {
           return { ok: false, erreur: versErreur(erreur) };

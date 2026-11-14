@@ -1,6 +1,6 @@
 import { champsDuTheme, themeParDefaut } from '@notes/ui';
 import { describe, expect, it } from 'vitest';
-import { decouperTaille, policeDeValeur, sectionsDuFormulaire, surSixChiffres, valeurDePolice } from './theme-form-model';
+import { decouperTaille, etatsDuTexte, etatsEnTexte, policeDeValeur, sectionsDuFormulaire, surSixChiffres, valeurDePolice } from './theme-form-model';
 
 describe('formulaire du thème', () => {
   it('montre chaque réglage du thème une fois, sauf ceux qui n’ont pas encore d’effet', () => {
@@ -37,5 +37,13 @@ describe('formulaire du thème', () => {
     expect(surSixChiffres('#7aa2f7')).toBe('#7aa2f7');
     expect(surSixChiffres('#7aa2f780')).toBe('#7aa2f7');
     expect(surSixChiffres('accent')).toBeNull();
+  });
+});
+
+describe('états des bases de données', () => {
+  it('passent en texte, une ligne par état, et se relisent', () => {
+    const etats = [{ name: 'À faire', color: 'muted' }, { name: 'Bloqué', color: '#ff0000' }];
+    expect(etatsEnTexte(etats)).toBe('À faire : muted\nBloqué : #ff0000');
+    expect(etatsDuTexte('À faire : muted\n\n  Bloqué:#ff0000 \nIdée')).toEqual([...etats, { name: 'Idée', color: 'muted' }]);
   });
 });

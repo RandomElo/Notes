@@ -12,6 +12,7 @@ const commentaires: Record<string, string> = {
   'code.syntax': 'Coloration du code.',
   callout: 'Couleur des callouts.',
   table: 'Tableaux.',
+  database: 'Bases de données : les états proposés par un champ « état », dans l\'ordre, avec leur couleur.',
   ui: "Interface : largeur du texte, largeur de l'arborescence, arrondis, durée des transitions.",
 };
 
@@ -71,5 +72,10 @@ export function verifierTheme(recu: unknown): Theme | null {
 }
 
 function ecrire(valeur: unknown): string {
+  if (Array.isArray(valeur)) {
+    // Les états, un par ligne : `{ name = "Fait", color = "success" }`.
+    const elements = valeur.map((element: Record<string, unknown>) => `  { ${Object.entries(element).map(([cle, champ]) => `${cle} = ${ecrire(champ)}`).join(', ')} },`);
+    return `[\n${elements.join('\n')}\n]`;
+  }
   return typeof valeur === 'string' ? JSON.stringify(valeur) : String(valeur);
 }

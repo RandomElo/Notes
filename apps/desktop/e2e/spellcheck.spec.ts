@@ -5,7 +5,7 @@ import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparerCoursesClassique } from './app';
+import { attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparerCoursesClassique, rubrique } from './app';
 
 // Critère de J11 : aucune latence perceptible à la frappe. Plus le soulignement, la bulle, le dictionnaire,
 // l'exclusion du code, la vérification bloc par bloc et le service absent.
@@ -234,7 +234,8 @@ test("sans LanguageTool installé : les réglages proposent l'installation, rien
   await expect(editeur(page).locator('.faute-orthographe')).toHaveCount(0);
   await expect(barreDeStatut(page)).not.toContainText('faute');
 
-  await page.keyboard.press('Control+,');
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Correction');
   const section = page.getByRole('region', { name: 'Correction orthographique' });
   await expect(section).toContainText("LanguageTool n'est pas installé");
   await expect(section).toContainText('2,1 Go');
@@ -246,10 +247,40 @@ test("sans LanguageTool installé : les réglages proposent l'installation, rien
 test('un poste qui ne suit pas : pas d’installation proposée, la raison à la place, l’édition marche', async () => {
   const session = await lancer(await preparerCoursesClassique(), [], { NOTES_MEMOIRE_ESSAI: String(8 * 1024 ** 3) });
   const { page } = session;
-  await page.keyboard.press('Control+,');
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Correction');
   const section = page.getByRole('region', { name: 'Correction orthographique' });
   await expect(section).toContainText('Ce poste a 8 Go de mémoire vive');
   await expect(section).toContainText("L'écriture reste possible, sans correction.");
   await expect(section.getByRole('button', { name: /Installer la correction/ })).toHaveCount(0);
   await fermer(session);
+});
+
+test('la correction se règle : discrète, désactivée (plus aucun trait), puis normale', async () => {
+  const faux = await fauxLanguageTool();
+  const session = await lancer(await preparerCoursesClassique(), [], { NOTES_LANGUAGETOOL_ADRESSE: faux.adresse });
+  const { page } = session;
+
+  await ouvrirPage(page, 'Courses');
+  await finDePage(page);
+  await taper(page, 'Il fesait beau.');
+  const orthographe = editeur(page).locator('.faute-orthographe');
+  await expect(orthographe).toHaveText(['fesait']);
+
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Correction');
+  const affichage = page.getByRole('group', { name: 'Affichage de la correction' });
+  await affichage.getByRole('button', { name: /^Discret/ }).click();
+  await expect(page.locator('body')).toHaveAttribute('data-correction', 'discret');
+  await affichage.getByRole('button', { name: /^Désactivée/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(editeur(page).locator('.faute-orthographe, .faute-grammaire')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Correction');
+  await page.getByRole('group', { name: 'Affichage de la correction' }).getByRole('button', { name: /^Normal/ }).click();
+  await page.keyboard.press('Escape');
+  await expect(editeur(page).locator('.faute-orthographe')).toHaveText(['fesait']);
+  await fermer(session);
+  faux.serveur.close();
 });

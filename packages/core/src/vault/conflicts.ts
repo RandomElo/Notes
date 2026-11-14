@@ -7,6 +7,9 @@ import type { SaveResult } from './content';
 import { VaultError } from './context';
 import type { VaultContext } from './context';
 import { chargerPage } from './operations';
+import { lireOrdre } from './order';
+import { lireEnfants } from './tree';
+import { estId } from '../page/id';
 
 /**
  * Les versions d'une page mises de côté (`page.conflit-[date].md`, docs/spec/sync.md)
@@ -79,4 +82,60 @@ function verifierSauvegarde(sauvegarde: string): string {
     throw new VaultError('introuvable', "Ce fichier n'est pas une version en conflit d'une page.");
   }
   return page;
+}
+
+/** Vrai pour la sauvegarde de l'ordre des sous-pages d'un dossier (`.order.conflit-[date]`). */
+export function estConflitDOrdre(chemin: string): boolean {
+  return /^\.order\.conflit-\d{4}-\d{2}-\d{2}-\d{6}(-\d+)?$/.test(nomDeBase(chemin));
+}
+
+/**
+ * Écarte la sauvegarde d'un ordre de sous-pages en conflit : l'ordre actuel reste. Rien ne s'y
+ * perd : une sous-page absente de l'ordre s'affiche quand même, à la fin. La suppression part
+ * ensuite sur le NAS par la sync, comme toute suppression.
+ */
+export async function ecarterConflitDOrdre(contexte: VaultContext, sauvegarde: string): Promise<void> {
+  if (!estConflitDOrdre(sauvegarde) || (await contexte.fs.infos(sauvegarde))?.estDossier !== false) {
+    throw new VaultError('introuvable', "Cette sauvegarde d'ordre a déjà été écartée.");
+  }
+  await contexte.fs.supprimer(sauvegarde);
+}
+
+/** Une page dans un ordre de sous-pages, avec ce qui la distingue de l'autre version. */
+export interface OrderEntry {
+  id: string;
+  /** Titre de la page, null si elle n'existe plus dans le dossier. */
+  titre: string | null;
+  /** « seule » : absente de l'autre version ; « deplacee » : présente des deux côtés, pas au même rang parmi les pages communes. */
+  difference: 'seule' | 'deplacee' | null;
+}
+
+export interface OrderConflict {
+  actuel: OrderEntry[];
+  ancien: OrderEntry[];
+}
+
+/** Les deux ordres comparés : chaque page marquée si elle n'est que d'un côté, ou si elle a changé de rang parmi les pages communes. */
+export function comparerOrdres(actuel: readonly string[], ancien: readonly string[], titres: ReadonlyMap<string, string>): OrderConflict {
+  const communs = (liste: readonly string[], autre: readonly string[]) => liste.filter((id) => autre.includes(id));
+  const communsActuel = communs(actuel, ancien);
+  const communsAncien = communs(ancien, actuel);
+  const marquer = (liste: readonly string[], autre: readonly string[], miens: string[], siens: string[]): OrderEntry[] =>
+    liste.map((id) => ({
+      id,
+      titre: titres.get(id) ?? null,
+      difference: !autre.includes(id) ? 'seule' : miens.indexOf(id) !== siens.indexOf(id) ? 'deplacee' : null,
+    }));
+  return { actuel: marquer(actuel, ancien, communsActuel, communsAncien), ancien: marquer(ancien, actuel, communsAncien, communsActuel) };
+}
+
+/** Lit la sauvegarde d'un ordre en conflit et l'ordre actuel du même dossier, comparés, avec les titres des pages. Ne modifie rien. */
+export async function lireConflitDOrdre(fs: LocalFs, sauvegarde: string): Promise<OrderConflict> {
+  if (!estConflitDOrdre(sauvegarde) || (await fs.infos(sauvegarde))?.estDossier !== false) {
+    throw new VaultError('introuvable', "Cette sauvegarde d'ordre a déjà été écartée.");
+  }
+  const dossier = dossierParent(sauvegarde);
+  const ids = (texte: string): string[] => [...new Set(texte.split(/\r?\n/).map((ligne) => ligne.trim()).filter(estId))];
+  const titres = new Map((await lireEnfants(fs, dossier)).flatMap((enfant) => (enfant.id === null ? [] : [[enfant.id, enfant.titre] as const])));
+  return comparerOrdres(await lireOrdre(fs, dossier), ids(await fs.lireTexte(sauvegarde)), titres);
 }

@@ -1,7 +1,7 @@
 import { ajouterItemApres, ajouterTache, basculerTache, decalerADroite, decalerAGauche, deplacerItem, documentDuCorps, modifierTexteDItem, supprimerItem } from '@notes/document';
 import type { Transform } from '@tiptap/pm/transform';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
-import { Check, ChevronDown, ListIndentDecrease, ListIndentIncrease, X } from 'lucide-react';
+import { Check, ChevronDown, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent, PointerEvent as PointerEventReact, ReactNode } from 'react';
 import { brancherFermeture } from '../quick-edit/auto-pairs';
@@ -26,8 +26,6 @@ interface TodoListProps {
 type Brouillon = {
   apres: number | null;
   texte: string;
-  /** Niveaux de décalage par rapport à la ligne « apres » : +1 sous elle, -1 un niveau plus haut. */
-  decalage: number;
 };
 
 /** Durée d'un appui long avant que la tâche se mette à glisser. */
@@ -210,7 +208,7 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
     }
     // Entrée sur une tâche vidée la supprime et s'arrête là, comme Keep.
     if (continuer && ligne !== undefined && !ligne.termine && texte.trim() !== '') {
-      definirBrouillon({ apres: edition.index, texte: '', decalage: 0 });
+      definirBrouillon({ apres: edition.index, texte: '' });
     } else {
       finirPlusTard();
     }
@@ -220,7 +218,7 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
     if (brouillon === null) {
       return;
     }
-    const { apres, decalage } = brouillon;
+    const { apres } = brouillon;
     const texte = saisi ?? brouillon.texte;
     if (texte.trim() === '') {
       definirBrouillon(null);
@@ -228,35 +226,17 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
       return;
     }
     const ligne = apres === null ? null : lignes[apres];
-    const fait = appliquer((tr) => (ligne === null || ligne === undefined ? ajouterTache(tr, texte) : ajouterItemApres(tr, ligne.position, texte, decalage)));
+    const fait = appliquer((tr) => (ligne === null || ligne === undefined ? ajouterTache(tr, texte) : ajouterItemApres(tr, ligne.position, texte, 0)));
     if (!fait) {
       return;
     }
     // La tâche ajoutée est la ligne qui suit ; la suivante se tape après elle.
     const nouvelle = apres === null ? 0 : rangApres(apres);
     if (continuer) {
-      definirBrouillon({ apres: nouvelle, texte: '', decalage: 0 });
+      definirBrouillon({ apres: nouvelle, texte: '' });
     } else {
       definirBrouillon(null);
       finirPlusTard();
-    }
-  };
-
-  /**
-   * Décale la tâche en cours de saisie d'un niveau (« React » contient
-   * « HTML » qui contient « head »). Le texte tapé part avec ; la saisie
-   * continue sur la même tâche, qui garde son rang dans l'ordre de lecture.
-   */
-  const decaler = (ligne: LigneDeTache, sens: 'droite' | 'gauche'): void => {
-    const texte = edition?.texte;
-    const fait = appliquer((tr) => {
-      if (texte !== undefined && texte.trim() !== '' && texte.trim() !== ligne.texte.trim()) {
-        modifierTexteDItem(tr, ligne.position, texte);
-      }
-      return sens === 'droite' ? decalerADroite(tr, ligne.position) : decalerAGauche(tr, ligne.position);
-    });
-    if (!fait) {
-      montrerAvis(sens === 'droite' ? 'Rien au-dessus de cette tâche pour la ranger dessous.' : 'Cette tâche est déjà au premier niveau.');
     }
   };
 
@@ -423,9 +403,13 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
       onKeyDown={(evenement) => touche(evenement, valider)}
       onBlur={() => valider(false)}
       onFocus={(evenement) => {
+        const zone = evenement.currentTarget;
         // Le curseur à la fin du texte, comme Keep.
-        const fin = evenement.currentTarget.value.length;
-        evenement.currentTarget.setSelectionRange(fin, fin);
+        zone.setSelectionRange(zone.value.length, zone.value.length);
+        // S'ajuste à la hauteur du texte dès l'ouverture (sans ça, un texte sur plusieurs lignes
+        // s'affiche sur une seule et le fond ne couvre pas toute sa hauteur).
+        zone.style.height = 'auto';
+        zone.style.height = `${zone.scrollHeight}px`;
       }}
       onInput={(evenement) => {
         const zone = evenement.currentTarget;
@@ -436,42 +420,26 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
     />
   );
 
-  /** La ligne où se tape une nouvelle tâche, à la profondeur de la ligne d'avant, décalable avant d'être enregistrée. */
+  /**
+   * La ligne où se tape une nouvelle tâche, à la profondeur de la ligne d'avant. Pas de bouton de
+   * décalage, trop encombrant : une fois écrite, la tâche se décale en la glissant de côté.
+   */
   const ligneBrouillon = (profondeurDAvant: number) => {
     if (brouillon === null) {
       return false;
     }
-    const profondeur = Math.max(0, profondeurDAvant + brouillon.decalage);
-    // Une ligne neuve se range sous celle d'au-dessus (un niveau de plus, pas davantage) ou remonte jusqu'au premier niveau.
-    const peutDescendre = brouillon.apres !== null && brouillon.decalage < 1;
-    const peutRemonter = profondeur > 0;
     return (
-      <div className="flex items-start gap-1 rounded-lg bg-texte/5" style={{ paddingLeft: profondeur * 28 }}>
+      <div className="flex items-start gap-1 rounded-lg bg-texte/5" style={{ paddingLeft: profondeurDAvant * 28 }}>
         <span className="flex size-11 shrink-0 items-center justify-center">
           <span className="size-5 rounded-[5px] bg-texte/15" />
         </span>
         <div className="min-w-0 flex-1">{champ(brouillon.texte, (texte) => definirBrouillon({ ...brouillon, texte }), validerBrouillon, 'Nouvelle tâche')}</div>
-        {boutonDeDecalage('gauche', !peutRemonter, () => definirBrouillon({ ...brouillon, decalage: brouillon.decalage - 1 }))}
-        {boutonDeDecalage('droite', !peutDescendre, () => definirBrouillon({ ...brouillon, decalage: brouillon.decalage + 1 }))}
       </div>
     );
   };
 
-  const boutonDeDecalage = (sens: 'droite' | 'gauche', desactive: boolean, action: () => void) => (
-    <button
-      type="button"
-      aria-label={sens === 'droite' ? 'Ranger sous la tâche du dessus' : 'Remonter d’un niveau'}
-      // Garde le focus dans le champ : le clavier reste ouvert.
-      onPointerDown={(evenement) => evenement.preventDefault()}
-      onClick={action}
-      disabled={desactive}
-      className="flex size-11 shrink-0 items-center justify-center rounded-full text-discret outline-none active:bg-texte/15 disabled:opacity-30"
-    >
-      {sens === 'droite' ? <ListIndentIncrease className="size-5" /> : <ListIndentDecrease className="size-5" />}
-    </button>
-  );
-
-  const premierTermine = lignes.findIndex((ligne) => ligne.termine);
+  // « Terminé » commence au rappel d'une tâche à faire dont une sous-tâche est cochée, s'il y en a un.
+  const premierTermine = lignes.findIndex((ligne) => ligne.termine || ligne.copie);
   const nombreTermine = lignes.filter((ligne) => ligne.termine).length;
 
   return (
@@ -489,7 +457,7 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
           type="button"
           onClick={() => {
             if (!refuserHorsLigne()) {
-              definirBrouillon({ apres: null, texte: '', decalage: 0 });
+              definirBrouillon({ apres: null, texte: '' });
               saisirEnFond();
             }
           }}
@@ -557,19 +525,14 @@ export function TodoList({ page, corps, appliquer, modifiable, rendreBlocs }: To
                     champ(edition.texte, (texte) => definirEdition({ index, texte }), validerEdition, 'Texte de la tâche')
                   ) : (
                     <div
-                      onClick={() => commencerEdition(index)}
-                      className={`ligne-de-tache break-words ${ligne.coche ? 'text-discret line-through' : ''} ${ligne.texteBrut === '' ? 'text-discret italic' : ''}`}
+                      // Le rappel d'une tâche se modifie à sa vraie place, plus haut.
+                      onClick={() => !ligne.copie && commencerEdition(index)}
+                      className={`ligne-de-tache break-words ${ligne.coche || ligne.copie ? 'text-discret' : ''} ${ligne.coche ? 'line-through' : ''} ${ligne.texteBrut === '' ? 'text-discret italic' : ''}`}
                     >
                       {ligne.texteBrut === '' ? 'Tâche vide' : ligne.texteBrut}
                     </div>
                   )}
                 </div>
-                {enEdition && (
-                  <>
-                    {boutonDeDecalage('gauche', ligne.profondeur === 0, () => decaler(ligne, 'gauche'))}
-                    {boutonDeDecalage('droite', false, () => decaler(ligne, 'droite'))}
-                  </>
-                )}
                 {enEdition && (
                   <button
                     type="button"

@@ -40,6 +40,11 @@ export function SpellPopover({ editor }: { editor: Editor }) {
   }, [editor]);
 
   useEffect(() => {
+    magasinDeCorrection.definirBulleOuverte(cible !== null);
+    return () => magasinDeCorrection.definirBulleOuverte(false);
+  }, [cible]);
+
+  useEffect(() => {
     if (cible === null) {
       return;
     }

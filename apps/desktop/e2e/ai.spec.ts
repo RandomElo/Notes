@@ -5,7 +5,7 @@ import { readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { actionDePage, attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparerCoursesClassique } from './app';
+import { actionDePage, attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparerCoursesClassique, rubrique } from './app';
 
 // Critère de J12 : estimation égale au réel une fois calée, sortie propre. Plus le flux complet (estimation, appel
 // annulable, comparaison, accepter, Ctrl+Z), le choix du modèle selon la carte, l'arrêt d'un modèle qui déborde de la
@@ -171,7 +171,8 @@ test('relecture par le modèle choisi selon la carte : estimation, annulation, c
   ]);
 
   // Réglages : la carte, le modèle choisi, le trop gros écarté ; plus rien de LiteLLM. L'historique s'ouvre d'ici.
-  await page.keyboard.press('Control+,');
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Fonctions IA');
   await expect(page.getByText('Carte d’essai, 8 Go de mémoire vidéo')).toBeVisible();
   await expect(page.getByText('IA locale possible. Notes choisit faux-modele:8b.')).toBeVisible();
   await expect(page.getByRole('list', { name: 'Modèles installés dans Ollama' })).toContainText('Trop gros pour les 8 Go de la carte.');
@@ -226,7 +227,7 @@ test('carte intégrée : pas d’IA locale, l’édition continue', async () => 
   await ouvrirPage(page, 'Courses');
   await actionDePage(page, 'Fonctions IA');
   const fenetre = fenetreIa(page);
-  await expect(fenetre.getByRole('alert')).toHaveText(/Carte intégrée d’essai est une carte intégrée, trop faible pour un modèle local/);
+  await expect(fenetre.getByRole('status').filter({ hasText: 'Fonctionnalité non disponible sur ce poste.' })).toContainText(/Carte intégrée d’essai est une carte intégrée, trop faible pour un modèle local/);
   await expect(fenetre.getByRole('button', { name: 'Lancer' })).toHaveAttribute('aria-disabled', 'true');
   await page.keyboard.press('Escape');
   await ajouterUnParagraphe(page, 'On écrit toujours.');
@@ -243,10 +244,11 @@ test('sans Ollama, la fonction se désactive sans bloquer l’édition', async (
   const { page } = session;
   await ouvrirPage(page, 'Courses');
   await actionDePage(page, 'Fonctions IA');
-  await expect(fenetreIa(page).getByRole('alert')).toHaveText(/Ollama ne répond pas/);
+  await expect(fenetreIa(page).getByRole('status').filter({ hasText: 'Fonctionnalité non disponible sur ce poste.' })).toContainText('Ollama ne répond pas');
   await page.keyboard.press('Escape');
   await ajouterUnParagraphe(page, 'On écrit toujours.');
-  await page.keyboard.press('Control+,');
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Fonctions IA');
   await expect(page.getByText('Ollama ne répond pas à cette adresse.')).toBeVisible();
   await fermer(session);
 });

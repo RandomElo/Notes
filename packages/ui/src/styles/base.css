@@ -151,6 +151,12 @@
   border-radius: 0.15em;
 }
 
+/* Favicon sombre sur une page sombre : un fond blanc derrière elle. */
+.notes-page .mention-site-icone-claire > img {
+  background-color: #fff;
+  padding: 0.06em;
+}
+
 /* Page introuvable : le texte du fichier, barré. */
 .notes-page .mention[data-cassee] {
   cursor: default;
@@ -173,9 +179,12 @@
   padding: 0.05em 0.15em;
 }
 
+/* Code dans le texte : rouge éclairci sur un fond teinté du même rouge, comme GitHub ou Notion en sombre.
+   Un fond gris se confondait avec la page. La couleur « erreur » de la palette suit le thème. */
 .notes-page code {
   border-radius: 0.3em;
-  background-color: var(--page-fond-code);
+  background-color: color-mix(in srgb, var(--color-erreur) 14%, transparent);
+  color: color-mix(in srgb, var(--color-erreur) 80%, white);
   font-family: var(--font-mono);
   font-size: 0.875em;
   padding: 0.15em 0.35em;
@@ -194,6 +203,7 @@
 
 .notes-page pre code {
   background: none;
+  color: inherit;
   font-size: inherit;
   padding: 0;
 }
@@ -604,4 +614,9 @@
   font-size: 0.9em;
   padding: 1.5em 1em;
   text-align: center;
+}
+
+/* Base de données : le tableau écrit dans la page est caché dans l'éditeur, la vue de la base le remplace (page-view/database-table.ts). */
+.notes-page .tableau-de-base-cache {
+  display: none !important;
 }

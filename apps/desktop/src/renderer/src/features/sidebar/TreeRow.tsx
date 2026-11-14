@@ -1,6 +1,6 @@
 import { titreParDefaut } from '@notes/core';
 import type { TreeNode } from '@notes/core';
-import { ChevronRight, Ellipsis, FileQuestion, FileText, Folder, ListTodo, Plus } from 'lucide-react';
+import { ChevronRight, Ellipsis, FileQuestion, FileText, Folder, ListTodo, Plus, Table2 } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import type { DragEvent, KeyboardEvent, MouseEvent } from 'react';
 import { PageIcon } from '../page-icon/PageIcon';
@@ -16,7 +16,7 @@ export interface TreeRowProps {
   enRenommage: boolean;
   /** Zone survolée pendant un glisser-déposer, null hors survol. */
   zoneDeDepot: DropZone | null;
-  /** Clic sur la ligne. « nouvelOnglet » : Ctrl+clic ou clic du milieu. « etendre » : Maj+clic, sélection multiple. */
+  /** Clic sur la ligne. « nouvelOnglet » : clic simple ou clic du milieu (Ctrl+clic garde l'onglet affiché). « etendre » : Maj+clic, sélection multiple. */
   surSelection: (nouvelOnglet: boolean, etendre: boolean) => void;
   surBascule: () => void;
   surValidationDuTitre: (titre: string) => void;
@@ -58,7 +58,7 @@ export function TreeRow(props: TreeRowProps) {
       aria-expanded={aDesEnfants ? deplie : undefined}
       tabIndex={props.focalisable ? 0 : -1}
       draggable={noeud.importe && !enRenommage}
-      onClick={(evenement) => props.surSelection(evenement.ctrlKey, evenement.shiftKey && !evenement.ctrlKey)}
+      onClick={(evenement) => props.surSelection(!evenement.ctrlKey, evenement.shiftKey && !evenement.ctrlKey)}
       onAuxClick={(evenement) => {
         if (evenement.button === 1) {
           evenement.preventDefault();
@@ -161,7 +161,13 @@ function RowIcon({ noeud }: { noeud: TreeNode }) {
     );
   }
   const defaut =
-    noeud.mode === 'todo' ? <ListTodo className={classe} aria-hidden="true" /> : <FileText className={classe} aria-hidden="true" />;
+    noeud.mode === 'todo' ? (
+      <ListTodo className={classe} aria-hidden="true" />
+    ) : noeud.mode === 'base' ? (
+      <Table2 className={classe} aria-hidden="true" />
+    ) : (
+      <FileText className={classe} aria-hidden="true" />
+    );
   return <PageIcon icone={noeud.icone} chemin={noeud.chemin} className="text-discret size-4 text-sm" defaut={defaut} />;
 }
 
@@ -210,6 +216,8 @@ function TitleInput(props: { titre: string; surValidation: (titre: string) => vo
       onKeyDown={(evenement) => {
         evenement.stopPropagation();
         if (evenement.key === 'Enter') {
+          // Le curseur part aussitôt dans la page : sans ceci, l'Entrée y arriverait et y poserait un paragraphe vide.
+          evenement.preventDefault();
           finir(true);
         } else if (evenement.key === 'Escape') {
           finir(false);

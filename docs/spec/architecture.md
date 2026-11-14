@@ -90,6 +90,12 @@ Pièges :
 
 `nodeIntegration` désactivé, `contextIsolation` activé, communication via `preload` et `contextBridge` typé.
 
+## Journal des erreurs
+
+Le desktop note ses plantages dans `erreurs.log`, dans le profil (`~/.config/Notes/`), pour qu'un écran vide laisse une trace de sa cause : erreurs non rattrapées et promesses rejetées de l'affichage, composant React qui plante (avec la pile des composants), processus de la page ou annexe arrêté, page figée, chargement raté, erreurs non rattrapées du main. Une entrée : date, version, origine, message, puis la pile d'appels décalée. Au-delà de 1 Mo, le fichier devient `erreurs.1.log` (l'ancien est remplacé) ; au plus 30 entrées par minute. Rien d'autre n'y va : ni contenu de page, ni identifiant (voir [securite](securite.md)).
+
+Une erreur dans l'affichage d'une page ne vide pas toute la fenêtre : seule la page est remplacée par un message et « Rouvrir la page », l'arborescence et les onglets restent. Chaque éditeur ne republie son nombre de fautes que pour un changement de la correction elle-même (serveur, dictionnaire, remarques ignorées) : deux éditeurs ouverts en même temps, à la création d'une page, se renvoyaient sinon leurs nombres sans fin, jusqu'au débordement de pile. La poignée des blocs efface à la fin de son geste l'état de glissement de ProseMirror, qui ne voit pas ce geste fait hors de l'éditeur : resté en place, il faisait planter `Tab`.
+
 ## Dépendances clés
 
 `@tiptap/*` (avec table, image, code-block-lowlight, task-list), `lowlight`, binaire compagnon SMB en Go (`github.com/cloudsoda/go-smb2`, voir [sync](sync.md)), `yaml` (front-matter), `smol-toml` (thème), `markdown-it` et `markdown-it-mark` (lecture du Markdown), `prosemirror-markdown` (écriture, avec un sérialiseur maison), `@iarna/toml`, `lucide-react`, `emojibase-data` (noms des emojis en français), `onnxruntime-web` (moteur ONNX en WebAssembly, pour le détourage des icônes, avec le modèle silueta de rembg), `fflate` (archives ZIP de l'export, MIT, sans dépendance).

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
-import { listerImagesOrphelines } from './assets';
+import { listerFichiersInutilises } from './assets';
 import { ajouterIconeImage, changerIcone } from './icon';
 import { lireArbre } from './tree';
 
@@ -32,9 +32,9 @@ describe('icône de page', () => {
     const { fs, contexte } = monter();
     await ajouterIconeImage(contexte, 'Alpha', webp);
     expect((await lireArbre(fs))[0]?.icone).toBe('assets/icone.webp');
-    expect(await listerImagesOrphelines(fs)).toEqual([]);
+    expect(await listerFichiersInutilises(fs)).toEqual([]);
     await ajouterIconeImage(contexte, 'Alpha', webp);
     expect((await lireArbre(fs))[0]?.icone).toBe('assets/icone-2.webp');
-    expect(await listerImagesOrphelines(fs)).toEqual(['Alpha/assets/icone.webp']);
+    expect((await listerFichiersInutilises(fs)).map((fichier) => fichier.chemin)).toEqual(['Alpha/assets/icone.webp']);
   });
 });

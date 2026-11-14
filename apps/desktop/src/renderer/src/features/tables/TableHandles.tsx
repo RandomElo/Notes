@@ -112,6 +112,7 @@ export function TableHandles({ editor }: { editor: Editor }) {
   const cadre = table.getBoundingClientRect();
   const noeud = editor.state.doc.nodeAt(position);
   const lignes = noeud?.childCount ?? 1;
+  const colonnes = noeud?.firstChild?.childCount ?? 1;
 
   const commencer = (sens: Glissement['sens']) => (evenement: ReactPointerEvent<HTMLButtonElement>) => {
     evenement.preventDefault();
@@ -162,40 +163,63 @@ export function TableHandles({ editor }: { editor: Editor }) {
     }
   };
 
+  // Pendant le geste, la taille du tableau s'affiche près de la poignée, comme dans Notion.
+  const taille =
+    glisse === null ? null : (
+      <div
+        role="status"
+        style={
+          glisse.bord === 'droit'
+            ? // Au-dessus de la poignée, calée sur son bord droit : un tableau pleine largeur la ferait sortir de la fenêtre.
+              { left: cadre.right + ecartDuBord + epaisseur, top: cadre.top - 28, transform: 'translateX(-100%)' }
+            : { left: cadre.left + cadre.width / 2, top: cadre.bottom + ecartDuBord + epaisseur + 6, transform: 'translateX(-50%)' }
+        }
+        className="bg-surface text-texte pointer-events-none fixed z-30 rounded px-2 py-0.5 text-xs whitespace-nowrap shadow-lg shadow-black/30"
+      >
+        {colonnes} × {lignes}
+      </div>
+    );
+
   const poignee = 'bg-texte/10 hover:bg-accent/30 active:bg-accent/40 text-discret fixed z-20 flex items-center justify-center rounded touch-none';
   const sansFocus = (evenement: { preventDefault(): void }): void => evenement.preventDefault();
   return actif.bord === 'droit' ? (
-    <button
-      type="button"
-      data-poignee-tableau
-      title="Ajouter une colonne. Tirer vers la droite pour en ajouter plusieurs, vers la gauche pour retirer les colonnes vides."
-      aria-label="Ajouter une colonne"
-      onMouseDown={sansFocus}
-      onPointerDown={commencer('colonne')}
-      onPointerMove={suivre}
-      onPointerUp={finir}
-      onPointerCancel={finir}
-      style={{ left: cadre.right + ecartDuBord, top: cadre.top, height: cadre.height, width: epaisseur }}
-      className={`${poignee} cursor-col-resize`}
-    >
-      <Plus className="size-3.5" aria-hidden="true" />
-    </button>
+    <>
+      <button
+        type="button"
+        data-poignee-tableau
+        title="Ajouter une colonne. Tirer vers la droite pour en ajouter plusieurs, vers la gauche pour retirer les colonnes vides."
+        aria-label="Ajouter une colonne"
+        onMouseDown={sansFocus}
+        onPointerDown={commencer('colonne')}
+        onPointerMove={suivre}
+        onPointerUp={finir}
+        onPointerCancel={finir}
+        style={{ left: cadre.right + ecartDuBord, top: cadre.top, height: cadre.height, width: epaisseur }}
+        className={`${poignee} cursor-col-resize`}
+      >
+        <Plus className="size-3.5" aria-hidden="true" />
+      </button>
+      {taille}
+    </>
   ) : (
-    <button
-      type="button"
-      data-poignee-tableau
-      title="Ajouter une ligne. Tirer vers le bas pour en ajouter plusieurs, vers le haut pour retirer les lignes vides."
-      aria-label="Ajouter une ligne"
-      onMouseDown={sansFocus}
-      onPointerDown={commencer('ligne')}
-      onPointerMove={suivre}
-      onPointerUp={finir}
-      onPointerCancel={finir}
-      // Dans l'espace entre le tableau et le bloc suivant.
-      style={{ left: cadre.left, top: cadre.bottom + ecartDuBord, width: cadre.width, height: epaisseur }}
-      className={`${poignee} cursor-row-resize`}
-    >
-      <Plus className="size-3.5" aria-hidden="true" />
-    </button>
+    <>
+      <button
+        type="button"
+        data-poignee-tableau
+        title="Ajouter une ligne. Tirer vers le bas pour en ajouter plusieurs, vers le haut pour retirer les lignes vides."
+        aria-label="Ajouter une ligne"
+        onMouseDown={sansFocus}
+        onPointerDown={commencer('ligne')}
+        onPointerMove={suivre}
+        onPointerUp={finir}
+        onPointerCancel={finir}
+        // Dans l'espace entre le tableau et le bloc suivant.
+        style={{ left: cadre.left, top: cadre.bottom + ecartDuBord, width: cadre.width, height: epaisseur }}
+        className={`${poignee} cursor-row-resize`}
+      >
+        <Plus className="size-3.5" aria-hidden="true" />
+      </button>
+      {taille}
+    </>
   );
 }

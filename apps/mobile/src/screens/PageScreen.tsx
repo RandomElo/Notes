@@ -1,5 +1,6 @@
-import { analyserPage, cheminDeFavicon, cheminDuFichierPage, dossierParent, lireSurcharges } from '@notes/core';
-import { extraireSommaire, lireMarkdown } from '@notes/document';
+import { analyserPage, baseParDefaut, cheminDeFavicon, cheminDuFichierPage, dossierParent, lireConfigDeBase, lireSurcharges } from '@notes/core';
+import type { BaseConfig } from '@notes/core';
+import { extraireSommaire, lireMarkdown, sansTableauDeBase } from '@notes/document';
 import { PageView, SubpagesBlock, cheminDeLImage, classeDePage, variablesDeSurcharge } from '@notes/ui';
 import type { MentionedPage, MentionViewOptions, SiteMentionOptions } from '@notes/ui';
 import { ArrowLeft, CloudOff, List, Smile } from 'lucide-react';
@@ -9,6 +10,7 @@ import { ImageViewer } from '../components/ImageViewer';
 import { OutlineSheet } from '../components/OutlineSheet';
 import { PageIcon } from '../components/PageIcon';
 import { BoutonIcone, TopBar } from '../components/TopBar';
+import { MobileDatabase } from '../features/database/MobileDatabase';
 import { PageEditor } from '../features/page-editor/PageEditor';
 import { NewPageSheet } from '../features/quick-edit/NewPageSheet';
 
@@ -24,7 +26,7 @@ import { usePageWrites } from '../state/usePageWrites';
 import { usePendingPageWrites } from '../state/usePendingPageWrites';
 import { estEnAttente } from '../state/pending-pages';
 
-type Lecture = { etat: 'lecture' } | { etat: 'pret'; corps: string; surcharges: Record<string, string> } | { etat: 'erreur' };
+type Lecture = { etat: 'lecture' } | { etat: 'pret'; corps: string; surcharges: Record<string, string>; base: BaseConfig | null } | { etat: 'erreur' };
 
 /**
  * Lecture d'une page (docs/spec/android.md), avec le même rendu que le desktop : le
@@ -44,7 +46,8 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
   const [sommaireOuvert, definirSommaireOuvert] = useState(false);
   const [image, definirImage] = useState<{ adresse: string; legende: string } | null>(null);
   const [choixDIcone, definirChoixDIcone] = useState(false);
-  const [nouvelleSousPage, definirNouvelleSousPage] = useState(false);
+  // Page qui reçoit la sous-page en création : la page affichée, ou une ligne de sa base (sous-ligne).
+  const [nouvelleSousPage, definirNouvelleSousPage] = useState<{ chemin: string; titre: string } | null>(null);
   /** L'icône choisie, montrée avant que l'arborescence relue l'ait. undefined : celle de l'arborescence. */
   const [iconeChoisie, definirIconeChoisie] = useState<string | null | undefined>(undefined);
   const contenu = useRef<HTMLDivElement>(null);
@@ -59,7 +62,7 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
       (texte) => {
         if (!annule) {
           const { enTete, corps } = analyserPage(texte);
-          definirLecture({ etat: 'pret', corps, surcharges: lireSurcharges(enTete) });
+          definirLecture({ etat: 'pret', corps, surcharges: lireSurcharges(enTete), base: lireConfigDeBase(enTete) });
         }
       },
       () => !annule && definirLecture({ etat: 'erreur' }),
@@ -118,6 +121,8 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
   // Seules les pages du dossier des notes se modifient ; une note venue d'un autre outil reste en lecture.
   const pageModifiable = noeud !== null && noeud.genre === 'page';
   const modeListe = noeud?.mode === 'todo';
+  // Base de données (docs/spec/base-de-donnees.md) : sa vue remplace le bloc des sous-pages.
+  const modeBase = noeud?.mode === 'base';
   /** Le corps affiché : celui du cache, avec les modifications qui partent sur le NAS (docs/spec/sync.md). */
   const surLeNas = usePageWrites(pageModifiable && !enAttente ? noeud.chemin : null, lecture.etat === 'pret' ? lecture.corps : null, modeListe);
   /** Une page créée sans NAS : son contenu attend sur le téléphone, et s'écrit même sans NAS. */
@@ -241,7 +246,17 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
               )}
               <h1 className="text-[1.9rem] leading-tight font-bold break-words">{noeud.titre}</h1>
             </div>
-            {!enAttente && noeud.genre === 'page' && (
+            {!enAttente && noeud.genre === 'page' && modeBase && (
+              <MobileDatabase
+                base={noeud.chemin}
+                config={(lecture.etat === 'pret' ? lecture.base : null) ?? baseParDefaut}
+                enfants={noeud.enfants}
+                corps={corps}
+                ouvrir={(cheminDeLaLigne) => navigation.ouvrir({ nom: 'page', chemin: cheminDeLaLigne })}
+                creer={(ligne) => definirNouvelleSousPage(ligne ?? { chemin: noeud.chemin, titre: noeud.titre })}
+              />
+            )}
+            {!enAttente && noeud.genre === 'page' && !modeBase && (
               <SubpagesBlock
                 pages={noeud.enfants.filter((enfant) => enfant.genre !== 'dossier').map((enfant) => ({ cle: enfant.chemin, titre: enfant.titre }))}
                 icone={(page) => {
@@ -249,7 +264,7 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
                   return enfant === undefined ? null : <PageIcon icone={enfant.icone} chemin={enfant.chemin} liste={enfant.mode === 'todo'} adresse={adresse} />;
                 }}
                 ouvrir={(page) => navigation.ouvrir({ nom: 'page', chemin: page.cle })}
-                creer={() => definirNouvelleSousPage(true)}
+                creer={() => definirNouvelleSousPage({ chemin: noeud.chemin, titre: noeud.titre })}
               />
             )}
             {enAttente && (
@@ -281,6 +296,7 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
                   absenceImage={absenceImage}
                   mentions={mentions}
                   sites={sites}
+                  baseDeDonnees={modeBase}
                 />
               </div>
             )}
@@ -289,7 +305,7 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
                 {corps.trim() === '' ? (
                   <p className="text-discret">Page vide.</p>
                 ) : (
-                  <PageView corps={corps} resoudreImage={resoudreImage} absenceImage={absenceImage} mentions={mentions} sites={sites} />
+                  <PageView corps={modeBase ? sansTableauDeBase(corps) : corps} resoudreImage={resoudreImage} absenceImage={absenceImage} mentions={mentions} sites={sites} />
                 )}
               </div>
             )}
@@ -302,13 +318,13 @@ export function PageScreen({ chemin: cheminDemande }: { chemin: string }) {
           <EmojiSheet actuelle={icone} choisir={choisirIcone} fermer={() => definirChoixDIcone(false)} />
         </Suspense>
       )}
-      {nouvelleSousPage && noeud !== null && (
+      {nouvelleSousPage !== null && (
         <NewPageSheet
-          parent={noeud.chemin}
-          titreDuParent={noeud.titre}
-          fermer={() => definirNouvelleSousPage(false)}
+          parent={nouvelleSousPage.chemin}
+          titreDuParent={nouvelleSousPage.titre}
+          fermer={() => definirNouvelleSousPage(null)}
           creee={(cheminCree) => {
-            definirNouvelleSousPage(false);
+            definirNouvelleSousPage(null);
             navigation.ouvrir({ nom: 'page', chemin: cheminCree });
           }}
         />

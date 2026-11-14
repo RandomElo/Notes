@@ -12,7 +12,7 @@ Déroulé d'une suppression : la page part d'abord dans un `.trash/` du dossier 
 
 Écran de la corbeille : il remplace la page au centre, comme les réglages, par une ligne en bas de la barre latérale ; `Échap` rend la page. Liste des entrées (les plus récentes en haut, celles du NAS et celles encore sur le poste), aperçu en lecture seule de l'entrée choisie, « Restaurer », « Supprimer définitivement » (confirmation), « Vider la corbeille » (confirmation). NAS injoignable, la liste montre les entrées du poste et le dit. Une page restaurée revient sous son parent d'origine (retrouvé par son identifiant, même déplacé), à sa place parmi ses sœurs (avant celle qui la suivait, sinon après celle qui la précédait, sinon à son ancien rang), à la racine et en dernier si son parent n'existe plus, avec ses sous-pages, ses images et son identifiant : ses mentions remarchent. Une image revient dans le dossier `assets/` de sa page.
 
-Images inutilisées : dans les réglages, chacune a un bouton « Mettre à la corbeille », et « Tout mettre à la corbeille » les envoie toutes d'un coup, après confirmation à côté du bouton.
+Fichiers inutilisés (images et PDF) : dans les réglages, jusqu'à cinq, chacun a un bouton « Mettre à la corbeille » ; au-delà, « Trier » ouvre une fenêtre où l'on coche ceux qui partent. Un PDF entre dans la corbeille comme une image (même nature, `image`, reconnu à son nom), et revient de même dans le dossier `assets/` de sa page.
 
 Rétention de 30 jours, purge automatique au démarrage. Interface : liste, prévisualisation, restaurer, supprimer définitivement (confirmation requise), vider. Si le NAS est injoignable, corbeille locale temporaire transférée au cycle suivant.
 

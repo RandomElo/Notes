@@ -10,7 +10,7 @@ import {
   listerCorbeille,
   lireApercu,
   mettreALaCorbeille,
-  mettreImageALaCorbeille,
+  mettreFichierJointALaCorbeille,
   placeDOrigine,
   purgerCorbeille,
   rapatrierEntree,
@@ -155,7 +155,7 @@ describe('restaurerEntree', () => {
 
   it('remet une image dans le dossier assets/ de sa page', async () => {
     const { fs, contexte, etape } = await vaultNeuf();
-    await mettreImageALaCorbeille(contexte, `${etape.chemin}/assets/schema.png`);
+    await mettreFichierJointALaCorbeille(contexte, `${etape.chemin}/assets/schema.png`);
     expect(await fs.infos(`${etape.chemin}/assets/schema.png`)).toBeNull();
     const [entree] = await listerCorbeille(stockageLocal(fs));
     expect(entree).toMatchObject({ nature: 'image', nom: 'schema.png', parentId: etape.id, id: null });
@@ -172,15 +172,24 @@ describe('restaurerEntree', () => {
 
   it('refuse une image dont la page n’existe plus', async () => {
     const { fs, contexte, etape, refonte } = await vaultNeuf();
-    await mettreImageALaCorbeille(contexte, `${etape.chemin}/assets/schema.png`);
+    await mettreFichierJointALaCorbeille(contexte, `${etape.chemin}/assets/schema.png`);
     await mettreALaCorbeille(contexte, refonte.chemin);
     const image = (await listerCorbeille(stockageLocal(fs))).find((entree) => entree.nature === 'image');
     await expect(restaurerEntree(contexte, image?.entree ?? '')).rejects.toThrow('La page de cette image');
   });
 
+  it('prend aussi un PDF joint, qui revient dans le dossier assets/ de sa page', async () => {
+    const { fs, contexte, etape } = await vaultNeuf();
+    await fs.ecrireTexte(`${etape.chemin}/assets/cours.pdf`, '%PDF-1.7');
+    await mettreFichierJointALaCorbeille(contexte, `${etape.chemin}/assets/cours.pdf`);
+    const entree = (await listerCorbeille(stockageLocal(fs))).find((element) => element.nom === 'cours.pdf');
+    expect(entree).toMatchObject({ nature: 'image', parentId: etape.id });
+    expect((await restaurerEntree(contexte, entree?.entree ?? '')).chemin).toBe(`${etape.chemin}/assets/cours.pdf`);
+  });
+
   it('refuse ce qui n’est pas une image d’un dossier assets/', async () => {
     const { contexte, etape } = await vaultNeuf();
-    await expect(mettreImageALaCorbeille(contexte, `${etape.chemin}/page.md`)).rejects.toThrow(VaultError);
+    await expect(mettreFichierJointALaCorbeille(contexte, `${etape.chemin}/page.md`)).rejects.toThrow(VaultError);
   });
 });
 

@@ -16,16 +16,16 @@ export type { PageIcon } from './page/icon';
 export { fichierPage } from './page/types';
 export type { PageFile, PageMeta, PageMode, PageRole } from './page/types';
 
-export { aUneExtensionDImage, ajouterImage, dossierAssets, extensionsDImage, listerImagesOrphelines, natureDImage, tailleMaxAvantConversion, tailleMaxDImage } from './vault/assets';
-export type { ImageKind } from './vault/assets';
+export { aUneExtensionDImage, ajouterImage, ajouterPdf, dossierAssets, pdfDeLaPage, tailleMaxDePdf, extensionsDImage, estFichierJoint, listerFichiersInutilises, natureDImage, tailleMaxAvantConversion, tailleMaxDImage } from './vault/assets';
+export type { ImageKind, UnusedFile } from './vault/assets';
 export { listerImagesAConvertir, naturesAConvertir, nomEnWebp, remplacerImageDansTexte, remplacerParWebp } from './vault/image-conversion';
 export type { ImageToConvert } from './vault/image-conversion';
 export { VaultError } from './vault/context';
 export type { VaultContext, VaultErrorCode } from './vault/context';
 export { enregistrerCorps, enregistrerLargeursDesTableaux, lireContenu, lireCorps } from './vault/content';
 export type { PageContent, SaveRequest, SaveResult } from './vault/content';
-export { estFichierDeConflitDePage, lireConflit, listerConflits, resoudreConflit } from './vault/conflicts';
-export type { ConflictVersions } from './vault/conflicts';
+export { comparerOrdres, ecarterConflitDOrdre, estConflitDOrdre, lireConflitDOrdre, estFichierDeConflitDePage, lireConflit, listerConflits, resoudreConflit } from './vault/conflicts';
+export type { ConflictVersions, OrderConflict, OrderEntry } from './vault/conflicts';
 export { importer } from './vault/import';
 export { chargerPage, creerPage, deplacerPage, deplacerPages, dupliquerPage, renommerPage, supprimerPageVide } from './vault/operations';
 export type { PageLocation } from './vault/operations';
@@ -36,6 +36,10 @@ export { ajouterAuDictionnaire, ajouterAuxIgnores, fichierDesIgnores, fichierDuD
 export type { IgnoredRemark } from './vault/dictionary';
 export { ajouterIconeImage, changerIcone } from './vault/icon';
 export { changerMode } from './vault/page-mode';
+export { baseParDefaut, cleDeRepliValide, colonneDesPages, couleurDuChoix, couleursDeChoix, identifiantValide, largeurMaxDeColonne, largeurMinDeColonne, lireConfigDeBase, lireValeurs, maxChoix, nomDeChampValide, nomDeChoixValide, separateurDeLigne, valeurPourLeChamp } from './page/database';
+export type { BaseChoice, BaseChoiceColor, BaseConfig, BaseField, BaseFieldType, BaseSort } from './page/database';
+export { changerConfigDeBase, changerValeurDeBase, estLigneDe, lireBase, renommerChampDeBase, renommerChoixDeBase, retirerChoixDeBase, verifierConfigDeBase } from './vault/database';
+export type { Base, BaseRow } from './vault/database';
 export { indexerTitres } from './vault/titles-index';
 export type { TitleEntry } from './vault/titles-index';
 export { lireArbre, trouverNoeud } from './vault/tree';
@@ -62,7 +66,7 @@ export {
   listerCorbeille,
   lireApercu,
   mettreALaCorbeille,
-  mettreImageALaCorbeille,
+  mettreFichierJointALaCorbeille,
   mettreMemoALaCorbeille,
   placeDOrigine,
   purgerCorbeille,

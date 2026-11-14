@@ -106,21 +106,27 @@ export const etendreSelection =
     return etat.tr.setSelection(new BlockSelection(etat.doc, selection.ancre, voisin.debut)).scrollIntoView();
   };
 
-/** Suppr ou Retour arrière : supprime les blocs sélectionnés, puis sélectionne le bloc qui prend leur place. */
+/** Suppr ou Retour arrière : supprime les blocs sélectionnés ; le curseur revient dans le texte, à la fin du bloc d'au-dessus. */
 export const supprimerBlocs: BlockCommand = (etat) => {
   if (!(etat.selection instanceof BlockSelection)) {
     return null;
   }
   const { debut, fin } = etat.selection.plage();
   const transaction = etat.tr.deleteRange(debut, fin);
-  const position = transaction.mapping.map(debut);
-  const blocs = listerBlocs(transaction.doc);
-  const suivant = blocs.find((bloc) => bloc >= position) ?? blocs[blocs.length - 1];
-  const texteRestant = transaction.doc.textContent !== '' || transaction.doc.childCount > 1;
-  transaction.setSelection(
-    suivant !== undefined && texteRestant ? new BlockSelection(transaction.doc, suivant) : Selection.atStart(transaction.doc),
-  );
+  // Plus de bloc sélectionné (demande d'Eloi) : le curseur à la fin du texte d'au-dessus, ou au début de celui d'après.
+  const $position = transaction.doc.resolve(transaction.mapping.map(debut));
+  transaction.setSelection(Selection.findFrom($position, -1, true) ?? Selection.findFrom($position, 1, true) ?? Selection.atStart(transaction.doc));
   return transaction.scrollIntoView();
+};
+
+/** Ctrl+A : tous les blocs de la page, sélectionnés comme blocs d'emblée (pas d'abord en texte). null sur une page vide. */
+export const selectionnerTout: BlockCommand = (etat) => {
+  const { doc } = etat;
+  const dernier = doc.lastChild;
+  if (dernier === null || (doc.childCount === 1 && dernier.isTextblock && dernier.content.size === 0)) {
+    return null;
+  }
+  return etat.tr.setSelection(new BlockSelection(doc, 0, doc.content.size - dernier.nodeSize));
 };
 
 /** Ctrl+D : duplique les blocs juste en dessous. La sélection ou le curseur passe dans la copie. */

@@ -4,7 +4,7 @@ import { access, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, ouvrirPage, preparer, titreDePage } from './app';
+import { attendreEnregistrement, editeur, fermer, lancer, ligne, lireCorps, ouvrirPage, preparer, titreDePage, rubrique } from './app';
 
 // Ce que les fonctions passées à evaluate utilisent du DOM, que la configuration TypeScript des essais ne connaît pas.
 declare const DataTransfer: new () => { setData(type: string, valeur: string): void };
@@ -88,12 +88,16 @@ test('une page renommée : ses mentions suivent, dans la page ouverte comme dans
   await mention(page, 'Chantier NAS').click();
   await expect(titreDePage(page)).toHaveText('Chantier NAS');
   await ouvrirPage(page, 'Courses');
+  const ongletsAvant = await page.getByRole('tablist', { name: 'Onglets' }).getByRole('tab').count();
   await mention(page, 'Mes projets').click({ modifiers: ['Control'] });
   await expect(titreDePage(page)).toHaveText('Mes projets');
-  await expect(page.getByRole('tablist', { name: 'Onglets' }).getByRole('tab')).toHaveCount(2);
+  // Déjà ouverte dans un onglet depuis le début de l'essai : on y retourne, sans onglet de plus.
+  await expect(page.getByRole('tab', { selected: true })).toContainText('Mes projets');
+  await expect(page.getByRole('tablist', { name: 'Onglets' }).getByRole('tab')).toHaveCount(ongletsAvant);
 
   // Aucune mention cassée après tout ça.
-  await page.keyboard.press('Control+,');
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Mentions');
   await page.locator('section[aria-labelledby="titre-mentions"]').getByRole('button', { name: 'Chercher' }).click();
   await expect(page.getByText('Aucune mention cassée.')).toBeVisible();
 
@@ -113,7 +117,8 @@ test('mention cassée : barrée dans la page, listée dans les réglages', async
   await expect(cassee).toHaveText('Archives');
   await expect(cassee.locator('.mention-titre')).toHaveCSS('text-decoration-line', 'line-through');
 
-  await page.keyboard.press('Control+,');
+  await page.getByRole('button', { name: 'Réglages' }).click();
+  await rubrique(page, 'Mentions');
   await page.locator('section[aria-labelledby="titre-mentions"]').getByRole('button', { name: 'Chercher' }).click();
   await expect(page.getByText('Une mention cassée.')).toBeVisible();
   await expect(page.getByText('dans Courses')).toBeVisible();

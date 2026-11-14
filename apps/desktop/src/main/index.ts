@@ -4,7 +4,7 @@ import { writeFile } from 'node:fs/promises';
 import { dirname, join } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { extensionsDImage } from '@notes/core';
-import { BrowserWindow, app, dialog, net, session, shell } from 'electron';
+import { BrowserWindow, Menu, app, dialog, net, session, shell } from 'electron';
 import { evenements } from '../shared/ipc-contract';
 import { imprimerEnPdf } from './export/pdf';
 import { declarerSchemaDesImages, lireImageDuVault, servirLesImages } from './images/asset-protocol';
@@ -12,6 +12,7 @@ import { telechargerImage } from './images/download';
 import { BackgroundRemoval } from './images/background-removal';
 import { creerHandlersExport } from './ipc/export';
 import { creerHandlersImages } from './ipc/images';
+import { creerHandlersBase } from './ipc/database';
 import { creerHandlersLiens } from './ipc/links';
 import { apercuDuSite } from './links/site-preview';
 import { cleMotDePasse, creerHandlersNas } from './ipc/nas';
@@ -21,6 +22,7 @@ import { creerHandlersCorrection } from './ipc/spellcheck';
 import { creerHandlersCorbeille } from './ipc/trash';
 import { creerHandlersVault } from './ipc/vault';
 import { creerHandlersDepotMarkdown } from './ipc/markdown-drop';
+import { creerHandlersNotion } from './ipc/notion';
 import { creerHandlersSync } from './ipc/sync';
 import { creerHandlersFenetre } from './ipc/window';
 import { chiffreSafeStorage } from './secrets/safe-storage-cipher';
@@ -41,12 +43,14 @@ import { identiteDuPoste } from './sync/device';
 import { IndexFile } from './sync/index-file';
 import { SyncScheduler } from './sync/scheduler';
 import { pageDemandee, sansPage } from './launch/page-argument';
+import { ouvrirLaBarre } from './launch/search-bar';
 import { attendreLaFinDeLAncienne, relancerApresLaFin } from './update/relaunch';
 import { UpdateWatcher } from './update/update-watcher';
 import { cheminDuDemarrage } from './languagetool/launcher';
 import { dossierDeLanguageTool } from './languagetool/location';
 import { SpellcheckService } from './languagetool/spellcheck-service';
 import { creerFileDAttente } from './vault/serial-queue';
+import { ErrorLog } from './errors/error-log';
 import { VaultService } from './vault/vault-service';
 
 const urlDeveloppement = app.isPackaged ? undefined : process.env['ELECTRON_RENDERER_URL'];
@@ -64,6 +68,31 @@ function cheminCompagnon(): string {
 }
 
 let fenetre: BrowserWindow | null = null;
+
+/** Journal des erreurs du profil (docs/spec/architecture.md, « Journal des erreurs »), ouvert au démarrage. */
+let journal = new ErrorLog('/dev/null', app.getVersion());
+
+/** Ce que le main voit d'un plantage : processus de la page perdu, page figée, processus annexe perdu, erreur non rattrapée. */
+function surveillerLesPlantages(): void {
+  journal = new ErrorLog(join(app.getPath('userData'), 'erreurs.log'), app.getVersion());
+  const pile = (erreur: unknown): string | undefined => (erreur instanceof Error ? erreur.stack : undefined);
+  // « Monitor » : note sans changer ce que fait Electron d'une erreur non rattrapée.
+  process.on('uncaughtExceptionMonitor', (erreur) => journal.noter({ origine: 'main', message: String(erreur), detail: pile(erreur) }));
+  process.on('unhandledRejection', (raison) => journal.noter({ origine: 'main (promesse)', message: String(raison), detail: pile(raison) }));
+  app.on('child-process-gone', (_evenement, details) => {
+    journal.noter({ origine: 'processus', message: `${details.type} arrêté : ${details.reason} (code ${details.exitCode})` });
+  });
+  app.on('web-contents-created', (_evenement, contenu) => {
+    contenu.on('render-process-gone', (_e, details) => journal.noter({ origine: 'affichage', message: `processus de la page arrêté : ${details.reason} (code ${details.exitCode})` }));
+    contenu.on('unresponsive', () => journal.noter({ origine: 'affichage', message: 'la page ne répond plus' }));
+    contenu.on('preload-error', (_e, _chemin, erreur) => journal.noter({ origine: 'preload', message: String(erreur), detail: erreur.stack }));
+    contenu.on('did-fail-load', (_e, code, description, _url, principal) => {
+      if (principal) {
+        journal.noter({ origine: 'affichage', message: `chargement raté : ${description} (${code})` });
+      }
+    });
+  });
+}
 
 const preferencesDesFenetres = {
   preload: join(import.meta.dirname, '../preload/index.cjs'),
@@ -159,6 +188,21 @@ async function choisirImages(): Promise<string[]> {
   return choix.canceled ? [] : choix.filePaths;
 }
 
+/** Sélecteur de fichiers du système pour les archives d'un export Notion. Liste vide si l'utilisateur annule. */
+async function choisirArchivesNotion(): Promise<string[]> {
+  if (fenetre === null) {
+    return [];
+  }
+  const choix = await dialog.showOpenDialog(fenetre, {
+    title: 'Export de Notion',
+    defaultPath: app.getPath('downloads'),
+    buttonLabel: 'Importer',
+    properties: ['openFile', 'multiSelections'],
+    filters: [{ name: 'Export Notion (.zip)', extensions: ['zip'] }],
+  });
+  return choix.canceled ? [] : choix.filePaths;
+}
+
 /** Dossier du dernier export, proposé au suivant. Au premier, le dossier Documents. */
 let dossierDExport: string | null = null;
 
@@ -216,6 +260,9 @@ function creerFenetre(handlers: ReturnType<typeof creerHandlersFenetre>): void {
   chargerApplication(fenetre);
 }
 
+// Pas de menu : la fenêtre n'a pas de cadre système, et ses raccourcis sont gérés par l'application.
+// Sans ça, les accélérateurs du menu par défaut (Ctrl+W fermer, Ctrl+Q quitter…) agiraient tout seuls.
+Menu.setApplicationMenu(null);
 app.enableSandbox();
 declarerSchemaDesImages();
 
@@ -229,6 +276,7 @@ if (app.isPackaged) {
 void attendreLaFinDeLAncienne(process.env).then(demarrer);
 
 function demarrer(): void {
+  surveillerLesPlantages();
   if (!app.requestSingleInstanceLock()) {
     app.quit();
   } else {
@@ -368,7 +416,17 @@ function demarrer(): void {
         octetsAleatoires: (taille) => randomBytes(taille),
       });
       const ffmpeg = join(dossierRessources(), 'ffmpeg', 'ffmpeg');
+      const notion = creerHandlersNotion({
+        vault,
+        enSerie: handlersVault.enSerie,
+        dossierTemporaire: () => app.getPath('temp'),
+        choisirArchives: choisirArchivesNotion,
+        signalerAvancement: (avancement) => fenetre?.webContents.send(evenements.avancementNotion, avancement),
+      });
+      app.on('will-quit', () => void notion.arreter());
       enregistrerCanaux({
+        journal,
+        notion,
         fenetre: handlersFenetre,
         vault: handlersVault,
         depot: creerHandlersDepotMarkdown({ vault, enSerie: handlersVault.enSerie }),
@@ -389,6 +447,7 @@ function demarrer(): void {
           },
         }),
         // Une session à part, sans cookies ni cache partagés avec la fenêtre, comme pour les images.
+        base: creerHandlersBase({ vault, enSerie: handlersVault.enSerie }),
         liens: creerHandlersLiens({
           vault,
           enSerie: handlersVault.enSerie,
@@ -399,6 +458,7 @@ function demarrer(): void {
           enSerie: handlersVault.enSerie,
           choisirFichiers: choisirImages,
           detourage,
+          ouvrirFichier: (chemin) => shell.openPath(chemin),
           // Une session à part, sans cookies ni cache partagés avec la fenêtre.
           telecharger: (adresse) => telechargerImage(adresse, (url, options) => session.fromPartition('telechargements-images').fetch(url, options)),
         }),
@@ -433,6 +493,7 @@ function demarrer(): void {
             pageEnAttente = null;
             return id;
           },
+          barreDeRecherche: () => ouvrirLaBarre(),
         },
         expediteurAutorise: (evenement) =>
           evenement.senderFrame !== null &&

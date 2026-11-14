@@ -35,6 +35,8 @@ export function convertirJetons(jetons: Jeton[]): ProseMirrorNode[] {
 
   // Jetons déjà traités avec le précédent (paragraphe qui ne contient qu'une image).
   let sauterJusque = -1;
+  // Images collées à la fin d'un paragraphe d'item, à remettre en blocs après lui.
+  let imagesApresLeParagraphe: ProseMirrorNode[] = [];
   jetons.forEach((jeton, index) => {
     if (index <= sauterJusque) {
       return;
@@ -93,8 +95,12 @@ export function convertirJetons(jetons: Jeton[]): ProseMirrorNode[] {
       case 'tbody_close':
         return;
       case 'tr_close':
-      case 'table_close':
       case 'paragraph_close':
+        fermer();
+        sommet().contenu.push(...imagesApresLeParagraphe);
+        imagesApresLeParagraphe = [];
+        return;
+      case 'table_close':
       case 'heading_close':
       case 'blockquote_close':
       case 'bullet_list_close':
@@ -106,7 +112,17 @@ export function convertirJetons(jetons: Jeton[]): ProseMirrorNode[] {
         const parent = pile[pile.length - 2];
         const sansCase = parent?.type === 'taskItem' && parent.contenu.length === 0;
         const dansUneCellule = parent?.type === 'tableCell' || parent?.type === 'tableHeader';
-        sommet().contenu.push(...convertirEnLigne(jeton.children ?? [], sansCase, dansUneCellule));
+        const enfants = jeton.children ?? [];
+        // Dans une liste serrée, une image d'un item suit son texte sans ligne vide
+        // (canonical.ts) : markdown-it la met dans le paragraphe, elle en ressort en bloc.
+        let finDuTexte = enfants.length;
+        if (parent?.type === 'listItem' || parent?.type === 'taskItem') {
+          while (finDuTexte >= 3 && enfants[finDuTexte - 1]?.type === 'image' && enfants[finDuTexte - 2]?.type === 'softbreak') {
+            finDuTexte -= 2;
+          }
+        }
+        sommet().contenu.push(...convertirEnLigne(enfants.slice(0, finDuTexte), sansCase, dansUneCellule));
+        imagesApresLeParagraphe = enfants.slice(finDuTexte).filter((enfant) => enfant.type === 'image').map((image) => creer('image', { ...attributsDImage(image) }));
         return;
       }
       case 'hr':

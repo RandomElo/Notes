@@ -1,7 +1,7 @@
 import { readFile, stat } from 'node:fs/promises';
-import { basename } from 'node:path';
-import { ajouterImage, dossierAssets, listerImagesAConvertir, listerImagesOrphelines, natureDImage, remplacerParWebp, tailleMaxAvantConversion, tailleMaxDImage } from '@notes/core';
-import type { ImageToConvert } from '@notes/core';
+import { basename, join } from 'node:path';
+import { ajouterImage, dossierAssets, listerImagesAConvertir, pdfDeLaPage, listerFichiersInutilises, natureDImage, remplacerParWebp, tailleMaxAvantConversion, tailleMaxDImage } from '@notes/core';
+import type { ImageToConvert, UnusedFile } from '@notes/core';
 import type { BackgroundRemovalResult, ImageReadResult, ImagesAddResult, ImagesReceivedResult } from '../../shared/ipc-contract';
 import type { BackgroundRemoval } from '../images/background-removal';
 import { coteDuModele } from '../images/background-removal-model';
@@ -19,6 +19,8 @@ export interface ImagesHandlersDependencies {
   telecharger: (adresse: string) => Promise<DownloadResult>;
   /** Détourage des icônes (images/background-removal.ts), hors de la file : il ne touche pas au vault. */
   detourage: Pick<BackgroundRemoval, 'masque'>;
+  /** Ouvre un fichier avec l'application du système (`shell.openPath`) ; rend un message d'erreur, vide si tout va bien. */
+  ouvrirFichier: (chemin: string) => Promise<string>;
 }
 
 /** Un nom de fichier seul, sans dossier ni fichier caché : ce qu'un dossier `assets/` peut contenir. */
@@ -29,7 +31,7 @@ const estNomDeFichier = (nom: unknown): nom is string =>
  * Handlers des canaux « images: ». Les entrées viennent du renderer : rien n'est supposé valide.
  * Une image reçue (choisie, téléchargée) est rendue au renderer, qui la convertit en WebP avant de l'ajouter.
  */
-export function creerHandlersImages({ vault, enSerie, choisirFichiers, telecharger, detourage }: ImagesHandlersDependencies) {
+export function creerHandlersImages({ vault, enSerie, choisirFichiers, telecharger, detourage, ouvrirFichier }: ImagesHandlersDependencies) {
   const echec = (erreur: unknown): ImagesAddResult => ({ ok: false, erreur: versErreur(erreur) });
 
   return {
@@ -108,10 +110,10 @@ export function creerHandlersImages({ vault, enSerie, choisirFichiers, telecharg
       });
     },
 
-    orphelines: (): Promise<string[]> =>
+    inutilises: (): Promise<UnusedFile[]> =>
       enSerie(async () => {
         try {
-          return await listerImagesOrphelines(vault.contexte().fs);
+          return await listerFichiersInutilises(vault.contexte().fs);
         } catch {
           return [];
         }
@@ -121,6 +123,22 @@ export function creerHandlersImages({ vault, enSerie, choisirFichiers, telecharg
      * Image collée depuis une autre page : le fichier « source » (dans un dossier `assets/`) est
      * copié dans les `assets/` de « page », sans rien remplacer. Rend l'adresse à écrire dans la page.
      */
+    /** Seul un PDF du dossier `assets/` de la page s'ouvre : jamais un autre fichier, qui pourrait s'exécuter. */
+    ouvrirPdf: async (demande: unknown): Promise<boolean> => {
+      const { page, adresse } = champs(demande);
+      const nom = typeof adresse === 'string' ? pdfDeLaPage(adresse) : null;
+      const dossier = vault.etat().dossier;
+      if (!estChemin(page) || nom === null || dossier === null) {
+        return false;
+      }
+      const relatif = `${page}/${dossierAssets}/${nom}`;
+      const infos = await vault.contexte().fs.infos(relatif).catch(() => null);
+      if (infos === null || infos.estDossier) {
+        return false;
+      }
+      return (await ouvrirFichier(join(dossier, ...relatif.split('/')))) === '';
+    },
+
     copier: (demande: unknown): Promise<ImagesAddResult> => {
       const { source, page } = champs(demande);
       const morceaux = typeof source === 'string' ? source.split('/') : [];

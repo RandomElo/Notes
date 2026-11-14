@@ -7,7 +7,7 @@ import type { EditorView } from '@tiptap/pm/view';
 import type { SpellcheckRequest, SpellIssue } from '../../../../shared/ipc-contract';
 import { api } from '../../lib/ipc';
 import { estBlocAVerifier, rienAVerifier, texteDuBloc } from './block-text';
-import { correctionPrete, fauteAMontrer, magasinDeCorrection } from './spellcheck-store';
+import { concerneLEditeur, correctionPrete, fauteAMontrer, magasinDeCorrection } from './spellcheck-store';
 
 /** Temps sans frappe avant de vérifier les blocs modifiés (docs/spec/correction.md). */
 export const delaiDeVerificationMs = 800;
@@ -28,7 +28,7 @@ interface EtatDeCorrection {
   envois: Envoi[];
 }
 
-type Action = { genre: 'envoyer'; envois: Envoi[] } | { genre: 'resultat'; id: number; fautes: SpellIssue[] | null } | { genre: 'tout-revoir' } | { genre: 'filtrer' };
+type Action = { genre: 'envoyer'; envois: Envoi[] } | { genre: 'resultat'; id: number; fautes: SpellIssue[] | null } | { genre: 'tout-revoir' } | { genre: 'filtrer' } | { genre: 'effacer' };
 
 export const cleDeCorrection = new PluginKey<EtatDeCorrection>('correction-orthographique');
 
@@ -113,6 +113,8 @@ function appliquer(transaction: Transaction, ancien: EtatDeCorrection): EtatDeCo
       decorations = decorations.remove(anciennes).add(document, decorationsDe(envoi.debut, action.fautes));
       return { decorations, aVerifier, envois: restants };
     }
+    case 'effacer':
+      return { decorations: DecorationSet.empty, aVerifier: [], envois: [] };
     case 'tout-revoir':
       return { decorations, aVerifier: blocsEntre(document), envois };
     case 'filtrer': {
@@ -130,9 +132,13 @@ export function fauteA(etat: EditorState, position: number): FauteSoulignee | nu
   return decoration === undefined ? null : { de: decoration.from, a: decoration.to, faute: (decoration.spec as { faute: SpellIssue }).faute };
 }
 
-/** Nombre de fautes soulignées. */
+/** Nombre de fautes soulignées. Un compte impossible ne doit pas faire tomber l'affichage : il vaut alors zéro. */
 function compter(etat: EditorState): number {
-  return cleDeCorrection.getState(etat)?.decorations.find().length ?? 0;
+  try {
+    return cleDeCorrection.getState(etat)?.decorations.find().length ?? 0;
+  } catch {
+    return 0;
+  }
 }
 
 /** Toutes les fautes soulignées, dans l'ordre de la page. */
@@ -235,7 +241,13 @@ export function creerPluginDeCorrection(): Plugin<EtatDeCorrection> {
         const ancien = snapshot;
         const nouveau = magasinDeCorrection.lire();
         snapshot = nouveau;
-        if (correctionPrete(nouveau) && !correctionPrete(ancien)) {
+        if (!concerneLEditeur(ancien, nouveau)) {
+          return;
+        }
+        if (!correctionPrete(nouveau) && correctionPrete(ancien)) {
+          // Correction coupée (réglage « Désactivée ») : les soulignements s'en vont.
+          vue.dispatch(vue.state.tr.setMeta(cleDeCorrection, { genre: 'effacer' } satisfies Action).setMeta('addToHistory', false));
+        } else if (correctionPrete(nouveau) && !correctionPrete(ancien)) {
           vue.dispatch(vue.state.tr.setMeta(cleDeCorrection, { genre: 'tout-revoir' } satisfies Action).setMeta('addToHistory', false));
         } else if (nouveau.dictionnaire !== ancien.dictionnaire || nouveau.ignores !== ancien.ignores) {
           vue.dispatch(vue.state.tr.setMeta(cleDeCorrection, { genre: 'filtrer' } satisfies Action).setMeta('addToHistory', false));

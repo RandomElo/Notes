@@ -20,7 +20,7 @@ export const variableDeCouleur: Record<ColorName, string> = {
  * variable, pas sa valeur : une page qui surcharge une couleur change ainsi
  * tout ce qui en dépend.
  */
-function couleur(valeur: string): string {
+export function couleurDuTheme(valeur: string): string {
   return (nomsDeCouleur as readonly string[]).includes(valeur) ? `var(${variableDeCouleur[valeur as ColorName]})` : valeur;
 }
 
@@ -42,37 +42,37 @@ export function variablesDuTheme(theme: Theme): Record<string, string> {
     variables[`--page-${niveau}-graisse`] = String(titre.weight);
     variables[`--page-${niveau}-style`] = titre.italic ? 'italic' : 'normal';
     variables[`--page-${niveau}-trait`] = titre.underline ? 'underline' : 'none';
-    variables[`--page-${niveau}-couleur`] = couleur(titre.color);
+    variables[`--page-${niveau}-couleur`] = couleurDuTheme(titre.color);
     variables[`--page-${niveau}-marge`] = titre.margin_top;
   }
 
-  variables['--page-puce-1'] = couleur(theme.list.bullet_1);
-  variables['--page-puce-2'] = couleur(theme.list.bullet_2);
-  variables['--page-puce-3'] = couleur(theme.list.bullet_3);
+  variables['--page-puce-1'] = couleurDuTheme(theme.list.bullet_1);
+  variables['--page-puce-2'] = couleurDuTheme(theme.list.bullet_2);
+  variables['--page-puce-3'] = couleurDuTheme(theme.list.bullet_3);
 
-  variables['--page-fond-code'] = couleur(theme.code.background);
+  variables['--page-fond-code'] = couleurDuTheme(theme.code.background);
   variables['--page-code-taille'] = theme.code.font_size;
   variables['--code-retour'] = theme.code.wrap ? 'pre-wrap' : 'pre';
   variables['--code-numeros'] = theme.code.line_numbers ? 'inline-block' : 'none';
   variables['--code-marge-numeros'] = theme.code.line_numbers ? '2em' : '0em';
-  variables['--code-texte'] = couleur(theme.code.syntax.text);
-  variables['--code-commentaire'] = couleur(theme.code.syntax.comment);
-  variables['--code-mot-cle'] = couleur(theme.code.syntax.keyword);
-  variables['--code-controle'] = couleur(theme.code.syntax.control);
-  variables['--code-chaine'] = couleur(theme.code.syntax.string);
-  variables['--code-regex'] = couleur(theme.code.syntax.regex);
-  variables['--code-nombre'] = couleur(theme.code.syntax.number);
-  variables['--code-fonction'] = couleur(theme.code.syntax.function);
-  variables['--code-type'] = couleur(theme.code.syntax.type);
-  variables['--code-variable'] = couleur(theme.code.syntax.variable);
-  variables['--code-balise'] = couleur(theme.code.syntax.tag);
-  variables['--code-attribut'] = couleur(theme.code.syntax.attribute);
-  variables['--callout-info'] = couleur(theme.callout.info);
-  variables['--callout-succes'] = couleur(theme.callout.success);
-  variables['--callout-alerte'] = couleur(theme.callout.warning);
-  variables['--callout-danger'] = couleur(theme.callout.danger);
-  variables['--tableau-bordure'] = couleur(theme.table.border);
-  variables['--tableau-entete'] = couleur(theme.table.header_background);
+  variables['--code-texte'] = couleurDuTheme(theme.code.syntax.text);
+  variables['--code-commentaire'] = couleurDuTheme(theme.code.syntax.comment);
+  variables['--code-mot-cle'] = couleurDuTheme(theme.code.syntax.keyword);
+  variables['--code-controle'] = couleurDuTheme(theme.code.syntax.control);
+  variables['--code-chaine'] = couleurDuTheme(theme.code.syntax.string);
+  variables['--code-regex'] = couleurDuTheme(theme.code.syntax.regex);
+  variables['--code-nombre'] = couleurDuTheme(theme.code.syntax.number);
+  variables['--code-fonction'] = couleurDuTheme(theme.code.syntax.function);
+  variables['--code-type'] = couleurDuTheme(theme.code.syntax.type);
+  variables['--code-variable'] = couleurDuTheme(theme.code.syntax.variable);
+  variables['--code-balise'] = couleurDuTheme(theme.code.syntax.tag);
+  variables['--code-attribut'] = couleurDuTheme(theme.code.syntax.attribute);
+  variables['--callout-info'] = couleurDuTheme(theme.callout.info);
+  variables['--callout-succes'] = couleurDuTheme(theme.callout.success);
+  variables['--callout-alerte'] = couleurDuTheme(theme.callout.warning);
+  variables['--callout-danger'] = couleurDuTheme(theme.callout.danger);
+  variables['--tableau-bordure'] = couleurDuTheme(theme.table.border);
+  variables['--tableau-entete'] = couleurDuTheme(theme.table.header_background);
 
   variables['--ui-largeur-contenu'] = theme.ui.content_width;
   variables['--ui-largeur-barre'] = theme.ui.sidebar_width;

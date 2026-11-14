@@ -1,7 +1,7 @@
 import { ecrireMarkdown, lireMarkdown, schema } from '@notes/document';
 import { EditorState, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
-import { placerSousLaTache, rangerLaPage, tacheALaFrappe } from './todo-extension';
+import { placerSousLaTache, rangerLaPage, retirerTacheVide, tacheALaFrappe } from './todo-extension';
 
 /** La page lue de « corps », suivie d'un paragraphe vide où se trouve le curseur (clic sous le dernier bloc). */
 function avecParagrapheVide(corps: string, placer: 'fin' | 'debut' = 'fin'): { etat: EditorState; source: ReturnType<typeof lireMarkdown>['source'] } {
@@ -96,5 +96,40 @@ describe('bloc choisi dans le menu, en mode liste', () => {
 
   it('rien hors du texte d’une tâche', () => {
     expect(placerSousLaTache(dans('Texte\n', 'Texte').etat)).toBeNull();
+  });
+});
+
+describe('Retour arrière sur une tâche vide', () => {
+  /** La page lue de « corps », curseur dans la tâche vide (la seule qui n'a pas de texte). */
+  function surLaTacheVide(corps: string): { etat: EditorState; source: ReturnType<typeof lireMarkdown>['source'] } {
+    const { document, source } = lireMarkdown(corps);
+    let position = -1;
+    document.descendants((noeud, debut) => {
+      if (noeud.type.name === 'paragraph' && noeud.content.size === 0 && position === -1) {
+        position = debut + 1;
+      }
+    });
+    return { etat: EditorState.create({ doc: document, selection: TextSelection.create(document, position) }), source };
+  }
+
+  it('la retire, curseur à la fin de la tâche d’avant, sans manger de lettre', () => {
+    const { etat, source } = surLaTacheVide('- [ ] pain\n- [ ] \n- [ ] lait\n');
+    const tr = retirerTacheVide(etat)!;
+    expect(ecrireMarkdown(tr.doc, source)).toBe('- [ ] pain\n- [ ] lait\n');
+    expect(tr.selection.$from.parent.textContent).toBe('pain');
+    expect(tr.selection.$from.parentOffset).toBe(4);
+  });
+
+  it('une sous-tâche vide seule : sa liste part avec elle, curseur sur la tâche parente', () => {
+    const { etat, source } = surLaTacheVide('- [ ] pain\n  - [ ] \n- [ ] lait\n');
+    const tr = retirerTacheVide(etat)!;
+    expect(ecrireMarkdown(tr.doc, source)).toBe('- [ ] pain\n- [ ] lait\n');
+    expect(tr.selection.$from.parent.textContent).toBe('pain');
+  });
+
+  it('ne fait rien sur la première tâche ni sur une tâche qui a du texte', () => {
+    expect(retirerTacheVide(surLaTacheVide('- [ ] \n- [ ] pain\n').etat)).toBeNull();
+    const { document } = lireMarkdown('- [ ] pain\n');
+    expect(retirerTacheVide(EditorState.create({ doc: document, selection: TextSelection.create(document, 3) }))).toBeNull();
   });
 });

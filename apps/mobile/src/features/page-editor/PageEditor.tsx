@@ -1,5 +1,5 @@
 import { ecrireMarkdown, lireMarkdown } from '@notes/document';
-import { classeDePage, extensionsDAffichage } from '@notes/ui';
+import { TableauDeBaseCache, classeDePage, extensionsDAffichage } from '@notes/ui';
 import type { ImageViewOptions, MentionViewOptions, PagesDirectory, SiteMentionOptions } from '@notes/ui';
 import type { Editor } from '@tiptap/core';
 import { Placeholder } from '@tiptap/extensions';
@@ -26,6 +26,8 @@ interface PageEditorProps {
   absenceImage: ImageViewOptions['absence'];
   mentions: MentionViewOptions;
   sites: SiteMentionOptions;
+  /** La page est une base de données : son tableau écrit est caché, la vue de la base le montre (docs/spec/base-de-donnees.md). */
+  baseDeDonnees?: boolean;
 }
 
 /** Délai sans frappe avant d'écrire sur le NAS, et avant de rendre le verrou après la dernière saisie. */
@@ -39,7 +41,7 @@ const delaiDeRelacheMs = 1500;
  * est réécrite comme sur le PC (seuls les blocs modifiés changent dans le
  * fichier) et part sur le NAS au fil de la frappe, sous le verrou de la page.
  */
-export function PageEditor({ page, corps, modifiable, remplacer, resoudreImage, absenceImage, mentions, sites }: PageEditorProps) {
+export function PageEditor({ page, corps, modifiable, remplacer, resoudreImage, absenceImage, mentions, sites, baseDeDonnees = false }: PageEditorProps) {
   const { commencerSaisie, finirSaisie, montrerAvis } = useNotes();
   const [focus, definirFocus] = useState(false);
   const [feuille, definirFeuille] = useState<'callout' | 'markdown' | null>(null);
@@ -59,7 +61,9 @@ export function PageEditor({ page, corps, modifiable, remplacer, resoudreImage, 
         { favicon: (href) => options.current.sites.favicon?.(href) ?? null },
       ),
       Placeholder.configure({ placeholder: 'Écrire…' }),
+      TableauDeBaseCache.configure({ actif: baseDeDonnees }),
     ];
+    // Créé une fois par page : une page qui devient une base est rouverte.
   }, []);
 
   /** Le Markdown d'origine de chaque bloc, pour ne réécrire que les blocs modifiés ; et le dernier corps venu de l'éditeur. */
@@ -140,6 +144,22 @@ export function PageEditor({ page, corps, modifiable, remplacer, resoudreImage, 
     },
     [enregistrer, finirSaisie, page],
   );
+
+  // L'application passe en arrière-plan ou se ferme : on écrit la dernière frappe tout de suite,
+  // sans attendre la pause de la saisie (sinon fermer l'application juste après une frappe la perdait).
+  useEffect(() => {
+    const surMasquage = (): void => {
+      if (document.visibilityState === 'hidden') {
+        enregistrer();
+      }
+    };
+    document.addEventListener('visibilitychange', surMasquage);
+    window.addEventListener('pagehide', surMasquage);
+    return () => {
+      document.removeEventListener('visibilitychange', surMasquage);
+      window.removeEventListener('pagehide', surMasquage);
+    };
+  }, [enregistrer]);
 
   // Le corps a changé ailleurs (PC, écriture refusée) : l'éditeur reprend la version du NAS.
   useEffect(() => {

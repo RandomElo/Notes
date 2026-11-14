@@ -4,7 +4,7 @@ import { RotateCcw } from 'lucide-react';
 import { useEffect, useId, useState } from 'react';
 import { ColorSelect } from './ColorSelect';
 import { InfoTip } from './InfoTip';
-import { decouperTaille, policeDeValeur, surSixChiffres, unitesDeTaille, valeurDePolice } from './theme-form-model';
+import { decouperTaille, etatsDuTexte, etatsEnTexte, policeDeValeur, surSixChiffres, unitesDeTaille, valeurDePolice } from './theme-form-model';
 import type { FontFamilyKind } from './theme-form-model';
 
 interface ThemeFieldProps {
@@ -60,7 +60,7 @@ export function ThemeField({ libelle, genre, valeur, parDefaut, palette, aide, p
       definirSaisie(tape);
     }
   };
-  const texte = saisie ?? String(valeur);
+  const texte = saisie ?? (typeof valeur === 'object' ? '' : String(valeur));
 
   let champ;
   switch (genre) {
@@ -159,6 +159,20 @@ export function ThemeField({ libelle, genre, valeur, parDefaut, palette, aide, p
         </div>
       );
       break;
+    case 'etats': {
+      const etats = valeur as { name: string; color: string }[];
+      champ = (
+        <textarea
+          id={id}
+          rows={Math.max(3, etats.length + 1)}
+          spellCheck={false}
+          value={saisie ?? etatsEnTexte(etats)}
+          onChange={(evenement) => proposer(etatsDuTexte(evenement.target.value), evenement.target.value)}
+          className={`${classeDeChamp} resize-y font-mono`}
+        />
+      );
+      break;
+    }
     case 'reference':
       // Une couleur qui peut renvoyer à la palette : tout se choisit dans la liste, « Couleur choisie… » compris.
       champ = <ColorSelect id={id} libelle={libelle} valeur={String(valeur)} palette={palette} surChoix={surChangement} />;

@@ -238,7 +238,7 @@ export function LinkTooltip({ editor, options }: { editor: Editor; options: Link
             <button
               type="button"
               onMouseDown={sansFocus}
-              onClick={(evenement) => ouvrirAdresse(cible.lien.adresse, evenement.ctrlKey, options)}
+              onClick={(evenement) => ouvrirAdresse(cible.lien.adresse, !evenement.ctrlKey, options)}
               title={`Ouvrir ${cible.lien.adresse}`}
               className={`${bouton} text-accent min-w-0`}
             >

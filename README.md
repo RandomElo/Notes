@@ -70,6 +70,9 @@ Un fichier par sujet, dans `docs/spec/` :
 | Fonctions IA | [ia](docs/spec/ia.md) |
 | Mémos vocaux | [memos](docs/spec/memos.md) |
 | Mode liste de tâches | [liste-de-taches](docs/spec/liste-de-taches.md) |
+| Base de données | [base-de-donnees](docs/spec/base-de-donnees.md) |
+| Base sans pages | [base-sans-pages](docs/spec/base-sans-pages.md) |
+| Import de Notion | [import-notion](docs/spec/import-notion.md) |
 | Application Android | [android](docs/spec/android.md) |
 | Sécurité et configuration | [securite](docs/spec/securite.md) |
 | Packaging | [packaging](docs/spec/packaging.md) |
@@ -189,3 +192,39 @@ Une ligne par version livrée, la plus récente en bas.
 | 2026-10-12 | 0.18.2 | Icône du sommaire retirée |
 | 2026-10-12 | 0.18.3 | LanguageTool selon le poste |
 | 2026-10-12 | 0.18.4 | LanguageTool sur un bon PC |
+| 2026-10-12 | 0.18.5 | Image sous une tâche relue |
+| 2026-10-12 | 0.18.6 | Journal des erreurs |
+| 2026-10-15 | 0.19.0 | Import Notion, réglages en rubriques |
+| 2026-10-15 | 0.19.1 | PDF joints, historique des versions |
+| 2026-10-15 | 0.19.2 | Import Notion validé sur le vrai export |
+| 2026-10-15 | 0.19.3 | Choix des pages Notion avec aperçu |
+| 2026-10-16 | 0.19.4 | Liens vers pages non importées retirés |
+| 2026-10-18 | 0.20.0 | Correctifs : onglets, recherche, tâches |
+| 2026-10-18 | 0.20.1 | Écran gris corrigé, Ctrl+A en blocs |
+| 2026-10-18 | 0.21.0 | Bases de données |
+| 2026-10-18 | 0.21.1 | Différence des ordres, type de champ |
+| 2026-10-21 | 0.21.2 | Sous-lignes, largeur des colonnes |
+| 2026-10-21 | 0.21.3 | Sous-lignes sur le téléphone |
+| 2026-10-21 | 0.21.4 | Repli gardé dans l'en-tête |
+| 2026-10-21 | 0.21.5 | Base : plus de barre de défilement d'un pixel au redimensionnement |
+| 2026-10-21 | 0.21.6 | Base : texte rogné dans une colonne étroite |
+| 2026-10-21 | 0.21.7 | Onglets nombreux rognés, plus de chevauchement avec « Relancer » |
+| 2026-10-21 | 0.21.8 | Détail de la sync : hauteur stable, fermé après le dernier conflit d'ordre résolu |
+| 2026-10-21 | 0.21.9 | Clic molette sur la barre de titre sans effet (plus d'abaissement de la fenêtre) |
+| 2026-10-21 | 0.21.10 | Clic molette sur la barre de titre : la fenêtre revient aussitôt au premier plan |
+| 2026-10-21 | 0.21.11 | Tentatives de la 0.21.9/0.21.10 retirées : le clic molette se règle côté Cinnamon |
+| 2026-10-21 | 0.21.12 | Téléphone : enregistrement à l'arrière-plan, fond d'une tâche longue sélectionnée, micro remonté |
+| 2026-10-21 | 0.21.13 | Raccourcis retirés : onglets (Ctrl+T/W/Tab/1-9), panneau et sommaire (Ctrl+\, Ctrl+Maj+\), réglages (Ctrl+,), quitter (Ctrl+Q), titres (Ctrl+Alt+0-5) |
+| 2026-10-24 | 0.22.0 | Recherche de pages sans onglet, loupe et Ctrl+Maj+F, barre Ctrl+F d'une seule couleur |
+| 2026-10-24 | 0.22.1 | Code Ctrl+E plus lisible, recherche de Notes en fenêtre sans barre du poste |
+| 2026-10-24 | 0.23.0 | Bases : colonne « choix » à valeurs possibles et couleurs |
+| 2026-10-24 | 0.23.1 | Base : un titre long ne cache plus les colonnes |
+| 2026-10-24 | 0.24.0 | Base sans pages, question à la création, paramètres de la base |
+| 2026-10-24 | 0.24.1 | Annuler le retrait d'une ligne sans page, recherche sans collage du clic molette |
+| 2026-10-24 | 0.24.2 | Base : le titre d'une ligne revient à la ligne |
+| 2026-10-28 | 0.25.0 | Base : vue en liste de tâches, au choix avec le tableau |
+| 2026-10-28 | 0.25.1 | Infobulle de cellule à la sélection, largeurs de colonnes affichées, poignée de tâche plus proche |
+| 2026-10-28 | 0.26.0 | Correction réglable (discrète, désactivée), barre sur cellules sélectionnées, poignée qui ne fuit plus, étiquettes de liste à droite |
+| 2026-10-28 | 0.26.1 | Correction discrète plus lisible, poignée de sous-tâche plus tenace |
+| 2026-10-28 | 0.26.2 | Poignée sans retard devant la case, celle de la sous-tâche et non du parent |
+| 2026-10-28 | 0.27.0 | Collage de Markdown proposé, colonne ajoutée à un tableau, PDF sans liste coupée, icônes du panneau |

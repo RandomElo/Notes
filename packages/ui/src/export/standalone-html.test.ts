@@ -74,6 +74,8 @@ describe('feuilleDExport', () => {
     expect(papier).not.toContain(`--page-h3-couleur: ${themeParDefaut.heading.h3.color};`);
     expect(css).toContain(`--export-fond-des-blocs-de-code: ${themeParDefaut.colors.surface};`);
     expect(css).toMatch(/@media print[\s\S]*break-after: avoid/);
+    // Une phrase d'introduction reste avec sa liste (PDF).
+    expect(css).toContain('p:has(+ ul)');
   });
 
   it('pose le papier sur la racine, plus fort que les variables communes', () => {

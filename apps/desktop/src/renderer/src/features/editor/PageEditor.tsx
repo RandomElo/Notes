@@ -1,15 +1,15 @@
 import { natureDIcone } from '@notes/core';
 import type { PageMode, TreeNode } from '@notes/core';
-import { avecLargeursDesTableaux, convertirEnListe, ouvrirNouvelleTache, ecrireMarkdown, largeursDesTableaux, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
+import { avecLargeursDesTableaux, convertirEnListe, documentDuCorps, ouvrirNouvelleTache, ecrireMarkdown, largeursDesTableaux, libelleDAdresse, lireMarkdown, mentionsARenommer } from '@notes/document';
 import type { ImageAttributes, OutlineEntry } from '@notes/document';
-import { SubpagesBlock, classeDePage, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
+import { SubpagesBlock, TableauDeBaseCache, classeDePage, definirTableauDeBaseCache, extensionsDAffichage, variablesDeSurcharge } from '@notes/ui';
 import { Node as NoeudTiptap } from '@tiptap/core';
 import type { AnyExtension } from '@tiptap/core';
 import { Dropcursor, Gapcursor, Placeholder, UndoRedo } from '@tiptap/extensions';
 import { EditorContent, ReactNodeViewRenderer, useEditor } from '@tiptap/react';
 import type { MentionedPage, Theme } from '@notes/ui';
 import type { Editor } from '@tiptap/react';
-import { Download, EllipsisVertical, FileText, List, ListChecks, Lock, Sparkles, X } from 'lucide-react';
+import { Copy, Download, EllipsisVertical, FileText, List, ListChecks, Lock, Settings2, Sparkles, Table2, X } from 'lucide-react';
 import { Selection, TextSelection } from '@tiptap/pm/state';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CSSProperties } from 'react';
@@ -28,6 +28,8 @@ import { ConflictNotice, useConflits } from '../conflicts/ConflictNotice';
 import { ImageCopy } from '../images/image-copy';
 import { ImageFiles, ajouterEnWebp } from '../images/image-files';
 import { ImageLinkPrompt } from '../images/ImageLinkPrompt';
+import { MarkdownPaste, collerEnTexte } from '../markdown-paste/markdown-paste';
+import { MarkdownPastePrompt } from '../markdown-paste/MarkdownPastePrompt';
 import { ImageResizeHandles } from '../images/ImageResizeHandles';
 import { adresseDImage } from '../images/image-url';
 import { ImageToolbar } from '../images/ImageToolbar';
@@ -60,8 +62,13 @@ import { OutlineDialog } from '../outline/OutlineDialog';
 import { OutlineRail } from '../outline/OutlineRail';
 import { allerAuTitre, useOutline } from '../outline/useOutline';
 import { FloatingToolbar } from '../toolbar/FloatingToolbar';
+import { FindBar } from '../find/FindBar';
+import { BaseModeDialog } from '../database/BaseModeDialog';
+import { DatabaseView } from '../database/DatabaseView';
+import { PageFind } from '../find/find-extension';
 import { TodoMode, cleDuModeListe, definirModeListe } from '../todo-mode/todo-extension';
 import { allerALaFin } from './end-click';
+import { CurseurItalique } from './italic-caret';
 import { PageSaver } from './page-saver';
 import type { SaveState } from './page-saver';
 import { PageTitle } from './PageTitle';
@@ -79,6 +86,7 @@ interface ExtensionsDeLEditeur {
   agrandir: (attributs: ImageAttributes, adresse: string) => void;
   surErreurDImage: (message: string) => void;
   surLienDImage: (adresse: string, position: number) => void;
+  surMarkdown: (texte: string, position: number) => void;
   /** Ouverture d'une page par un lien ou une mention, et titre d'une page pour un lien collé. */
   liens: LinkOptions;
   /** « Terminé » replié ou déplié, en mode liste. */
@@ -96,16 +104,14 @@ function IconeDeMention({ page }: { page: MentionedPage }) {
  * collées ou déposées, correction orthographique, annuler et rétablir,
  * curseur entre deux blocs, repère de dépôt, invite.
  */
-function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage, liens, surRepli }: ExtensionsDeLEditeur): AnyExtension[] {
+function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage, surMarkdown, liens, surRepli }: ExtensionsDeLEditeur): AnyExtension[] {
   const affichage = extensionsDAffichage(
     { resoudre: (src) => adresseDImage(chemin(), src), agrandir },
     { pages: annuaireDesPages, Icone: IconeDeMention, ouvrir: liens.ouvrirPage },
     { favicon: adresseDeFavicon },
   );
   return [
-    ...affichage.map((extension) =>
-      extension instanceof NoeudTiptap && extension.name === 'codeBlock' ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(CodeBlockView) }) : extension,
-    ),
+    ...affichage.map((extension) => (extension instanceof NoeudTiptap && extension.name === 'codeBlock' ? extension.extend({ addNodeView: () => ReactNodeViewRenderer(CodeBlockView) }) : extension)),
     BlockKeys,
     SlashKeys,
     MentionKeys,
@@ -113,10 +119,14 @@ function extensionsDeLEditeur({ chemin, agrandir, surErreurDImage, surLienDImage
     ColumnResize,
     CodePaste,
     ImageFiles.configure({ chemin, surErreur: surErreurDImage, surLienDImage }),
+    MarkdownPaste.configure({ surMarkdown }),
     ImageCopy.configure({ chemin, surErreur: surErreurDImage }),
     // Après les images : un lien d'image collé leur revient.
     LinkBehaviour.configure(liens),
     SpellcheckDecorations,
+    CurseurItalique,
+    PageFind,
+    TableauDeBaseCache,
     TodoMode.configure({ surRepli }),
     UndoRedo,
     Gapcursor,
@@ -144,7 +154,7 @@ interface PageEditorProps {
   theme: Theme;
   /** Ouvre l'écran de résolution d'une version en conflit de cette page. */
   surConflit: (sauvegarde: string) => void;
-  /** Sommaire latéral affiché (Ctrl+Maj+\ le masque). */
+  /** Sommaire latéral, toujours affiché (docs/spec/interface.md). */
   sommaireVisible: boolean;
   /** Ouvre une page depuis un lien ou une mention. « nouvelOnglet » : Ctrl+clic ou clic du milieu. */
   surOuvrirPage: (id: string, nouvelOnglet: boolean) => void;
@@ -157,16 +167,35 @@ interface PageEditorProps {
   /** Mémos en attente, pour la page « Mémos vocaux » seulement (docs/spec/memos.md) ; null pour toute autre page. */
   memos: MemosState | null;
   surMemos: (etat: MemosState) => void;
+  /** Les sous-pages ont changé hors de l'arborescence (ligne ajoutée à une base) : elle se relit. */
+  surArbreModifie: () => void;
+  /** Met des pages à la corbeille (une ligne d'une base), leurs onglets se fermant. */
+  surCorbeille: (noeuds: TreeNode[]) => Promise<boolean>;
 }
 
 /** Page ouverte : fil d'Ariane, titre, puis l'éditeur de son contenu. */
-export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree, theme, surConflit, sommaireVisible, surOuvrirPage, surIcone, surExport, surMode, memos, surMemos }: PageEditorProps) {
+export function PageEditor({
+  noeud,
+  surRenommage,
+  surSousPage,
+  entrer,
+  surEntree,
+  theme,
+  surConflit,
+  sommaireVisible,
+  surOuvrirPage,
+  surIcone,
+  surExport,
+  surMode,
+  memos,
+  surMemos,
+  surArbreModifie,
+  surCorbeille,
+}: PageEditorProps) {
   // Entrée ou flèche bas dans le titre : le curseur passe au début du contenu.
   const [descentes, descendre] = useState(0);
   const [chargement, definirChargement] = useState<Chargement>({ etat: 'lecture' });
-  const [enregistrement, definirEnregistrement] = useState<SaveState>({
-    genre: 'enregistre',
-  });
+  const [enregistrement, definirEnregistrement] = useState<SaveState>({ genre: 'enregistre' });
   const cheminDeDepart = useRef(noeud.chemin);
   const verrou = usePageLock(noeud.chemin);
   const lectureSeule = verrou.verrou.etat === 'autre';
@@ -180,6 +209,16 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   // Menu « ⋮ » du haut de la page, ouvert sous son bouton.
   const [menu, definirMenu] = useState<{ x: number; y: number } | null>(null);
   const boutonMenu = useRef<HTMLButtonElement>(null);
+  // Le fil d'Ariane de la page : titres séparés par « / ». « Copier le chemin » en copie exactement ce texte.
+  const filDAriane = noeud.chemin.split('/').join(' / ');
+  const [cheminCopie, definirCheminCopie] = useState(false);
+  useEffect(() => {
+    if (!cheminCopie) {
+      return;
+    }
+    const attente = window.setTimeout(() => definirCheminCopie(false), 1500);
+    return () => window.clearTimeout(attente);
+  }, [cheminCopie]);
   const modeListe = noeud.mode === 'todo';
   const [erreurDeMode, definirErreurDeMode] = useState<string | null>(null);
   // Activer le mode écrit `mode: todo`, puis convertit la page en tâches dans l'éditeur : une étape d'annulation,
@@ -197,6 +236,34 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
       editeur.view.focus();
     }
   };
+  // Base de données (docs/spec/base-de-donnees.md) : seul l'en-tête change ; la vue de la base écrit ensuite son tableau dans la page.
+  const modeBase = noeud.mode === 'base';
+  // En passant en base, une question : une page par ligne, ou des lignes sans page (le tableau de la page).
+  const [choixDuModeDeBase, definirChoixDuModeDeBase] = useState(false);
+  const [parametresDeBase, definirParametresDeBase] = useState(false);
+  const basculerBase = async (): Promise<void> => {
+    if (modeBase) {
+      definirErreurDeMode(await surMode(null));
+    } else {
+      definirChoixDuModeDeBase(true);
+    }
+  };
+  const passerEnBase = async (lignes: 'pages' | 'tableau'): Promise<void> => {
+    definirChoixDuModeDeBase(false);
+    // Le mode des lignes s'écrit avant : la vue de la base s'ouvre directement dans le bon mode (passer en base garde une configuration présente).
+    const lue = await api.lireBase({ chemin: noeud.chemin });
+    if (lue.ok && lignes === 'pages' && lue.config.lignes !== 'tableau') {
+      definirErreurDeMode(await surMode('base'));
+      return;
+    }
+    const ecrite = lue.ok ? await api.changerConfigDeBase({ chemin: noeud.chemin, config: lignes === 'tableau' ? { ...lue.config, lignes: 'tableau', repliees: [] } : { ...lue.config, lignes: 'pages' } }) : lue;
+    definirErreurDeMode(ecrite.ok ? await surMode('base') : ecrite.erreur.message);
+  };
+  useEffect(() => {
+    if (editeur !== null && !editeur.isDestroyed) {
+      definirTableauDeBaseCache(editeur.view, modeBase);
+    }
+  }, [editeur, modeBase]);
   // Corps de la page tel qu'il est dans l'éditeur, en Markdown (fourni par la surface d'édition).
   const lireCorps = useRef<(() => string) | null>(null);
   const lireLeCorps = useMemo(() => () => lireCorps.current?.() ?? '', []);
@@ -225,9 +292,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
   const couleurs = useMemo(() => (surcharges === null ? {} : variablesDeSurcharge(surcharges, theme).variables), [surcharges, theme]);
   const surSurcharges = useMemo(
     () => (recues: Record<string, string>) =>
-      definirChargement((actuel) =>
-        actuel.etat === 'pret' && JSON.stringify(actuel.surcharges) !== JSON.stringify(recues) ? { ...actuel, surcharges: recues } : actuel,
-      ),
+      definirChargement((actuel) => (actuel.etat === 'pret' && JSON.stringify(actuel.surcharges) !== JSON.stringify(recues) ? { ...actuel, surcharges: recues } : actuel)),
     [],
   );
 
@@ -235,9 +300,14 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
     <div data-zone-page style={couleurs as CSSProperties} className="bg-fond text-texte -mr-6 -ml-12 flex min-h-full pr-6 pl-12">
       <article className="mx-auto max-w-(--ui-largeur-contenu) min-w-0 flex-1 pb-[40vh]">
         {/* Reste visible quand la page défile : c'est là que s'affiche le résultat de l'enregistrement. */}
-        <div className="bg-fond sticky top-0 z-10 -mx-2 flex items-center justify-between gap-4 px-2 py-2">
-          <p className="text-discret min-w-0 truncate text-xs">{noeud.chemin.split('/').join(' / ')}</p>
+        <div data-haut-de-page className="bg-fond sticky top-0 z-10 -mx-2 flex items-center justify-between gap-4 px-2 py-2">
+          <p className="text-discret min-w-0 truncate text-xs">{filDAriane}</p>
           <div className="flex shrink-0 items-center gap-2">
+            {cheminCopie && (
+              <p role="status" className="text-discret shrink-0 text-xs">
+                Chemin copié
+              </p>
+            )}
             {chargement.etat === 'pret' && <SaveIndicator etat={enregistrement} />}
             <button
               ref={boutonMenu}
@@ -252,7 +322,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
               aria-label="Actions de la page"
               aria-haspopup="menu"
               aria-expanded={menu !== null}
-              title="Sommaire, mode liste, fonctions IA, export"
+              title="Sommaire, mode liste, base de données, fonctions IA, export"
               className={`flex size-6 items-center justify-center rounded outline-0 ${menu === null ? 'text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte' : 'bg-texte/20 text-texte'}`}
             >
               <EllipsisVertical className="size-4" aria-hidden="true" />
@@ -265,21 +335,46 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           <PageTitle titre={noeud.titre} surRenommage={surRenommage} surDescente={() => descendre((compte) => compte + 1)} lectureSeule={lectureSeule} />
         </div>
 
-        <SubpagesBlock
-          pages={noeud.enfants.filter((enfant) => enfant.id !== null).map((enfant) => ({ cle: enfant.id!, titre: enfant.titre }))}
-          icone={(page) => {
-            const enfant = noeud.enfants.find((autre) => autre.id === page.cle);
-            return enfant === undefined ? null : <PageIcon icone={enfant.icone} chemin={enfant.chemin} defaut={enfant.mode === 'todo' ? <ListChecks className="size-[1em]" /> : <FileText className="size-[1em]" />} className="text-discret" />;
-          }}
-          ouvrir={(page, evenement) => surOuvrirPage(page.cle, evenement.ctrlKey || evenement.metaKey || evenement.button === 1)}
-          {...(lectureSeule ? {} : { creer: surSousPage })}
-        />
+        {modeBase ? (
+          <DatabaseView
+            chemin={noeud.chemin}
+            signatureDesLignes={noeud.enfants.map((enfant) => `${enfant.id ?? ''}:${enfant.titre}:${enfant.icone ?? ''}`).join('|')}
+            etats={theme.database.states}
+            lectureSeule={lectureSeule}
+            editeur={editeur}
+            surOuvrirPage={surOuvrirPage}
+            surArbreModifie={surArbreModifie}
+            surCorbeille={async (cheminDeLaLigne) => {
+              const enfant = noeud.enfants.find((autre) => autre.chemin === cheminDeLaLigne);
+              return enfant === undefined ? false : surCorbeille([enfant]);
+            }}
+            parametresOuverts={parametresDeBase}
+            surFermerParametres={() => definirParametresDeBase(false)}
+          />
+        ) : (
+          <SubpagesBlock
+            pages={noeud.enfants.filter((enfant) => enfant.id !== null).map((enfant) => ({ cle: enfant.id!, titre: enfant.titre }))}
+            icone={(page) => {
+              const enfant = noeud.enfants.find((autre) => autre.id === page.cle);
+              return enfant === undefined ? null : (
+                <PageIcon
+                  icone={enfant.icone}
+                  chemin={enfant.chemin}
+                  defaut={enfant.mode === 'todo' ? <ListChecks className="size-[1em]" /> : <FileText className="size-[1em]" />}
+                  className="text-discret"
+                />
+              );
+            }}
+            ouvrir={(page, evenement) => surOuvrirPage(page.cle, evenement.button === 1 || !(evenement.ctrlKey || evenement.metaKey))}
+            {...(lectureSeule ? {} : { creer: surSousPage })}
+          />
+        )}
         {verrou.verrou.etat === 'autre' && <LockNotice nom={verrou.verrou.nom} surForcage={verrou.forcer} />}
         <ConflictNotice conflits={conflits} surResolution={surConflit} />
         {memos !== null && <MemoList etat={memos} surEtat={surMemos} />}
         {erreurDeMode !== null && (
           <p role="alert" className="bg-erreur/10 mb-4 rounded-md p-3 text-sm">
-            Le mode liste n'a pas pu être changé : {erreurDeMode}
+            Le mode de la page n'a pas pu être changé : {erreurDeMode}
           </p>
         )}
 
@@ -312,6 +407,9 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
           />
         )}
       </article>
+      {choixDuModeDeBase && (
+        <BaseModeDialog aDesSousPages={noeud.enfants.some((enfant) => enfant.id !== null)} surChoix={(lignes) => void passerEnBase(lignes)} surAnnulation={() => definirChoixDuModeDeBase(false)} />
+      )}
       {menu !== null && (
         <ContextMenu
           x={menu.x}
@@ -323,6 +421,8 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
               ? []
               : ([
                   { libelle: modeListe ? 'Quitter le mode liste' : 'Passer en liste de tâches', icone: ListChecks, action: () => void basculerModeListe() },
+                  ...(modeBase ? [{ libelle: 'Paramètres de la base', icone: Settings2, action: () => definirParametresDeBase(true) }] : []),
+                  { libelle: modeBase ? 'Quitter la base de données' : 'Passer en base de données', icone: Table2, action: () => void basculerBase() },
                   {
                     libelle: 'Fonctions IA',
                     icone: Sparkles,
@@ -332,6 +432,7 @@ export function PageEditor({ noeud, surRenommage, surSousPage, entrer, surEntree
                     },
                   },
                 ] satisfies MenuItem[])),
+            { libelle: 'Copier le chemin', icone: Copy, action: () => void navigator.clipboard.writeText(filDAriane).then(() => definirCheminCopie(true)) },
             { libelle: 'Exporter la page', icone: Download, action: surExport },
           ]}
           surFermeture={() => definirMenu(null)}
@@ -410,13 +511,32 @@ interface EditorSurfaceProps {
   surModeListe: () => void;
 }
 
-function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, surSousPage, descentes, entrer, surEntree, surSurcharges, lectureSeule, surFrappe, surEditeur, surLecteurDeCorps, modeListe, surModeListe }: EditorSurfaceProps) {
+function EditorSurface({
+  corps,
+  largeurs,
+  id,
+  surOuvrirPage,
+  chemin,
+  surEtat,
+  surSousPage,
+  descentes,
+  entrer,
+  surEntree,
+  surSurcharges,
+  lectureSeule,
+  surFrappe,
+  surEditeur,
+  surLecteurDeCorps,
+  modeListe,
+  surModeListe,
+}: EditorSurfaceProps) {
   const [erreurDImage, definirErreurDImage] = useState<string | null>(null);
   // Position où ouvrir la grille de taille d'un tableau (`/tableau`), null quand elle est fermée.
   const [grille, definirGrille] = useState<number | null>(null);
   const [visionneuse, definirVisionneuse] = useState<{ attributs: ImageAttributes; adresse: string } | null>(null);
   // Lien d'image collé, en attente de la réponse : télécharger ou garder le lien.
   const [lienColle, definirLienColle] = useState<{ adresse: string; position: number } | null>(null);
+  const [markdownColle, definirMarkdownColle] = useState<{ texte: string; position: number } | null>(null);
   const depart = useMemo(() => lireMarkdown(corps), [corps]);
   // Les largeurs de l'en-tête, posées une fois sur les tableaux du document de départ (le Markdown n'en dit rien).
   const largeursDeDepart = useRef(largeurs);
@@ -442,6 +562,7 @@ function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, su
     () => ({
       ouvrirPage: (cible, nouvelOnglet) => ouvrirPage.current(cible, nouvelOnglet),
       titreDePage: (cible) => annuaireDesPages.lire(cible)?.titre ?? null,
+      ouvrirPdf: (adresse) => void api.ouvrirPdf({ page: cheminActuel.current, adresse }),
       // Le lien collé reste un lien si le site ne répond pas, ou si on l'a déjà modifié entre-temps.
       surAdresseCollee: (adresse) => {
         const editeur = editeurActuel.current;
@@ -483,6 +604,7 @@ function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, su
         agrandir: (attributs, adresse) => definirVisionneuse({ attributs, adresse }),
         surErreurDImage: definirErreurDImage,
         surLienDImage: (adresse, position) => definirLienColle({ adresse, position }),
+        surMarkdown: (texte, position) => definirMarkdownColle({ texte, position }),
         liens,
         surRepli: definirReplie,
       }),
@@ -493,11 +615,7 @@ function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, su
     extensions,
     content: documentDeDepart.toJSON() as object,
     editorProps: {
-      attributes: {
-        class: `${classeDePage} min-h-64`,
-        'aria-label': 'Contenu de la page',
-        spellcheck: 'false',
-      },
+      attributes: { class: `${classeDePage} min-h-64`, 'aria-label': 'Contenu de la page', spellcheck: 'false' },
       // La ligne en cours ne descend jamais dans le dernier tiers de la fenêtre : la page défile avant (docs/spec/editeur.md).
       // En haut, de quoi rester sous la barre collante de la page.
       scrollThreshold: { top: 64, bottom: Math.round(window.innerHeight / 3), left: 0, right: 0 },
@@ -648,9 +766,7 @@ function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, su
           // Les largeurs des tableaux viennent avec la nouvelle version : sans elles, la frappe suivante les effacerait de l'en-tête.
           const document = avecLargeursDesTableaux(relu.document, lu.largeursDesTableaux);
           largeursEnregistrees.current = JSON.stringify(largeursDesTableaux(document));
-          editeur.commands.setContent(document.toJSON() as object, {
-            emitUpdate: false,
-          });
+          editeur.commands.setContent(document.toJSON() as object, { emitUpdate: false });
         });
       }),
     [editeur, sauvegarde, surSurcharges],
@@ -664,8 +780,7 @@ function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, su
         return;
       }
       // En mode liste, le vide de l'éditeur sous la dernière tâche compte aussi : c'est là qu'on clique pour en ajouter une.
-      const sousLaListe =
-        modeListeActuel.current.modeListe && cible === editeur.view.dom && evenement.clientY > (editeur.view.dom.lastElementChild?.getBoundingClientRect().bottom ?? Infinity);
+      const sousLaListe = modeListeActuel.current.modeListe && cible === editeur.view.dom && evenement.clientY > (editeur.view.dom.lastElementChild?.getBoundingClientRect().bottom ?? Infinity);
       // Seulement le fond : ni le contenu, ni un bouton, un champ ou un message.
       if (!sousLaListe && (editeur.view.dom.contains(cible) || cible.closest('button, a, input, textarea, nav, [role="alert"], [contenteditable]') !== null)) {
         return;
@@ -717,18 +832,14 @@ function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, su
       {erreurDImage !== null && (
         <div role="alert" className="bg-erreur/10 mb-4 flex items-start gap-3 rounded-md p-3 text-sm">
           <p className="flex-1">{erreurDImage}</p>
-          <button
-            type="button"
-            onClick={() => definirErreurDImage(null)}
-            aria-label="Fermer le message"
-            className="text-discret hover:bg-texte/10 hover:text-texte shrink-0 rounded p-0.5"
-          >
+          <button type="button" onClick={() => definirErreurDImage(null)} aria-label="Fermer le message" className="text-discret hover:bg-texte/10 hover:text-texte shrink-0 rounded p-0.5">
             <X className="size-4" aria-hidden="true" />
           </button>
         </div>
       )}
       <EditorContent editor={editeur} />
       <SpellPopover editor={editeur} />
+      <FindBar editor={editeur} />
       {!lectureSeule && (
         <>
           <BlockHandle editor={editeur} />
@@ -751,6 +862,7 @@ function EditorSurface({ corps, largeurs, id, surOuvrirPage, chemin, surEtat, su
           {grille !== null && <TableGridPicker editor={editeur} position={grille} surFermeture={() => definirGrille(null)} />}
         </>
       )}
+      {markdownColle !== null && <PastedMarkdown editeur={editeur} colle={markdownColle} surFin={() => definirMarkdownColle(null)} />}
       {lienColle !== null && <PastedImageLink editeur={editeur} lien={lienColle} chemin={() => cheminActuel.current} surFin={() => definirLienColle(null)} surErreur={definirErreurDImage} />}
       {visionneuse !== null && (
         <ImageViewer
@@ -778,9 +890,7 @@ function LockNotice({ nom, surForcage }: LockNoticeProps) {
   return (
     <div role="status" className="bg-alerte/15 mb-4 flex items-start gap-3 rounded-md p-3 text-sm">
       <Lock className="text-alerte mt-0.5 size-4 shrink-0" aria-hidden="true" />
-      <p className="flex-1">
-        Cette page est en cours de modification sur {nom === '' ? 'un autre appareil' : `« ${nom} »`}. Elle est en lecture seule ici et se met à jour à chaque synchronisation.
-      </p>
+      <p className="flex-1">Cette page est en cours de modification sur {nom === '' ? 'un autre appareil' : `« ${nom} »`}. Elle est en lecture seule ici et se met à jour à chaque synchronisation.</p>
       <button
         type="button"
         disabled={enCours}
@@ -794,6 +904,34 @@ function LockNotice({ nom, surForcage }: LockNoticeProps) {
         Forcer l'édition
       </button>
     </div>
+  );
+}
+
+interface PastedMarkdownProps {
+  editeur: Editor;
+  colle: { texte: string; position: number };
+  surFin: () => void;
+}
+
+/** La question sur un texte Markdown collé, placée au curseur, et ce que fait chaque réponse. */
+function PastedMarkdown({ editeur, colle, surFin }: PastedMarkdownProps) {
+  const position = Math.min(colle.position, editeur.state.doc.content.size);
+  const coordonnees = editeur.view.coordsAtPos(position);
+  return (
+    <MarkdownPastePrompt
+      gauche={coordonnees.left}
+      haut={coordonnees.bottom + 6}
+      surTexte={() => {
+        editeur.view.focus();
+        collerEnTexte(editeur.view, colle.texte);
+        surFin();
+      }}
+      surMiseEnForme={() => {
+        const contenu = documentDuCorps(colle.texte).toJSON().content as Record<string, unknown>[] | undefined;
+        editeur.chain().focus().insertContentAt(position, contenu ?? []).run();
+        surFin();
+      }}
+    />
   );
 }
 

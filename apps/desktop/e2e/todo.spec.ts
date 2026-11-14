@@ -3,6 +3,13 @@ import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import { actionDePage, attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparer } from './app';
 
+// Types du DOM, évalués dans la fenêtre : le projet des essais n'a pas la bibliothèque DOM.
+declare const DataTransfer: new () => { items: { add(fichier: unknown): void } };
+declare const ClipboardEvent: new (type: string, options: { clipboardData: unknown; bubbles: boolean; cancelable: boolean }) => unknown;
+
+/** Un PNG de 1 × 1 pixel. */
+const png = [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 6, 0, 0, 0, 31, 21, 196, 137, 0, 0, 0, 13, 73, 68, 65, 84, 120, 156, 99, 248, 207, 192, 240, 31, 0, 5, 0, 1, 255, 137, 153, 61, 29, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130];
+
 // Mode liste de tâches (J14, docs/spec/liste-de-taches.md) : une seule liste par page, sans titres, façon Keep.
 
 const enTeteProjets = '---\nid: 0199a0b0-0000-7000-8000-000000000002\ntitle: Projets\ncreated: 2026-10-01T08:00:00.000Z\nupdated: 2026-10-01T08:00:00.000Z\n---\n';
@@ -26,7 +33,7 @@ test('passer une page en mode liste en fait une seule liste, prête à écrire ;
   // Le menu « ⋮ » propose maintenant de quitter le mode ; Échap le ferme et rend le focus à son bouton.
   await page.getByRole('button', { name: 'Actions de la page' }).click();
   await expect(page.getByRole('menuitem', { name: 'Sommaire de la page' })).toBeFocused();
-  await expect(page.getByRole('menuitem')).toHaveText(['Sommaire de la page', 'Quitter le mode liste', 'Fonctions IA', 'Exporter la page']);
+  await expect(page.getByRole('menuitem')).toHaveText(['Sommaire de la page', 'Quitter le mode liste', 'Passer en base de données', 'Fonctions IA', 'Exporter la page']);
   await page.keyboard.press('Escape');
   await expect(page.getByRole('menu')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Actions de la page' })).toBeFocused();
@@ -129,5 +136,55 @@ test('une page vide passée en liste montre sa case, sans rien écrire dans le f
   await attendreEnregistrement(page);
   await expect.poll(() => lireCorps(vault, 'Projets')).toBe('- [ ] Pain\n');
   await expect(editeur(page).locator('p.tache-a-venir')).toHaveCount(0);
+  await fermer(session);
+});
+
+test('Retour arrière retire une tâche vide ; une sous-tâche cochée se montre dans « Terminé » sous son parent ; une image collée va sous la tâche', async () => {
+  const preparation = await preparer();
+  const fichier = join(preparation.vault, 'Courses', 'page.md');
+  await writeFile(fichier, (await readFile(fichier, 'utf8')).replace(/\n---\n[\s\S]*$/, '\n---\n- [ ] Pâtes\n  - [ ] Penne\n- [ ] Tomates\n- [x] Café\n'));
+  const session = await lancer(preparation);
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Courses');
+  const contenu = editeur(page);
+
+  // Une tâche ouverte par Entrée puis effacée : elle part, le curseur revient à la fin de « Tomates », sans manger de lettre.
+  await contenu.locator('p', { hasText: /^Tomates$/ }).click();
+  await page.waitForTimeout(150);
+  await page.keyboard.press('End');
+  await page.waitForTimeout(150);
+  await page.keyboard.press('Enter');
+  await page.keyboard.press('Backspace');
+  await page.keyboard.type('!');
+  await attendreEnregistrement(page);
+  await expect.poll(() => lireCorps(vault, 'Courses')).toBe('- [ ] Pâtes\n  - [ ] Penne\n- [ ] Tomates!\n- [x] Café\n');
+
+  // « Penne » cochée : cachée sous « Pâtes », montrée dans « Terminé » sous un rappel de « Pâtes ». Le fichier ne bouge pas.
+  await contenu.locator('li[data-checked]').filter({ hasText: 'Penne' }).filter({ hasNotText: 'Pâtes' }).locator('input[type="checkbox"]').click();
+  await expect(page.getByRole('button', { name: /Terminé \(2\)/ })).toBeVisible();
+  const copies = contenu.locator('li.copies-terminees');
+  await expect(copies.locator('li.tache-copie')).toHaveText(['PâtesPenne', 'Penne']);
+  await expect(contenu.locator('li.sous-tache-deplacee')).toBeHidden();
+  await attendreEnregistrement(page);
+  await expect.poll(() => lireCorps(vault, 'Courses')).toBe('- [ ] Pâtes\n  - [x] Penne\n- [ ] Tomates!\n- [x] Café\n');
+
+  // Une image collée dans une tâche va sous son texte, dans la tâche (page « Correctifs »).
+  await contenu.locator('p', { hasText: /^Tomates!$/ }).click();
+  await page.waitForTimeout(150);
+  await contenu.evaluate((zone: { dispatchEvent(evenement: unknown): void }, octets) => {
+    const donnees = new DataTransfer();
+    donnees.items.add(new File([new Uint8Array(octets)], 'capture.png', { type: 'image/png' }));
+    zone.dispatchEvent(new ClipboardEvent('paste', { clipboardData: donnees, bubbles: true, cancelable: true }));
+  }, png);
+  await attendreEnregistrement(page);
+  await expect.poll(() => lireCorps(vault, 'Courses')).toMatch(/^- \[ \] Pâtes\n {2}- \[x\] Penne\n- \[ \] Tomates!\n {2}!\[\]\(assets\/[^)]+\.(png|webp)\)\n- \[x\] Café\n$/);
+
+  // Décochée depuis « Terminé » : elle revient sous « Pâtes ».
+  await copies.locator('li.tache-copie[data-checked="true"] input').click();
+  await expect(copies).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Terminé \(1\)/ })).toBeVisible();
+  await attendreEnregistrement(page);
+  await expect.poll(() => lireCorps(vault, 'Courses')).toMatch(/^- \[ \] Pâtes\n {2}- \[ \] Penne\n- \[ \] Tomates!\n {2}!\[\]/);
+
   await fermer(session);
 });

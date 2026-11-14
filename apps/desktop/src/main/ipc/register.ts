@@ -4,6 +4,7 @@ import { canaux } from '../../shared/ipc-contract';
 import type { AiService } from '../ai/ai-service';
 import type { creerHandlersExport } from './export';
 import type { creerHandlersImages } from './images';
+import type { creerHandlersBase } from './database';
 import type { creerHandlersLiens } from './links';
 import type { creerHandlersMemos } from './memos';
 import type { creerHandlersNas } from './nas';
@@ -14,6 +15,8 @@ import type { creerHandlersCorbeille } from './trash';
 import type { creerHandlersVault } from './vault';
 import type { creerHandlersDepotMarkdown } from './markdown-drop';
 import type { creerHandlersFenetre } from './window';
+import type { creerHandlersNotion } from './notion';
+import type { ErrorEntry, ErrorLog } from '../errors/error-log';
 
 export interface IpcDependencies {
   nas: ReturnType<typeof creerHandlersNas>;
@@ -24,24 +27,28 @@ export interface IpcDependencies {
   sync: ReturnType<typeof creerHandlersSync>;
   images: ReturnType<typeof creerHandlersImages>;
   liens: ReturnType<typeof creerHandlersLiens>;
+  base: ReturnType<typeof creerHandlersBase>;
   exports: ReturnType<typeof creerHandlersExport>;
   corbeille: ReturnType<typeof creerHandlersCorbeille>;
   correction: ReturnType<typeof creerHandlersCorrection>;
   ia: AiService;
   memos: ReturnType<typeof creerHandlersMemos>;
-  /** Quitter, relancer sur une nouvelle version, page demandée par `--page=<id>`. */
+  journal: ErrorLog;
+  notion: ReturnType<typeof creerHandlersNotion>;
+  /** Quitter, relancer sur une nouvelle version, page demandée par `--page=<id>`, barre de recherche du poste. */
   lancement: {
     quitter: () => void;
     relancer: () => void;
     miseAJourEnAttente: () => boolean;
     prendrePage: () => string | null;
+    barreDeRecherche: () => Promise<boolean>;
   };
   /** Vrai si l'appel vient bien de la page de l'application. */
   expediteurAutorise: (evenement: IpcMainInvokeEvent) => boolean;
 }
 
 /** Branche chaque canal du contrat sur son handler, derrière le contrôle de l'expéditeur. */
-export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, images, liens, exports, corbeille, correction, ia, memos, lancement, expediteurAutorise }: IpcDependencies): void {
+export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, images, liens, base, exports, corbeille, correction, ia, memos, journal, notion, lancement, expediteurAutorise }: IpcDependencies): void {
   const brancher = (canal: string, handler: (...arguments_: unknown[]) => unknown): void => {
     ipcMain.handle(canal, (evenement, ...arguments_) => {
       if (!expediteurAutorise(evenement)) {
@@ -73,6 +80,12 @@ export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, ima
   brancher(canaux.listerMentionsCassees, () => vault.listerMentionsCassees());
   brancher(canaux.changerIcone, (demande) => vault.changerIcone(demande));
   brancher(canaux.changerMode, (demande) => vault.changerMode(demande));
+  brancher(canaux.lireBase, (demande) => base.lire(demande));
+  brancher(canaux.changerConfigDeBase, (demande) => base.changerConfig(demande));
+  brancher(canaux.changerValeurDeBase, (demande) => base.changerValeur(demande));
+  brancher(canaux.renommerChampDeBase, (demande) => base.renommerChamp(demande));
+  brancher(canaux.renommerChoixDeBase, (demande) => base.renommerChoix(demande));
+  brancher(canaux.retirerChoixDeBase, (demande) => base.retirerChoix(demande));
   brancher(canaux.ajouterIconeImage, (demande) => vault.ajouterIconeImage(demande));
   brancher(canaux.deplacerPage, (demande) => vault.deplacerPage(demande));
   brancher(canaux.deplacerPages, (demande) => vault.deplacerPages(demande));
@@ -87,6 +100,8 @@ export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, ima
   brancher(canaux.listerConflits, (demande) => vault.listerConflits(demande));
   brancher(canaux.lireConflit, (demande) => vault.lireConflit(demande));
   brancher(canaux.resoudreConflit, (demande) => vault.resoudreConflit(demande));
+  brancher(canaux.ecarterConflitDOrdre, (demande) => vault.ecarterConflitDOrdre(demande));
+  brancher(canaux.lireConflitDOrdre, (demande) => vault.lireConflitDOrdre(demande));
 
   brancher(canaux.lireTheme, () => theme.lire());
   brancher(canaux.creerTheme, () => theme.creer());
@@ -105,6 +120,18 @@ export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, ima
   brancher(canaux.relancerNotes, () => lancement.relancer());
   brancher(canaux.miseAJourEnAttente, () => lancement.miseAJourEnAttente());
   brancher(canaux.prendrePageDemandee, () => lancement.prendrePage());
+  brancher(canaux.ouvrirBarreDeRecherche, () => lancement.barreDeRecherche());
+  brancher(canaux.choisirArchivesNotion, () => notion.choisir());
+  brancher(canaux.analyserNotion, (demande) => notion.analyser(demande));
+  brancher(canaux.importerNotion, (demande) => notion.importer(demande));
+  brancher(canaux.apercuNotion, (demande) => notion.apercu(demande));
+  brancher(canaux.abandonnerNotion, () => notion.abandonner());
+  brancher(canaux.signalerErreur, (erreur) => {
+    const recue = erreurRecue(erreur);
+    if (recue !== null) {
+      journal.noter(recue);
+    }
+  });
 
   brancher(canaux.choisirImages, () => images.choisir());
   brancher(canaux.ajouterImage, (demande) => images.ajouter(demande));
@@ -112,9 +139,10 @@ export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, ima
   brancher(canaux.listerImagesAConvertir, () => images.aConvertir());
   brancher(canaux.lireImage, (demande) => images.lire(demande));
   brancher(canaux.convertirImage, (demande) => images.convertir(demande));
-  brancher(canaux.listerImagesOrphelines, () => images.orphelines());
+  brancher(canaux.listerFichiersInutilises, () => images.inutilises());
   brancher(canaux.retirerLeFond, (demande) => images.retirerLeFond(demande));
   brancher(canaux.copierImage, (demande) => images.copier(demande));
+  brancher(canaux.ouvrirPdf, (demande) => images.ouvrirPdf(demande));
   brancher(canaux.apercuDuSite, (demande) => liens.apercuDuSite(demande));
   brancher(canaux.enregistrerFavicon, (demande) => liens.enregistrerFavicon(demande));
 
@@ -123,7 +151,7 @@ export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, ima
   brancher(canaux.lireImageDExport, (demande) => exports.lireImage(demande));
 
   brancher(canaux.mettreALaCorbeille, (demande) => corbeille.mettre(demande));
-  brancher(canaux.mettreImageALaCorbeille, (demande) => corbeille.mettreImage(demande));
+  brancher(canaux.mettreFichierJointALaCorbeille, (demande) => corbeille.mettreFichierJoint(demande));
   brancher(canaux.listerCorbeille, () => corbeille.lister());
   brancher(canaux.apercuCorbeille, (demande) => corbeille.apercu(demande));
   brancher(canaux.restaurerDeLaCorbeille, (demande) => corbeille.restaurer(demande));
@@ -162,4 +190,19 @@ export function enregistrerCanaux({ nas, vault, depot, fenetre, theme, sync, ima
   brancher(canaux.estimerMiseEnFormeMemo, (demande) => memos.estimerMiseEnForme(demande));
   brancher(canaux.installerModeleWhisper, () => memos.installerModele());
   brancher(canaux.annulerInstallationWhisper, () => memos.annulerInstallation());
+}
+
+const naturesDErreur: Record<string, string> = { erreur: 'affichage', promesse: 'affichage (promesse)', react: 'affichage (composant)' };
+
+/** Erreur envoyée par le renderer, vérifiée : null si elle n'a pas la forme attendue. */
+export function erreurRecue(erreur: unknown): ErrorEntry | null {
+  if (typeof erreur !== 'object' || erreur === null) {
+    return null;
+  }
+  const { nature, message, detail } = erreur as Record<string, unknown>;
+  const origine = typeof nature === 'string' ? naturesDErreur[nature] : undefined;
+  if (origine === undefined || typeof message !== 'string' || (detail !== undefined && typeof detail !== 'string')) {
+    return null;
+  }
+  return detail === undefined ? { origine, message } : { origine, message, detail };
 }

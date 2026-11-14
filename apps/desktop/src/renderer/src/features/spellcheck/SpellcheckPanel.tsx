@@ -70,7 +70,7 @@ function Etapes({ etat }: { etat: SpellcheckState }) {
  * lance elle-même à chaque ouverture.
  */
 export function SpellcheckPanel() {
-  const { etat } = useMagasinDeCorrection();
+  const { etat, affichage } = useMagasinDeCorrection();
   const [confirmation, definirConfirmation] = useState(false);
   if (etat === null) {
     return null;
@@ -137,8 +137,30 @@ export function SpellcheckPanel() {
 
         {etat.installation === 'installee' && (
           <>
+            <div role="group" aria-label="Affichage de la correction" className="flex flex-wrap gap-2">
+              {(
+                [
+                  ['normal', 'Normal', 'Traits ondulés rouges et bleus.'],
+                  ['discret', 'Discret', 'Traits pointillés adoucis.'],
+                  ['desactive', 'Désactivée', 'Aucune vérification, aucun trait.'],
+                ] as const
+              ).map(([valeur, titre, aide]) => (
+                <button
+                  key={valeur}
+                  type="button"
+                  aria-pressed={affichage === valeur}
+                  onClick={() => magasinDeCorrection.definirAffichage(valeur)}
+                  className={`min-w-36 flex-1 rounded-md px-3 py-2 text-left outline-0 ${affichage === valeur ? 'bg-accent/25' : 'hover:bg-texte/10 focus-visible:bg-texte/20'}`}
+                >
+                  <span className="block font-medium">{titre}</span>
+                  <span className="text-discret block text-xs">{aide}</span>
+                </button>
+              ))}
+            </div>
             <p role="status">
-              {etat.serveur === 'pret'
+              {affichage === 'desactive'
+                ? 'La correction est désactivée sur ce poste. LanguageTool reste disponible pour l’extension du navigateur.'
+                : etat.serveur === 'pret'
                 ? 'La correction est active.'
                 : etat.serveur === 'demarrage'
                   ? 'LanguageTool démarre…'

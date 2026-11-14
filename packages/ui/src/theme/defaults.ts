@@ -22,6 +22,12 @@ export interface HeadingStyle {
   margin_top: string;
 }
 
+/** Un état d'une base de données : son nom et sa couleur (`#rrggbb` ou un nom de la palette). */
+export interface DatabaseState {
+  name: string;
+  color: string;
+}
+
 export interface Theme {
   colors: Record<ColorName, string>;
   typography: { font: string; mono: string; size: string; line_height: number };
@@ -51,6 +57,8 @@ export interface Theme {
   };
   callout: { info: string; success: string; warning: string; danger: string };
   table: { border: string; header_background: string };
+  /** Bases de données (docs/spec/base-de-donnees.md) : les états qu'un champ « état » propose, dans l'ordre, avec leur couleur. */
+  database: { states: DatabaseState[] };
   ui: { content_width: string; sidebar_width: string; radius: string; transition: string };
 }
 
@@ -109,5 +117,13 @@ export const themeParDefaut: Theme = {
   },
   callout: { info: 'accent', success: 'success', warning: 'warning', danger: 'error' },
   table: { border: 'border', header_background: 'surface' },
+  database: {
+    states: [
+      { name: 'À faire', color: 'muted' },
+      { name: 'En cours', color: 'accent' },
+      { name: 'En attente', color: 'warning' },
+      { name: 'Fait', color: 'success' },
+    ],
+  },
   ui: { content_width: '48rem', sidebar_width: '18rem', radius: '0.375rem', transition: '150ms' },
 };

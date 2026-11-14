@@ -16,42 +16,50 @@ const onglets = (page: Page) => page.getByRole('tablist', { name: 'Onglets' }).g
 const titresDesOnglets = (page: Page) => onglets(page).locator('span.truncate').allTextContents();
 const ongletActif = (page: Page) => page.getByRole('tab', { selected: true }).locator('span.truncate');
 
-test('onglets : une page par onglet, Ctrl+clic, Ctrl+W, Ctrl+Tab, Ctrl+1, retrouvés au redémarrage', async () => {
+test('onglets : un clic ouvre un nouvel onglet, Ctrl+clic garde l’onglet affiché, fermer au clic du milieu, glisser, retrouvés au redémarrage, recherche sans onglet', async () => {
   const preparation = await preparer();
   let session = await lancer(preparation);
   let { page } = session;
 
+  // Le premier onglet est vide : la page y arrive.
   await ouvrirPage(page, 'Courses');
   expect(await titresDesOnglets(page)).toEqual(['Courses']);
 
-  // Un clic remplace la page de l'onglet affiché.
+  // Un clic dans l'arborescence : nouvel onglet juste après l'onglet affiché.
   await ouvrirPage(page, 'Bienvenue');
-  expect(await titresDesOnglets(page)).toEqual(['Bienvenue']);
+  expect(await titresDesOnglets(page)).toEqual(['Courses', 'Bienvenue']);
+  await expect(ongletActif(page)).toHaveText('Bienvenue');
 
-  // Ctrl+clic : nouvel onglet juste après.
-  await ligne(page, 'Courses').click({ modifiers: ['Control'] });
-  await expect(titreDePage(page)).toHaveText('Courses');
-  expect(await titresDesOnglets(page)).toEqual(['Bienvenue', 'Courses']);
-  await expect(ongletActif(page)).toHaveText('Courses');
+  // Ctrl+clic : la page remplace celle de l'onglet affiché.
+  await ligne(page, 'Journal').click({ modifiers: ['Control'] });
+  await expect(titreDePage(page)).toHaveText('Journal');
+  expect(await titresDesOnglets(page)).toEqual(['Courses', 'Journal']);
 
   // Une page déjà ouverte dans un onglet : on y retourne au lieu de l'ouvrir deux fois.
-  await ligne(page, 'Bienvenue').click();
-  await expect(ongletActif(page)).toHaveText('Bienvenue');
-  expect(await titresDesOnglets(page)).toEqual(['Bienvenue', 'Courses']);
-
-  await page.keyboard.press('Control+Tab');
+  await ligne(page, 'Courses').click();
   await expect(ongletActif(page)).toHaveText('Courses');
-  await expect(titreDePage(page)).toHaveText('Courses');
-  await page.keyboard.press('Control+1');
-  await expect(ongletActif(page)).toHaveText('Bienvenue');
+  expect(await titresDesOnglets(page)).toEqual(['Courses', 'Journal']);
+
+  // Un clic sur un onglet l'affiche.
+  await onglets(page).filter({ hasText: 'Journal' }).click();
+  await expect(ongletActif(page)).toHaveText('Journal');
+  await expect(titreDePage(page)).toHaveText('Journal');
+  await onglets(page).filter({ hasText: 'Courses' }).click();
+  await expect(ongletActif(page)).toHaveText('Courses');
 
   // Clic du milieu dans l'arborescence : nouvel onglet aussi.
   await ligne(page, 'Projets').click({ button: 'middle' });
   await expect(ongletActif(page)).toHaveText('Projets');
-  expect(await titresDesOnglets(page)).toEqual(['Bienvenue', 'Projets', 'Courses']);
+  expect(await titresDesOnglets(page)).toEqual(['Courses', 'Projets', 'Journal']);
 
-  await page.keyboard.press('Control+w');
-  expect(await titresDesOnglets(page)).toEqual(['Bienvenue', 'Courses']);
+  // Glisser un onglet change sa place, l'onglet affiché reste le même.
+  await onglets(page).filter({ hasText: 'Journal' }).dragTo(onglets(page).filter({ hasText: 'Courses' }), { targetPosition: { x: 5, y: 5 } });
+  expect(await titresDesOnglets(page)).toEqual(['Journal', 'Courses', 'Projets']);
+  await expect(ongletActif(page)).toHaveText('Projets');
+
+  // Clic du milieu sur un onglet : il se ferme, l'onglet affiché passe à son voisin.
+  await onglets(page).filter({ hasText: 'Projets' }).click({ button: 'middle' });
+  expect(await titresDesOnglets(page)).toEqual(['Journal', 'Courses']);
   await expect(ongletActif(page)).toHaveText('Courses');
 
   // Au redémarrage : mêmes onglets, même onglet affiché.
@@ -59,14 +67,58 @@ test('onglets : une page par onglet, Ctrl+clic, Ctrl+W, Ctrl+Tab, Ctrl+1, retrou
   session = await lancer(preparation);
   page = session.page;
   await expect(ongletActif(page)).toHaveText('Courses');
-  expect(await titresDesOnglets(page)).toEqual(['Bienvenue', 'Courses']);
+  expect(await titresDesOnglets(page)).toEqual(['Journal', 'Courses']);
   await expect(titreDePage(page)).toHaveText('Courses');
 
-  // Fermer le dernier onglet le vide sans fermer la fenêtre.
-  await page.keyboard.press('Control+w');
-  await page.keyboard.press('Control+w');
-  expect(await titresDesOnglets(page)).toEqual(['Nouvel onglet']);
-  await expect(page.getByText("Choisis une page dans l'arborescence")).toBeVisible();
+  // Une page mise à la corbeille ferme son onglet.
+  await ligne(page, 'Courses').click({ button: 'right' });
+  await page.getByRole('menuitem', { name: 'Mettre à la corbeille' }).click();
+  await expect.poll(() => titresDesOnglets(page)).toEqual(['Journal']);
+
+  // Le dernier onglet se ferme aussi : plus d'onglet, la recherche de pages au milieu, prête à la frappe,
+  // avec la page qu'on vient de quitter dans les suggestions.
+  await onglets(page).filter({ hasText: 'Journal' }).click({ button: 'middle' });
+  await expect(onglets(page)).toHaveCount(0);
+  const recherche = page.getByRole('combobox', { name: 'Chercher une page' });
+  await expect(recherche).toBeFocused();
+  await expect(page.getByRole('listbox', { name: 'Pages' }).getByRole('option').first()).toContainText('Journal');
+  // Le clic du milieu n'y a rien collé ; le collage au clavier marche.
+  await expect(recherche).toHaveValue('');
+  await session.application.evaluate(({ clipboard }) => clipboard.writeText('journ'));
+  await page.keyboard.press('Control+V');
+  await expect(recherche).toHaveValue('journ');
+  await recherche.fill('');
+
+  // Toujours sans onglet au redémarrage.
+  await fermer(session);
+  session = await lancer(preparation);
+  page = session.page;
+  await expect(onglets(page)).toHaveCount(0);
+
+  // Recherche sans accents ; Entrée ouvre la page dans un nouvel onglet.
+  await page.getByRole('combobox', { name: 'Chercher une page' }).fill('bienv');
+  await page.keyboard.press('Enter');
+  await expect(titreDePage(page)).toHaveText('Bienvenue');
+  expect(await titresDesOnglets(page)).toEqual(['Bienvenue']);
+
+  // Sans barre de recherche du poste, Ctrl+Maj+F ouvre la recherche de Notes en fenêtre ; Échap la ferme.
+  await page.keyboard.press('Control+Shift+F');
+  const fenetre = page.getByRole('dialog', { name: 'Chercher une page' });
+  await expect(fenetre.getByRole('combobox', { name: 'Chercher une page' })).toBeFocused();
+  await page.keyboard.press('Escape');
+  await expect(fenetre).toHaveCount(0);
+  // La loupe du panneau aussi ; une page choisie s'ouvre dans un nouvel onglet et ferme la fenêtre.
+  await page.getByRole('button', { name: 'Chercher une page' }).click();
+  await fenetre.getByRole('combobox', { name: 'Chercher une page' }).fill('journ');
+  await page.keyboard.press('Enter');
+  await expect(fenetre).toHaveCount(0);
+  await expect(titreDePage(page)).toHaveText('Journal');
+  expect(await titresDesOnglets(page)).toEqual(['Bienvenue', 'Journal']);
+
+  // Le « + » ouvre un onglet vide, qui montre la même recherche.
+  await page.getByRole('button', { name: 'Nouvel onglet' }).click();
+  await expect(ongletActif(page)).toHaveText('Nouvel onglet');
+  await expect(page.getByRole('combobox', { name: 'Chercher une page' })).toBeFocused();
   await fermer(session);
 });
 
@@ -80,11 +132,10 @@ test('--page=<id> : la barre de recherche du poste ouvre une page, Notes lancée
   const { application, page } = session;
   await expect(titreDePage(page)).toHaveText('Refonte du NAS');
 
-  // Ctrl+K ne fait plus rien ; Ctrl+T ouvre un onglet vide, sans recherche.
+  // Ctrl+K ne fait rien dans Notes (la barre de recherche du poste le prend) ; le « + » ouvre un onglet vide.
   await page.keyboard.press('Control+k');
-  await page.keyboard.press('Control+t');
+  await page.getByRole('button', { name: 'Nouvel onglet' }).click();
   await expect(ongletActif(page)).toHaveText('Nouvel onglet');
-  await expect(page.getByRole('combobox')).toHaveCount(0);
 
   // Notes lancée : la seconde instance passe la page à la fenêtre ouverte, dans l'onglet affiché.
   const executable = await application.evaluate(() => process.execPath);
@@ -140,13 +191,7 @@ test('sommaire : à jour à la frappe, suit la lecture, sommaire complet avec fi
   await expect(complet).toBeHidden();
   await expect(sommaire.locator('[aria-current="location"]')).toHaveText('Citation et séparateur');
 
-  // Ctrl+Maj+\ masque le sommaire latéral, Ctrl+\ la barre latérale.
-  await page.keyboard.press('Control+Shift+Backslash');
-  await expect(sommaire).toBeHidden();
-  await page.keyboard.press('Control+Backslash');
-  await expect(page.getByRole('navigation', { name: 'Arborescence des pages' })).toBeHidden();
-  await page.keyboard.press('Control+Backslash');
-  await page.keyboard.press('Control+Shift+Backslash');
+  // Le sommaire latéral est permanent (plus de raccourci pour le masquer). Le panneau des pages se bascule par ses boutons (tree.spec).
   await expect(sommaire).toBeVisible();
   await fermer(session);
 });
@@ -200,5 +245,19 @@ test('sommaire : beaucoup de titres, hauteur limitée, le trait en cours reste v
   await sommaire.hover();
   const nom = sommaire.locator('li[data-allume]');
   await expect.poll(async () => Math.abs((await boite(nom)).y + (await boite(nom)).height / 2 - (trait.y + trait.height / 2))).toBeLessThan(16);
+  await fermer(session);
+});
+
+test('un clic sur la version montre les versions, la plus récente en haut ; Échap la referme', async () => {
+  const session = await lancer(await preparer());
+  const { page, application } = session;
+  const version = await application.evaluate(({ app }) => app.getVersion());
+  await page.getByRole('button', { name: `version ${version}` }).click();
+  const liste = page.getByRole('dialog', { name: 'Versions de Notes' });
+  await expect(liste.getByRole('listitem').first()).toContainText(version);
+  await expect(liste.locator('[aria-current="true"]')).toContainText(version);
+  expect(await liste.getByRole('listitem').count()).toBeGreaterThan(10);
+  await page.keyboard.press('Escape');
+  await expect(liste).toHaveCount(0);
   await fermer(session);
 });

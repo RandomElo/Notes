@@ -10,7 +10,7 @@ import { cleDeNom, nomLibre } from '../page/naming';
 import { analyserPage, cheminDuFichierPage } from '../page/page-file';
 import { cheminDeMemoValide, dossierDesMemos } from '../memos/memos';
 import { fichierPage } from '../page/types';
-import { aUneExtensionDImage, dossierAssets } from '../vault/assets';
+import { dossierAssets, estFichierJoint } from '../vault/assets';
 import { VaultError } from '../vault/context';
 import type { VaultContext } from '../vault/context';
 import { chargerPage, idsDesEnfants, nomsPris } from '../vault/operations';
@@ -161,12 +161,15 @@ export async function mettreALaCorbeille(contexte: VaultContext, chemin: string)
   return { chemin: parent, id: meta.id };
 }
 
-/** Met une image du dossier `assets/` d'une page dans la corbeille du poste (image inutilisée). */
-export async function mettreImageALaCorbeille(contexte: VaultContext, chemin: string): Promise<void> {
+/**
+ * Met un fichier joint (image ou PDF) du dossier `assets/` d'une page dans la corbeille du poste
+ * (fichier inutilisé). Il y est de nature « image » : il revient de même dans le dossier `assets/` de sa page.
+ */
+export async function mettreFichierJointALaCorbeille(contexte: VaultContext, chemin: string): Promise<void> {
   const { fs } = contexte;
   const assets = dossierParent(chemin);
-  if (nomDeBase(assets) !== dossierAssets || !aUneExtensionDImage(chemin) || (await fs.infos(chemin))?.estDossier !== false) {
-    throw new VaultError('introuvable', 'Cette image est introuvable.');
+  if (nomDeBase(assets) !== dossierAssets || !estFichierJoint(chemin) || (await fs.infos(chemin))?.estDossier !== false) {
+    throw new VaultError('introuvable', 'Ce fichier est introuvable.');
   }
   const page = dossierParent(assets);
   await deposer(contexte, chemin, {

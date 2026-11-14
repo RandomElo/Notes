@@ -1,34 +1,17 @@
 import type { TreeNode } from '@notes/core';
 import { PageView } from '@notes/ui';
-import { ArrowDownToLine, FilePlus } from 'lucide-react';
+import { ArrowDownToLine } from 'lucide-react';
 import { useCallback, useEffect, useState } from 'react';
 import { api } from '../../lib/ipc';
 import { adresseDImage, dossierDeLaPage } from '../images/image-url';
 
 interface PageSummaryProps {
-  noeud: TreeNode | null;
-  surCreation: () => void;
+  noeud: TreeNode;
   surImport: (noeud: TreeNode) => void;
 }
 
-/** Zone centrale quand aucune page n'est ouverte, ou pour un élément venu d'un autre outil : import proposé, contenu montré en lecture seule. */
-export function PageSummary({ noeud, surCreation, surImport }: PageSummaryProps) {
-  if (noeud === null) {
-    return (
-      <div className="mx-auto max-w-xl py-16 text-center">
-        <p className="text-discret text-sm">Choisis une page dans l'arborescence, ou crée-en une.</p>
-        <button
-          type="button"
-          onClick={surCreation}
-          className="border-bordure hover:bg-bordure/60 mt-4 inline-flex items-center gap-2 rounded-md border px-3 py-2 text-sm font-medium"
-        >
-          <FilePlus className="size-4" aria-hidden="true" />
-          Nouvelle page
-        </button>
-      </div>
-    );
-  }
-
+/** Zone centrale pour un élément venu d'un autre outil : import proposé, contenu montré en lecture seule. */
+export function PageSummary({ noeud, surImport }: PageSummaryProps) {
   return (
     <article className="mx-auto max-w-2xl py-10">
       <p className="text-discret text-xs">{noeud.chemin.split('/').join(' / ')}</p>

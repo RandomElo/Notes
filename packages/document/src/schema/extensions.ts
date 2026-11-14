@@ -15,6 +15,7 @@ import { Paragraph } from '@tiptap/extension-paragraph';
 import { Strike } from '@tiptap/extension-strike';
 import { Text } from '@tiptap/extension-text';
 import { Underline } from '@tiptap/extension-underline';
+import { Fleches } from './arrows';
 import { FermetureAutomatique } from './auto-pairs';
 import { SousTachesCochees } from '../operations/toggle-task';
 import { avecElision } from './marks/elision';
@@ -40,11 +41,15 @@ export const niveauxDeTitre = [1, 2, 3, 4, 5] as const;
 // règle de collage, ni raccourci clavier.
 const sansSaisie = { addInputRules: () => [], addPasteRules: () => [], addKeyboardShortcuts: () => ({}) };
 
+// Titres et paragraphe sans raccourci clavier (Ctrl+Alt+1 à 5, Ctrl+Alt+0 retirés) : ils se font au Markdown
+// (`#`), au menu « / » et à la barre d'outils. Le reste des extensions garde ses raccourcis.
+const sansRaccourciClavier = { addKeyboardShortcuts: () => ({}) };
+
 export const extensionsDuSchema: Extensions = [
   Document,
-  Paragraph,
+  Paragraph.extend(sansRaccourciClavier),
   Text,
-  Heading.configure({ levels: [...niveauxDeTitre] }),
+  Heading.extend(sansRaccourciClavier).configure({ levels: [...niveauxDeTitre] }),
   Blockquote.extend(sansSaisie),
   BulletList,
   OrderedList,
@@ -68,6 +73,7 @@ export const extensionsDuSchema: Extensions = [
   // Les liens s'ouvrent et se créent par l'application (clic, collage d'une adresse), pas par l'extension.
   Link.configure({ openOnClick: false, autolink: false, linkOnPaste: false, protocols: ['notes'] }),
   FermetureAutomatique,
+  Fleches,
   SousTachesCochees,
   avecElision(Bold, '**'),
   avecElision(Italic, '*'),

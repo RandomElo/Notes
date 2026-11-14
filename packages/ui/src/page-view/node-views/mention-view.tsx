@@ -26,7 +26,7 @@ export interface MentionViewOptions {
   pages?: PagesDirectory;
   /** Icône d'une page, dessinée par l'application. Absente : pas d'icône. */
   Icone?: ComponentType<{ page: MentionedPage }>;
-  /** Ouvre la page visée. « nouvelOnglet » : Ctrl+clic ou clic du milieu. Absent : la mention ne s'ouvre pas. */
+  /** Ouvre la page visée. « nouvelOnglet » : clic ou clic du milieu ; Ctrl+clic garde l'onglet affiché. Absent : la mention ne s'ouvre pas. */
   ouvrir?: (id: string, nouvelOnglet: boolean) => void;
 }
 
@@ -50,7 +50,8 @@ function MentionView({ node, extension }: NodeViewProps) {
       return;
     }
     evenement.preventDefault();
-    options.ouvrir(id, evenement.ctrlKey || evenement.metaKey || evenement.button === 1);
+    // Un clic ouvre la page dans un nouvel onglet (clic du milieu aussi) ; Ctrl+clic garde l'onglet affiché.
+    options.ouvrir(id, evenement.button === 1 || !(evenement.ctrlKey || evenement.metaKey));
   };
   const { Icone } = options;
   return (

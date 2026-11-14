@@ -2,6 +2,8 @@ export { PageView, classeDePage } from './page-view/PageView';
 export { SubpagesBlock } from './components/SubpagesBlock';
 export type { SubpageEntry } from './components/SubpagesBlock';
 export { extensionsDAffichage } from './page-view/extensions';
+export { TableauDeBaseCache, classeTableauDeBase, definirTableauDeBaseCache } from './page-view/database-table';
+export type { DatabaseTableOptions } from './page-view/database-table';
 export { estMentionDeSite, titreDeMentionDeSite } from './page-view/site-mentions';
 export type { SiteMentionOptions } from './page-view/site-mentions';
 export { devinerLangage, langageConnu, listerLangages, nomDuLangage } from './page-view/node-views/code-highlight';

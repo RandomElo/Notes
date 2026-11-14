@@ -3,7 +3,7 @@ import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { AllSelection, EditorState, TextSelection } from '@tiptap/pm/state';
 import { describe, expect, it } from 'vitest';
 import {
-  allerAuBloc, deplacerBlocs, dupliquerBlocs, editerBloc, etendreSelection, indenterBlocs, plageCourante, selectionnerBloc, supprimerBlocs,
+  allerAuBloc, deplacerBlocs, dupliquerBlocs, editerBloc, etendreSelection, indenterBlocs, plageCourante, selectionnerBloc, selectionnerTout, supprimerBlocs,
 } from './block-commands';
 import type { BlockCommand } from './block-commands';
 import { BlockSelection } from './block-selection';
@@ -229,13 +229,17 @@ describe('dupliquer et supprimer', () => {
     expect(selection(etat)).toEqual(['un', 'deux']);
   });
 
-  it('supprime les blocs sélectionnés et sélectionne celui qui prend leur place', () => {
-    let etat = jouer(etatSur('un\n\ndeux\n\ntrois\n', 'deux'), selectionnerBloc, supprimerBlocs);
-    expect(markdown(etat)).toBe('un\n\ntrois\n');
-    expect(selection(etat)).toEqual(['trois']);
-    etat = jouer(etat, supprimerBlocs);
-    expect(selection(etat)).toEqual(['un']);
-    etat = jouer(etat, supprimerBlocs);
+  it('supprime les blocs sélectionnés, curseur à la fin du bloc d’au-dessus, sans bloc sélectionné', () => {
+    let etat = jouer(etatSur('un\n\ndeux\n\ntrois\n', 'deux'), selectionnerBloc, etendreSelection(1), supprimerBlocs);
+    expect(markdown(etat)).toBe('un\n');
+    expect(etat.selection).toBeInstanceOf(TextSelection);
+    expect(etat.selection.$from.parent.textContent).toBe('un');
+    expect(etat.selection.$from.parentOffset).toBe(2);
+    // Rien au-dessus : au début du bloc d'après.
+    etat = jouer(etatSur('un\n\ndeux\n', 'un'), selectionnerBloc, supprimerBlocs);
+    expect(etat.selection.$from.parent.textContent).toBe('deux');
+    expect(etat.selection.$from.parentOffset).toBe(0);
+    etat = jouer(etat, selectionnerBloc, supprimerBlocs);
     expect(markdown(etat)).toBe('');
     expect(etat.doc.childCount).toBe(1);
     expect(etat.selection).toBeInstanceOf(TextSelection);
@@ -243,6 +247,14 @@ describe('dupliquer et supprimer', () => {
 
   it('retire la liste avec son dernier item', () => {
     expect(markdown(jouer(etatSur('un\n\n- seul\n\ndeux\n', 'seul'), selectionnerBloc, supprimerBlocs))).toBe('un\n\ndeux\n');
+  });
+
+  it('Ctrl+A sélectionne tous les blocs de la page, listes comprises', () => {
+    const etat = jouer(etatSur('un\n\n- a\n- b\n\ndeux\n', 'un'), selectionnerTout);
+    expect(etat.selection).toBeInstanceOf(BlockSelection);
+    expect(etat.selection.from).toBe(0);
+    expect(etat.selection.to).toBe(etat.doc.content.size);
+    expect(selectionnerTout(EditorState.create({ doc: lireMarkdown('').document }))).toBeNull();
   });
 
   it('ne supprime rien sans sélection de blocs', () => {

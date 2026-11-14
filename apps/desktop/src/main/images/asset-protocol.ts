@@ -12,9 +12,13 @@ const typesMime: Record<ImageKind, string> = {
   svg: 'image/svg+xml',
 };
 
-/** À appeler avant que l'application soit prête : le schéma se comporte comme une adresse web ordinaire et sûre. */
+/**
+ * À appeler avant que l'application soit prête : le schéma se comporte comme une adresse web ordinaire et sûre.
+ * CORS ouvert : la page lit les pixels d'une favicon (fond clair derrière une favicon sombre). La fenêtre ne
+ * charge que l'application, aucune page d'Internet ne peut s'en servir.
+ */
 export function declarerSchemaDesImages(): void {
-  protocol.registerSchemesAsPrivileged([{ scheme: schemaDesImages, privileges: { standard: true, secure: true } }]);
+  protocol.registerSchemesAsPrivileged([{ scheme: schemaDesImages, privileges: { standard: true, secure: true, corsEnabled: true } }]);
 }
 
 /**
@@ -48,6 +52,7 @@ export async function repondreImage(adresse: string, fs: LocalFs | null): Promis
       // Un SVG ouvert seul n'exécute rien et ne charge rien.
       'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'",
       'X-Content-Type-Options': 'nosniff',
+      'Access-Control-Allow-Origin': '*',
       // L'image peut changer sur le disque (sync) : pas de cache.
       'Cache-Control': 'no-store',
     },

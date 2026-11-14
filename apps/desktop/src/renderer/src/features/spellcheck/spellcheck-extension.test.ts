@@ -1,5 +1,7 @@
 import { lireMarkdown } from '@notes/document';
 import { EditorState } from '@tiptap/pm/state';
+import type { Transaction } from '@tiptap/pm/state';
+import type { EditorView } from '@tiptap/pm/view';
 import { describe, expect, it, vi } from 'vitest';
 import type { SpellIssue } from '../../../../shared/ipc-contract';
 import { cleDeCorrection, creerPluginDeCorrection, fauteA } from './spellcheck-extension';
@@ -79,5 +81,32 @@ describe('soulignement des fautes', () => {
     apres = apres.apply(apres.tr.setMeta(cleDeCorrection, { genre: 'filtrer' }));
     expect(cleDeCorrection.getState(apres)!.decorations.find()).toHaveLength(0);
     expect(cleDeCorrection.getState(apres)!.aVerifier).toEqual([]);
+  });
+});
+
+describe('deux éditeurs ouverts en même temps', () => {
+  it('ne se renvoient pas leurs nombres de fautes sans fin (écran gris à la création d’une page)', () => {
+    // La vue du plugin sans navigateur : une fausse vue suffit, et ses minuteurs ne partent jamais.
+    vi.stubGlobal('window', { setTimeout: () => 0, clearTimeout: () => undefined });
+    const pret = { installation: 'installee', serveur: 'pret', dossier: '', taille: 0, etapes: [] } as unknown as Parameters<typeof magasinDeCorrection.definirEtat>[0];
+    magasinDeCorrection.definirEtat(pret);
+    const ouvrir = (etat: EditorState, plugin: ReturnType<typeof creerPluginDeCorrection>) => {
+      const vue = { state: etat, isDestroyed: false, dispatch: (tr: Transaction) => (vue.state = vue.state.apply(tr)) };
+      return plugin.spec.view!(vue as unknown as EditorView);
+    };
+    // Une page avec une faute soulignée, une autre sans : leurs nombres diffèrent.
+    const plugin = creerPluginDeCorrection();
+    const doc = lireMarkdown('Il fesait beau.\n').document;
+    let avecFaute = EditorState.create({ doc, plugins: [plugin] });
+    const envois = cleDeCorrection.getState(avecFaute)!.aVerifier.map((debut, indice) => ({ id: indice + 1, debut, texte: avecFaute.doc.nodeAt(debut)!.textContent }));
+    avecFaute = avecFaute.apply(avecFaute.tr.setMeta(cleDeCorrection, { genre: 'envoyer', envois }));
+    avecFaute = avecFaute.apply(avecFaute.tr.setMeta(cleDeCorrection, { genre: 'resultat', id: 1, fautes: [faute(3, 8, 'fesèt')] }));
+    expect(cleDeCorrection.getState(avecFaute)!.decorations.find()).toHaveLength(1);
+    const premier = ouvrir(avecFaute, plugin);
+    const second = ouvrir(etatDe('Rien à redire.\n'), creerPluginDeCorrection());
+    expect(() => magasinDeCorrection.definirEtat({ ...pret })).not.toThrow();
+    premier.destroy?.();
+    second.destroy?.();
+    vi.unstubAllGlobals();
   });
 });

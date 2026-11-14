@@ -39,6 +39,55 @@ function globe(): SVGSVGElement {
   return dessin;
 }
 
+/** Luminance (0 noir, 1 blanc) d'une couleur CSS `#rrggbb`, null pour une autre écriture. */
+function luminance(couleur: string): number | null {
+  const morceaux = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(couleur.trim());
+  if (morceaux === null) {
+    return null;
+  }
+  const [r, v, b] = morceaux.slice(1).map((hexa) => Number.parseInt(hexa, 16) / 255) as [number, number, number];
+  return 0.2126 * r + 0.7152 * v + 0.0722 * b;
+}
+
+/** Luminance moyenne des pixels visibles d'une image chargée, null si on ne peut pas la lire. */
+function luminanceDeLImage(image: HTMLImageElement): number | null {
+  const cote = 16;
+  const toile = window.document.createElement('canvas');
+  toile.width = cote;
+  toile.height = cote;
+  const contexte = toile.getContext('2d', { willReadFrequently: true });
+  if (contexte === null) {
+    return null;
+  }
+  try {
+    contexte.drawImage(image, 0, 0, cote, cote);
+    const pixels = contexte.getImageData(0, 0, cote, cote).data;
+    let somme = 0;
+    let poids = 0;
+    for (let i = 0; i < pixels.length; i += 4) {
+      const opacite = (pixels[i + 3] ?? 0) / 255;
+      somme += opacite * (0.2126 * (pixels[i] ?? 0) + 0.7152 * (pixels[i + 1] ?? 0) + 0.0722 * (pixels[i + 2] ?? 0)) / 255;
+      poids += opacite;
+    }
+    return poids < 1 ? null : somme / poids;
+  } catch {
+    // Image d'une autre origine sans CORS : ses pixels ne se lisent pas, elle reste telle quelle.
+    return null;
+  }
+}
+
+/**
+ * Une favicon sombre sur une page sombre (le logo noir de GitHub sur le thème par défaut) se voit
+ * mal : elle reçoit un fond blanc. Sur une page claire, rien ne change.
+ */
+function eclaircirSiSombre(image: HTMLImageElement, icone: HTMLElement): void {
+  const fond = luminance(window.getComputedStyle(icone).getPropertyValue('--color-fond'));
+  const favicon = luminanceDeLImage(image);
+  if (fond !== null && favicon !== null && fond < 0.5 && favicon < 0.35) {
+    icone.classList.add('mention-site-icone-claire');
+  }
+}
+
 /** Les mentions de site d'un document : début de chaque lien au titre « mention », avec sa marque. */
 function mentionsDeSite(document: ProseMirrorNode): { position: number; marque: Mark }[] {
   const trouvees: { position: number; marque: Mark }[] = [];
@@ -74,6 +123,9 @@ function decorations(document: ProseMirrorNode, options: SiteMentionOptions): De
             const image = window.document.createElement('img');
             image.alt = '';
             image.draggable = false;
+            // Pixels lisibles (fond clair derrière une favicon sombre) : le main sert les images avec CORS.
+            image.crossOrigin = 'anonymous';
+            image.addEventListener('load', () => eclaircirSiSombre(image, icone));
             image.src = adresse;
             // Favicon absente du dossier des notes : le globe à sa place, rien n'est cherché sur Internet.
             image.addEventListener('error', () => image.replaceWith(globe()));

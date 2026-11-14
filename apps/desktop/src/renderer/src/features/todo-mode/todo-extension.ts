@@ -1,7 +1,8 @@
-import { normaliserListe, retirerTachesVides, sectionTerminee } from '@notes/document';
+import { basculerTache, normaliserListe, retirerTachesVides, sectionTerminee, sousTachesTerminees } from '@notes/document';
+import type { DoneSubtask } from '@notes/document';
 import type { Node as ProseMirrorNode } from '@tiptap/pm/model';
 import { Extension } from '@tiptap/core';
-import { Plugin, PluginKey, TextSelection } from '@tiptap/pm/state';
+import { Plugin, PluginKey, Selection, TextSelection } from '@tiptap/pm/state';
 import type { EditorState, Transaction } from '@tiptap/pm/state';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
 import type { EditorView } from '@tiptap/pm/view';
@@ -154,6 +155,36 @@ export function placerSousLaTache(etat: EditorState): Transaction | null {
   return tr.setSelection(TextSelection.create(tr.doc, apresLeTexte + 1));
 }
 
+/**
+ * `Retour arrière` au début d'une tâche vide, en mode liste : elle disparaît et le curseur va à
+ * la fin du texte d'avant, comme dans Keep. null quand ce n'est pas le cas (curseur ailleurs,
+ * tâche qui a quelque chose dessous, première tâche de la page).
+ */
+export function retirerTacheVide(etat: EditorState): Transaction | null {
+  const { selection } = etat;
+  const $curseur = selection.$from;
+  if (!selection.empty || $curseur.depth < 3 || $curseur.parent.type.name !== 'paragraph' || $curseur.parent.content.size > 0) {
+    return null;
+  }
+  const tache = $curseur.node(-1);
+  if (tache.type.name !== 'taskItem' || tache.childCount !== 1) {
+    return null;
+  }
+  // Seule tâche de sa liste : la liste part avec elle, sauf si c'est celle de la page.
+  const seule = $curseur.node(-2).childCount === 1;
+  if (seule && $curseur.depth - 2 === 1) {
+    return null;
+  }
+  const profondeur = seule ? $curseur.depth - 2 : $curseur.depth - 1;
+  const debut = $curseur.before(profondeur);
+  const avant = Selection.findFrom(etat.doc.resolve(debut), -1, true);
+  if (avant === null) {
+    return null;
+  }
+  const tr = etat.tr.delete(debut, $curseur.after(profondeur));
+  return tr.setSelection(TextSelection.create(tr.doc, tr.mapping.map(avant.from))).scrollIntoView();
+}
+
 const chevron = (replie: boolean): string =>
   `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="transform: rotate(${replie ? 0 : 90}deg)"><path d="m9 18 6-6-6-6"/></svg>`;
 
@@ -176,6 +207,82 @@ function titreDeSection(vue: EditorView, nombre: number, replie: boolean, surRep
   });
   ligne.append(bouton);
   return ligne;
+}
+
+/** Classe d'une sous-tâche cochée sous une tâche à faire : cachée à sa place, montrée dans « Terminé » (styles.css). */
+export const classeSousTacheDeplacee = 'sous-tache-deplacee';
+
+/** Une tâche en lecture, comme la dessine l'éditeur (case et texte), dont la case coche ou décoche la vraie tâche. */
+function tacheEnCopie(vue: EditorView, position: number, sousListe: HTMLElement | null): HTMLElement {
+  const tache = vue.state.doc.nodeAt(position);
+  const coche = tache?.attrs['checked'] === true;
+  const ligne = document.createElement('li');
+  ligne.dataset['type'] = 'taskItem';
+  ligne.dataset['checked'] = String(coche);
+  ligne.className = 'tache-copie';
+  const etiquette = document.createElement('label');
+  etiquette.contentEditable = 'false';
+  const caseACocher = document.createElement('input');
+  caseACocher.type = 'checkbox';
+  caseACocher.checked = coche;
+  caseACocher.addEventListener('mousedown', (evenement) => evenement.preventDefault());
+  caseACocher.addEventListener('change', () => {
+    const tr = vue.state.tr;
+    if (basculerTache(tr, position, caseACocher.checked, true)) {
+      vue.dispatch(tr);
+    }
+  });
+  etiquette.append(caseACocher, document.createElement('span'));
+  const contenu = document.createElement('div');
+  const texte = document.createElement('p');
+  texte.textContent = tache?.firstChild?.textContent ?? '';
+  contenu.append(texte);
+  if (sousListe !== null) {
+    contenu.append(sousListe);
+  }
+  ligne.append(etiquette, contenu);
+  return ligne;
+}
+
+function listeEnCopie(...lignes: HTMLElement[]): HTMLElement {
+  const liste = document.createElement('ul');
+  liste.dataset['type'] = 'taskList';
+  liste.append(...lignes);
+  return liste;
+}
+
+/** La sous-tâche cochée et ce qu'elle contient, en copie. */
+function brancheEnCopie(vue: EditorView, position: number): HTMLElement {
+  const tache = vue.state.doc.nodeAt(position);
+  const enfants: HTMLElement[] = [];
+  let interieur = position + 1;
+  tache?.forEach((enfant) => {
+    if (enfant.type.name === 'taskList') {
+      let sous = interieur + 1;
+      enfant.forEach((item) => {
+        enfants.push(brancheEnCopie(vue, sous));
+        sous += item.nodeSize;
+      });
+    }
+    interieur += enfant.nodeSize;
+  });
+  return tacheEnCopie(vue, position, enfants.length === 0 ? null : listeEnCopie(...enfants));
+}
+
+/**
+ * Sous-tâches cochées sous une tâche à faire, montrées dans « Terminé » sous leurs parents
+ * non cochés (docs/spec/liste-de-taches.md). Ce n'est que de l'affichage : dans le document,
+ * elles restent à leur place, cachées. Les cases de la copie agissent sur les vraies tâches.
+ */
+function copiesTerminees(vue: EditorView, sousTaches: DoneSubtask[]): HTMLElement {
+  const conteneur = document.createElement('li');
+  conteneur.className = 'copies-terminees';
+  conteneur.contentEditable = 'false';
+  const lignes = sousTaches.map(({ position, parents }) =>
+    parents.reduceRight<HTMLElement>((dedans, parent) => tacheEnCopie(vue, parent, listeEnCopie(dedans)), brancheEnCopie(vue, position)),
+  );
+  conteneur.append(listeEnCopie(...lignes));
+  return conteneur;
 }
 
 /** Invite du paragraphe vide où se trouve le curseur, dans une tâche : son texte, ou une note dessous. */
@@ -207,14 +314,29 @@ function decorations(etat: EditorState, { actif, replie }: EtatDuModeListe, surR
     liste.push(indication);
   }
   const positions = sectionTerminee(etat.doc);
-  if (positions.length > 0) {
+  const sousTaches = sousTachesTerminees(etat.doc);
+  for (const { position } of sousTaches) {
+    liste.push(Decoration.node(position, position + etat.doc.nodeAt(position)!.nodeSize, { class: classeSousTacheDeplacee }));
+  }
+  if (positions.length > 0 || sousTaches.length > 0) {
+    // Juste avant la première tâche terminée, ou à la fin de la liste s'il n'y en a pas.
+    const ou = positions[0] ?? etat.doc.child(0).nodeSize - 1;
+    const nombre = positions.length + sousTaches.length;
     liste.push(
-      Decoration.widget(positions[0]!, (vue) => titreDeSection(vue, positions.length, replie, surRepli), {
-        side: -1,
-        key: `termine-${positions.length}-${replie}`,
+      Decoration.widget(ou, (vue) => titreDeSection(vue, nombre, replie, surRepli), {
+        side: -2,
+        key: `termine-${nombre}-${replie}`,
         ignoreSelection: true,
       }),
     );
+    if (!replie && sousTaches.length > 0) {
+      // La clé suit le texte et l'état des tâches montrées : la copie se refait quand elles changent.
+      const empreinte = sousTaches
+        .flatMap(({ position, parents }) => [...parents, position])
+        .map((position) => `${position}:${etat.doc.nodeAt(position)!.textContent}:${String(etat.doc.nodeAt(position)!.attrs['checked'])}`)
+        .join('|');
+      liste.push(Decoration.widget(ou, (vue) => copiesTerminees(vue, sousTaches), { side: -1, key: `copies-${empreinte}`, ignoreSelection: true }));
+    }
     if (replie) {
       for (const position of positions) {
         liste.push(Decoration.node(position, position + etat.doc.nodeAt(position)!.nodeSize, { class: classeTacheRepliee }));
@@ -232,6 +354,24 @@ export interface TodoModeOptions {
 /** Le mode liste : inactif tant que la page ne le demande pas (`definirModeListe`). */
 export const TodoMode = Extension.create<TodoModeOptions>({
   name: 'modeListe',
+  // Avant les raccourcis des listes : leur `Retour arrière` joint la tâche vide à la précédente et mange une lettre.
+  priority: 1000,
+
+  addKeyboardShortcuts() {
+    return {
+      Backspace: ({ editor }) => {
+        if (cleDuModeListe.getState(editor.state)?.actif !== true || !editor.isEditable) {
+          return false;
+        }
+        const tr = retirerTacheVide(editor.state);
+        if (tr === null) {
+          return false;
+        }
+        editor.view.dispatch(tr);
+        return true;
+      },
+    };
+  },
 
   addOptions() {
     return { surRepli: () => undefined };

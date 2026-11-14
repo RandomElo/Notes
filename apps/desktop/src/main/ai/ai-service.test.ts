@@ -103,12 +103,12 @@ describe('AiService : modèle local', () => {
 
   it('refuse un modèle choisi à la main qui ne tient pas', async () => {
     const { service } = await monter({ ia: { modeles: { relecture: { modele: 'gemma3:12b' }, 'mise-au-propre': { modele: '' }, memo: { modele: '' } } } });
-    expect(await service.estimer(page)).toEqual({ ok: false, message: 'gemma3:12b : Trop gros pour les 8 Go de la carte.' });
+    expect(await service.estimer(page)).toEqual({ ok: false, message: 'gemma3:12b : Trop gros pour les 8 Go de la carte.', indisponible: false });
   });
 
   it('bloque l’IA locale sur une carte intégrée', async () => {
     const { service } = await monter({ cartes: [{ fabricant: 'amd', nom: 'AMD Radeon Graphics', vram: 512 * 1024 ** 2, dediee: false }] });
-    expect(await service.estimer(page)).toMatchObject({ ok: false, message: expect.stringContaining('carte intégrée') });
+    expect(await service.estimer(page)).toMatchObject({ ok: false, message: expect.stringContaining('carte intégrée'), indisponible: true });
   });
 
   it('abandonne un appel dont le modèle déborde de la mémoire vidéo, avec un message, sans l’écarter', async () => {

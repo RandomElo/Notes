@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
-import { lireConflit, listerConflits, resoudreConflit } from './conflicts';
+import { comparerOrdres, ecarterConflitDOrdre, estConflitDOrdre, lireConflitDOrdre, lireConflit, listerConflits, resoudreConflit } from './conflicts';
 
 const enTete = (modifie: string) => `---\nid: 0199a0b0-0000-7000-8000-000000000001\ntitle: Alpha\ncreated: 2026-01-01T00:00:00.000Z\nupdated: ${modifie}\n---\n`;
 const sauvegarde = 'Alpha/page.conflit-2026-10-03-190212.md';
@@ -56,5 +56,39 @@ describe('conflits d’une page', () => {
     expect(resultat.conflit).not.toBeNull();
     expect(await fs.lireTexte(`Alpha/${resultat.conflit}`)).toContain('arrivée pendant la résolution');
     expect(await listerConflits(fs, 'Alpha')).toEqual([`Alpha/${resultat.conflit}`]);
+  });
+});
+
+describe('conflit de l’ordre des sous-pages', () => {
+  it('se reconnaît, et s’écarte en gardant l’ordre actuel', async () => {
+    const { fs, contexte } = monter();
+    expect(estConflitDOrdre('Alpha/.order.conflit-2026-10-03-190212')).toBe(true);
+    expect(estConflitDOrdre(sauvegarde)).toBe(false);
+    await ecarterConflitDOrdre(contexte, 'Alpha/.order.conflit-2026-10-03-190212');
+    expect(await fs.infos('Alpha/.order.conflit-2026-10-03-190212')).toBeNull();
+    await expect(ecarterConflitDOrdre(contexte, sauvegarde)).rejects.toThrow();
+    expect(await fs.infos(sauvegarde)).not.toBeNull();
+  });
+});
+
+describe('différence entre deux ordres', () => {
+  it('marque les pages d’un seul côté et celles qui ont changé de rang', () => {
+    const titres = new Map([['a', 'A'], ['b', 'B'], ['c', 'C']]);
+    const { actuel, ancien } = comparerOrdres(['a', 'b', 'c'], ['b', 'a', 'z'], titres);
+    expect(actuel.map((page) => [page.titre, page.difference])).toEqual([['A', 'deplacee'], ['B', 'deplacee'], ['C', 'seule']]);
+    expect(ancien.map((page) => [page.titre, page.difference])).toEqual([['B', 'deplacee'], ['A', 'deplacee'], [null, 'seule']]);
+  });
+
+  it('se lit depuis le dossier, avec les titres des sous-pages', async () => {
+    const fs = MemoryLocalFs.depuis({
+      'Alpha/page.md': enTete('2026-10-03T17:04:00.000Z'),
+      'Alpha/Une/page.md': '---\nid: 0199a0b0-0000-7000-8000-000000000011\ntitle: Une\n---\n',
+      'Alpha/Deux/page.md': '---\nid: 0199a0b0-0000-7000-8000-000000000012\ntitle: Deux\n---\n',
+      'Alpha/.order': '0199a0b0-0000-7000-8000-000000000012\n0199a0b0-0000-7000-8000-000000000011\n',
+      'Alpha/.order.conflit-2026-10-03-190212': '0199a0b0-0000-7000-8000-000000000011\n0199a0b0-0000-7000-8000-000000000012\n',
+    });
+    const conflit = await lireConflitDOrdre(fs, 'Alpha/.order.conflit-2026-10-03-190212');
+    expect(conflit.actuel.map((page) => page.titre)).toEqual(['Deux', 'Une']);
+    expect(conflit.ancien.map((page) => [page.titre, page.difference])).toEqual([['Une', 'deplacee'], ['Deux', 'deplacee']]);
   });
 });

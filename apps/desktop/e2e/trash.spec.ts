@@ -2,7 +2,7 @@ import { mkdir, readdir, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { fermer, lancer, ligne, lireVault, ouvrirPage, preparer, titreDePage } from './app';
+import { fermer, lancer, ligne, lireVault, ouvrirPage, preparer, titreDePage, rubrique } from './app';
 
 // Types du DOM, évalués dans la fenêtre : le projet des essais n'a pas la bibliothèque DOM.
 declare const DataTransfer: new () => unknown;
@@ -166,27 +166,45 @@ test('sélection multiple : Maj+↑/↓, Maj+clic, glisser-déposer groupé, Sup
   await fermer(session);
 });
 
-test('images inutilisées : tout mettre à la corbeille, avec confirmation', async () => {
+test('fichiers inutilisés : images et PDF, triés dans une fenêtre quand il y en a beaucoup', async () => {
   const dossiers = await preparer();
   await mkdir(join(dossiers.vault, 'Courses', 'assets'), { recursive: true });
-  await writeFile(join(dossiers.vault, 'Courses', 'assets', 'vieille-1.png'), 'x');
-  await writeFile(join(dossiers.vault, 'Courses', 'assets', 'vieille-2.png'), 'y');
+  for (let numero = 1; numero <= 5; numero++) {
+    await writeFile(join(dossiers.vault, 'Courses', 'assets', `vieille-${numero}.png`), 'x'.repeat(numero));
+  }
+  await writeFile(join(dossiers.vault, 'Courses', 'assets', 'cours.pdf'), '%PDF-1.7 gros');
   const session = await lancer(dossiers);
   const { page, vault } = session;
 
   await page.getByRole('button', { name: 'Réglages' }).click();
-  const section = page.getByRole('region', { name: 'Images inutilisées' });
+  await rubrique(page, 'Images et fichiers');
+  const section = page.getByRole('region', { name: 'Fichiers inutilisés' });
   await section.getByRole('button', { name: 'Chercher' }).click();
-  await expect(section.getByRole('status').filter({ hasText: '2 images inutilisées.' })).toBeVisible();
-  await page.getByRole('button', { name: 'Tout mettre à la corbeille' }).click();
-  // Échap annule la confirmation sans fermer les réglages.
+  await expect(section.getByRole('status').filter({ hasText: 'Inutilisés : 6 fichiers, 28 o.' })).toBeVisible();
+
+  // Six fichiers : la liste s'ouvre dans la fenêtre de tri, le plus gros d'abord.
+  await section.getByRole('button', { name: 'Trier' }).click();
+  const fenetre = page.getByRole('dialog', { name: 'Trier les fichiers inutilisés' });
+  const fichiers = fenetre.getByRole('list', { name: 'Fichiers' }).getByRole('listitem');
+  await expect(fichiers.first()).toContainText('cours.pdf');
+  await fenetre.getByRole('button', { name: 'PDF', exact: true }).click();
+  await expect(fichiers).toHaveCount(1);
+  await fenetre.getByRole('button', { name: 'Tous', exact: true }).click();
+  await fenetre.getByRole('button', { name: 'Nom', exact: true }).click();
+  await expect(fichiers.first()).toContainText('cours.pdf');
+  await fenetre.getByRole('checkbox', { name: 'Choisir cours.pdf' }).check();
+  await fenetre.getByRole('checkbox', { name: 'Choisir vieille-5.png' }).check();
+  await fenetre.getByRole('button', { name: /Mettre à la corbeille \(2 fichiers/ }).click();
+  await expect(fichiers).toHaveCount(4);
+  // Échap ferme la fenêtre, pas les réglages.
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('button', { name: 'Tout mettre à la corbeille' })).toBeVisible();
-  await page.getByRole('button', { name: 'Tout mettre à la corbeille' }).click();
-  await page.getByRole('button', { name: 'Mettre les 2 images à la corbeille' }).click();
-  await expect(section.getByRole('status').filter({ hasText: 'Aucune image inutilisée.' })).toBeVisible();
+  await expect(fenetre).toBeHidden();
+  await expect(section.getByRole('status').filter({ hasText: 'Inutilisés : 4 fichiers, 10 o.' })).toBeVisible();
   const entrees = await entreesDeLaCorbeille(vault);
-  expect(entrees).toHaveLength(2);
-  expect(entrees.every((entree) => / vieille-\d\.png$/.test(entree))).toBe(true);
+  expect(entrees.map((entree) => entree.replace(/^.* /, '')).sort()).toEqual(['cours.pdf', 'vieille-5.png']);
+
+  // Cinq fichiers ou moins : la liste reste dans les réglages.
+  await expect(section.getByRole('button', { name: 'Trier' })).toBeHidden();
+  await expect(section.getByRole('listitem')).toHaveCount(4);
   await fermer(session);
 });

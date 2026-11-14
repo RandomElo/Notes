@@ -4,7 +4,7 @@ import { Plugin, PluginKey } from '@tiptap/pm/state';
 import type { EditorState } from '@tiptap/pm/state';
 import { estItem } from './block-ranges';
 import { Decoration, DecorationSet } from '@tiptap/pm/view';
-import { allerAuBloc, deplacerBlocs, dupliquerBlocs, editerBloc, etendreSelection, indenterBlocs, selectionnerBloc, supprimerBlocs } from './block-commands';
+import { allerAuBloc, deplacerBlocs, dupliquerBlocs, editerBloc, etendreSelection, indenterBlocs, selectionnerBloc, selectionnerTout, supprimerBlocs } from './block-commands';
 import type { BlockCommand } from './block-commands';
 import { BlockSelection } from './block-selection';
 
@@ -92,6 +92,8 @@ export const BlockKeys = Extension.create({
       // Avec Ctrl+Maj, ce sont les blocs qui bougent : les blocs sélectionnés, ou celui du curseur.
       'Mod-Shift-ArrowUp': partout(deplacerBlocs(-1)),
       'Mod-Shift-ArrowDown': partout(deplacerBlocs(1)),
+      // Ctrl+A sélectionne d'emblée tous les blocs (demande d'Eloi), comme Échap le ferait après une sélection de texte.
+      'Mod-a': ({ editor }) => jouer(editor, selectionnerTout),
       'Mod-d': ({ editor }) => {
         jouer(editor, dupliquerBlocs);
         // Toujours consommé : sinon Chromium propose d'ajouter un favori.

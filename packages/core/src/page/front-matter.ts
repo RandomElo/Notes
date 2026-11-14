@@ -1,5 +1,7 @@
 import { Document, isMap, parseDocument } from 'yaml';
 import { estId } from './id';
+import { configEnYaml } from './database';
+import type { BaseConfig } from './database';
 import type { PageMeta, PageMode, PageRole } from './types';
 
 /**
@@ -91,7 +93,7 @@ export function lireMeta(enTete: string | null): PageMeta | null {
     icone: typeof champs['icon'] === 'string' && champs['icon'] !== '' ? champs['icon'] : null,
     creeLe: texteDeDate(champs['created']),
     modifieLe: texteDeDate(champs['updated']),
-    mode: champs['mode'] === 'todo' ? 'todo' : null,
+    mode: champs['mode'] === 'todo' || champs['mode'] === 'base' ? champs['mode'] : null,
     ...(champs['role'] === 'memos' ? { role: 'memos' as const } : {}),
   };
 }
@@ -172,6 +174,10 @@ export interface FrontMatterChanges {
   role?: PageRole | null;
   /** Largeurs des colonnes des tableaux ; une liste sans aucune largeur retire la clé. */
   largeursDesTableaux?: number[][] | null;
+  /** Configuration d'une base de données (`base:`). */
+  base?: BaseConfig | null;
+  /** Valeurs d'une ligne de base de données (`props:`) ; une liste vide retire la clé. */
+  valeurs?: Record<string, string> | null;
 }
 
 const cles: Record<keyof FrontMatterChanges, string> = {
@@ -183,6 +189,8 @@ const cles: Record<keyof FrontMatterChanges, string> = {
   mode: 'mode',
   role: 'role',
   largeursDesTableaux: 'table_widths',
+  base: 'base',
+  valeurs: 'props',
 };
 
 /**
@@ -201,6 +209,19 @@ export function modifierEnTete(enTete: string | null, changements: FrontMatterCh
     const valeur = changements[champ];
     if (valeur === null || valeur === undefined || (Array.isArray(valeur) && valeur.every((tableau) => tableau.length === 0))) {
       document.delete(cle);
+    } else if (champ === 'base') {
+      // Un champ par ligne : `- {name: État, type: state}`.
+      const noeud = document.createNode(configEnYaml(valeur as BaseConfig)) as { get(cle: string, garder: true): { items?: { flow?: boolean }[] } | undefined };
+      for (const item of noeud.get('fields', true)?.items ?? []) {
+        item.flow = true;
+      }
+      document.set(cle, noeud);
+    } else if (champ === 'valeurs') {
+      if (Object.keys(valeur as Record<string, string>).length === 0) {
+        document.delete(cle);
+      } else {
+        document.set(cle, valeur);
+      }
     } else if (Array.isArray(valeur)) {
       // Une ligne par tableau, ses largeurs entre crochets : `- [30, 70]`.
       const noeud = document.createNode(valeur);

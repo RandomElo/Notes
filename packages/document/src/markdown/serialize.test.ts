@@ -149,4 +149,21 @@ describe('document venu d’un éditeur', () => {
     );
     expect(ecrireMarkdown(modifie, source)).toBe('* une\n* puce\n\nAutre texte.\n\n|a|b|\n|-|-|\n|1|2|\n');
   });
+
+  it('relit une image collée sous le texte d’une tâche comme un bloc, pas comme un bloc brut', () => {
+    const image = { type: 'image', attrs: { src: 'assets/a.webp' } };
+    const liste = noeud({
+      type: 'taskList',
+      attrs: { tight: true },
+      content: [
+        { type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'à faire' }] }] },
+        { type: 'taskItem', attrs: { checked: true }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'avec image' }] }, image, image] },
+      ],
+    });
+    const ecrit = modifier('', () => [liste]);
+    expect(ecrit).toBe('- [ ] à faire\n- [x] avec image\n  ![](assets/a.webp)\n  ![](assets/a.webp)\n');
+    const relu = lireMarkdown(ecrit);
+    expect(relu.document.child(0).eq(liste)).toBe(true);
+    expect(ecrireMarkdown(relu.document, relu.source)).toBe(ecrit);
+  });
 });

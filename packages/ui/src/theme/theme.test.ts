@@ -176,3 +176,27 @@ describe('variablesDeSurcharge', () => {
     expect(avertissements[1]).toContain('seules les couleurs se surchargent');
   });
 });
+
+describe('états des bases de données', () => {
+  it('ont des valeurs par défaut, se lisent dans le fichier et se réécrivent à l’identique', () => {
+    expect(themeParDefaut.database.states.map((etat) => etat.name)).toEqual(['À faire', 'En cours', 'En attente', 'Fait']);
+    const texte = '[database]\nstates = [{ name = "Idée", color = "#ff8800" }, { name = "Fini", color = "success" }]\n';
+    const { theme, avertissements } = lireTheme(texte);
+    expect(avertissements).toEqual([]);
+    expect(theme.database.states).toEqual([
+      { name: 'Idée', color: '#ff8800' },
+      { name: 'Fini', color: 'success' },
+    ]);
+    expect(lireTheme(texteDuTheme(theme)).theme.database.states).toEqual(theme.database.states);
+    // Des objets ordinaires, qu'on peut afficher (smol-toml rend des tables sans prototype).
+    expect(Object.getPrototypeOf(theme.database.states[0])).toBe(Object.prototype);
+  });
+
+  it('refusent une liste vide, des noms en double ou une couleur inconnue', () => {
+    for (const valeur of ['[]', '[{ name = "A", color = "muted" }, { name = "A", color = "accent" }]', '[{ name = "A", color = "rose" }]']) {
+      const { theme, avertissements } = lireTheme(`[database]\nstates = ${valeur}\n`);
+      expect(avertissements).toHaveLength(1);
+      expect(theme.database.states).toEqual(themeParDefaut.database.states);
+    }
+  });
+});

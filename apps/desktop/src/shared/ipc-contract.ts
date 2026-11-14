@@ -1,6 +1,7 @@
 import type { MemoAcceptance, MemoConversion, MemoEstimate, MemosState, MemoTranscription, WhisperState } from './memos-contract';
+import type { NotionAnalysisResult, NotionDatabaseChoice, NotionImportResult, NotionPreviewResult, NotionProgress } from './notion-contract';
 import type { AiProgress, AiPromptResult, AiRequest, AiEstimateResult, AiRunResult, AiState, AiUsageView } from './ai-contract';
-import type { AiSettings, BrokenMention, ConflictVersions, IgnoredRemark, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, NasSettingsField, PageLocation, PageMode, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, VaultErrorCode } from '@notes/core';
+import type { AiSettings, Base, BaseConfig, BrokenMention, ConflictVersions, IgnoredRemark, ImageToConvert, LocalFsErrorCode, LockState, NasSettings, OrderConflict, NasSettingsField, PageLocation, PageMode, RemoteFsErrorCode, SaveRequest, SaveResult, SyncStatus, TakeResult, TrashEntry, TrashPreview, TreeNode, UnusedFile, VaultErrorCode } from '@notes/core';
 
 /**
  * Contrat IPC entre le main, le preload et le renderer. Tout canal ajouté ici
@@ -36,6 +37,8 @@ export const canaux = {
   listerConflits: 'vault:lister-conflits',
   lireConflit: 'vault:lire-conflit',
   resoudreConflit: 'vault:resoudre-conflit',
+  ecarterConflitDOrdre: 'vault:ecarter-conflit-ordre',
+  lireConflitDOrdre: 'vault:lire-conflit-ordre',
   lireTheme: 'theme:lire',
   creerTheme: 'theme:creer',
   ouvrirTheme: 'theme:ouvrir',
@@ -49,6 +52,13 @@ export const canaux = {
   pagesEnAttente: 'sync:pages-en-attente',
   quitterNotes: 'lancement:quitter',
   prendrePageDemandee: 'lancement:prendre-page',
+  ouvrirBarreDeRecherche: 'lancement:barre-de-recherche',
+  signalerErreur: 'journal:signaler-erreur',
+  choisirArchivesNotion: 'notion:choisir',
+  analyserNotion: 'notion:analyser',
+  importerNotion: 'notion:importer',
+  apercuNotion: 'notion:apercu',
+  abandonnerNotion: 'notion:abandonner',
   relancerNotes: 'maj:relancer',
   miseAJourEnAttente: 'maj:en-attente',
   choisirImages: 'images:choisir',
@@ -57,20 +67,27 @@ export const canaux = {
   listerImagesAConvertir: 'images:a-convertir',
   lireImage: 'images:lire',
   convertirImage: 'images:convertir',
-  listerImagesOrphelines: 'images:orphelines',
+  listerFichiersInutilises: 'fichiers:inutilises',
   retirerLeFond: 'images:retirer-le-fond',
   copierImage: 'images:copier',
+  ouvrirPdf: 'images:ouvrir-pdf',
   apercuDuSite: 'liens:apercu-du-site',
   enregistrerFavicon: 'liens:enregistrer-favicon',
   listerMentionsCassees: 'vault:mentions-cassees',
   changerIcone: 'vault:changer-icone',
   ajouterIconeImage: 'vault:ajouter-icone-image',
   changerMode: 'vault:changer-mode',
+  lireBase: 'base:lire',
+  changerConfigDeBase: 'base:changer-config',
+  changerValeurDeBase: 'base:changer-valeur',
+  renommerChampDeBase: 'base:renommer-champ',
+  renommerChoixDeBase: 'base:renommer-choix',
+  retirerChoixDeBase: 'base:retirer-choix',
   exporter: 'export:exporter',
   montrerExport: 'export:montrer',
   lireImageDExport: 'export:lire-image',
   mettreALaCorbeille: 'corbeille:mettre',
-  mettreImageALaCorbeille: 'corbeille:mettre-image',
+  mettreFichierJointALaCorbeille: 'corbeille:mettre-fichier-joint',
   listerCorbeille: 'corbeille:lister',
   apercuCorbeille: 'corbeille:apercu',
   restaurerDeLaCorbeille: 'corbeille:restaurer',
@@ -137,6 +154,8 @@ export const evenements = {
   historiqueIaModifie: 'ia:historique-modifie',
   /** Le modèle de transcription se télécharge, ou le serveur a démarré ou s'est arrêté. Porte l'état. */
   etatWhisperModifie: 'memos:etat-whisper',
+  /** L'import de Notion avance. Porte l'avancement. */
+  avancementNotion: 'notion:avancement',
 } as const;
 
 /** Une étape de l'installation de la correction orthographique : un fichier à télécharger, vérifier, décompresser. */
@@ -217,6 +236,9 @@ export type VaultOperationResult =
   | { ok: false; erreur: { code: VaultErrorCode | LocalFsErrorCode | 'requete_invalide' | 'nas_indisponible' | 'interne'; message: string } };
 
 export type VaultFailure = Extract<VaultOperationResult, { ok: false }>;
+
+/** Lecture d'une base de données : sa configuration et ses lignes. */
+export type DatabaseReadResult = ({ ok: true } & Base) | VaultFailure;
 
 /** Corps Markdown d'une page (sans son front-matter) et ses surcharges de thème non vérifiées, ou l'erreur. */
 /** Fichiers Markdown déposés : les pages créées (et l'arborescence à jour), ou le texte à ajouter à la page ouverte. */
@@ -380,6 +402,18 @@ export interface NotesApi {
   ajouterIconeImage(demande: { chemin: string; octets: Uint8Array }): Promise<VaultOperationResult>;
   /** Passe une page en mode liste de tâches (`todo`) ou la ramène en page classique (null). Seul le front-matter change. */
   changerMode(demande: { chemin: string; mode: PageMode | null }): Promise<VaultOperationResult>;
+  /** Base de données d'une page (docs/spec/base-de-donnees.md) : sa configuration et ses lignes (sous-pages). */
+  lireBase(demande: { chemin: string }): Promise<DatabaseReadResult>;
+  /** Écrit les champs et le tri d'une base dans l'en-tête de sa page. */
+  changerConfigDeBase(demande: { chemin: string; config: BaseConfig }): Promise<TrashActionResult>;
+  /** Change une valeur d'une ligne ; une saisie vide la retire. */
+  changerValeurDeBase(demande: { base: string; ligne: string; champ: string; valeur: string }): Promise<TrashActionResult>;
+  /** Renomme un champ, dans la configuration et dans toutes les lignes. */
+  renommerChampDeBase(demande: { chemin: string; ancien: string; nouveau: string }): Promise<TrashActionResult>;
+  /** Renomme un choix d'un champ « choix », dans la liste et dans toutes les lignes. */
+  renommerChoixDeBase(demande: { chemin: string; champ: string; ancien: string; nouveau: string }): Promise<TrashActionResult>;
+  /** Retire un choix d'un champ « choix » : de la liste et des lignes qui l'avaient. */
+  retirerChoixDeBase(demande: { chemin: string; champ: string; nom: string }): Promise<TrashActionResult>;
   deplacerPage(demande: { chemin: string; parent: string; index?: number }): Promise<VaultOperationResult>;
   /** Déplace plusieurs pages ensemble, à la suite, dans l'ordre donné. Une page dont un ancêtre est aussi déplacé suit celui-ci. */
   deplacerPages(demande: { chemins: string[]; parent: string; index?: number }): Promise<VaultOperationResult>;
@@ -405,6 +439,10 @@ export interface NotesApi {
   lireConflit(demande: { sauvegarde: string }): Promise<ConflictReadResult>;
   /** Enregistre la page résolue, puis supprime la version en conflit. */
   resoudreConflit(demande: { sauvegarde: string } & SaveRequest): Promise<PageSaveResult>;
+  /** Écarte la sauvegarde d'un ordre de sous-pages en conflit (`.order.conflit-[date]`) : l'ordre actuel reste. */
+  ecarterConflitDOrdre(demande: { sauvegarde: string }): Promise<TrashActionResult>;
+  /** Les deux ordres d'une sauvegarde d'ordre en conflit, comparés, avec les titres des pages. Ne modifie rien. */
+  lireConflitDOrdre(demande: { sauvegarde: string }): Promise<({ ok: true } & OrderConflict) | VaultFailure>;
   /** Lit le fichier de thème. Ne modifie rien. */
   lireTheme(): Promise<ThemeFile>;
   /** Crée le fichier de thème avec les valeurs par défaut, s'il n'existe pas. Ne remplace jamais un fichier existant. */
@@ -435,7 +473,23 @@ export interface NotesApi {
   quitterNotes(): Promise<void>;
   /** La page demandée par `--page=<id>`, une seule fois, null s'il n'y en a pas. */
   prendrePageDemandee(): Promise<string | null>;
+  /** Montre la barre de recherche du poste (`../BarreRecherche`) sur les pages de Notes ; false si elle n'est pas installée. */
+  ouvrirBarreDeRecherche(): Promise<boolean>;
   surPageDemandee(ecouteur: () => void): () => void;
+  /** Note une erreur de l'affichage dans le journal des erreurs du profil (`erreurs.log`). */
+  signalerErreur(erreur: RendererError): Promise<void>;
+
+  /** Sélecteur de fichiers pour les archives `.zip` d'un export Notion. Aucune si l'utilisateur annule. */
+  choisirArchivesNotion(): Promise<string[]>;
+  /** Ouvre les archives (dans un dossier temporaire) et rend ce qu'elles contiennent. Remplace l'analyse précédente. */
+  analyserNotion(demande: { archives: string[] }): Promise<NotionAnalysisResult>;
+  /** Une page de l'export analysé, convertie comme à l'import, pour la voir avant de choisir. */
+  apercuNotion(demande: { fichier: string }): Promise<NotionPreviewResult>;
+  /** Importe l'export analysé à la racine du dossier des notes, chaque base selon son choix, sans les pages exclues ni leurs sous-pages. */
+  importerNotion(demande: { choix: Record<string, NotionDatabaseChoice>; exclues: string[] }): Promise<NotionImportResult>;
+  /** Arrête l'import en cours (à la page suivante) ou oublie l'analyse, et efface le dossier temporaire. */
+  abandonnerNotion(): Promise<void>;
+  surAvancementNotion(ecouteur: (avancement: NotionProgress) => void): () => void;
   /** Vrai si une nouvelle version a été installée depuis le lancement (`npm run installer`). */
   miseAJourEnAttente(): Promise<boolean>;
   surMiseAJourInstallee(ecouteur: () => void): () => void;
@@ -454,10 +508,12 @@ export interface NotesApi {
   lireImage(demande: { page: string; nom: string }): Promise<ImageReadResult>;
   /** Ajoute la version WebP d'une image et fait renvoyer la page à elle. L'ancien fichier reste. */
   convertirImage(demande: { page: string; ancien: string; octets: Uint8Array }): Promise<ImagesAddResult>;
-  /** Les images des dossiers `assets/` auxquelles leur page ne renvoie plus. Ne modifie rien. */
-  listerImagesOrphelines(): Promise<string[]>;
+  /** Les images et PDF des dossiers `assets/` auxquels leur page ne renvoie plus. Ne modifie rien. */
+  listerFichiersInutilises(): Promise<UnusedFile[]>;
   /** Copie une image d'une page (« source », chemin dans le dossier des notes) dans les `assets/` d'une autre, sans rien remplacer. */
   copierImage(demande: { source: string; page: string }): Promise<ImagesAddResult>;
+  /** Ouvre dans la visionneuse du système un PDF joint à la page (`assets/<nom>.pdf`). Faux s'il n'existe pas. */
+  ouvrirPdf(demande: { page: string; adresse: string }): Promise<boolean>;
   /** Titre et favicon d'un site (http ou https, sans cookies, délai court), pour une mention de site. */
   apercuDuSite(demande: { adresse: string }): Promise<SitePreviewResult>;
   /** Garde la favicon d'un site (PNG) dans `.notes/favicons/`, sans remplacer celle qui y est. */
@@ -475,7 +531,7 @@ export interface NotesApi {
   /** Met des pages à la corbeille, chacune avec sa descendance (docs/spec/corbeille.md). */
   mettreALaCorbeille(demande: { chemins: string[] }): Promise<VaultOperationResult>;
   /** Met une image d'un dossier `assets/` à la corbeille (image inutilisée). */
-  mettreImageALaCorbeille(demande: { chemin: string }): Promise<TrashActionResult>;
+  mettreFichierJointALaCorbeille(demande: { chemin: string }): Promise<TrashActionResult>;
   /** Entrées de la corbeille du poste et de celle du NAS. Ne modifie rien. */
   listerCorbeille(): Promise<TrashListResult>;
   /** Texte et sous-pages d'une page de la corbeille, ou octets d'une image. Ne modifie rien. */
@@ -548,4 +604,12 @@ export interface NotesApi {
   installerModeleWhisper(): Promise<WhisperState>;
   annulerInstallationWhisper(): Promise<void>;
   surEtatWhisper(ecouteur: (etat: WhisperState) => void): () => void;
+}
+
+/** Erreur de l'affichage envoyée au journal des erreurs : rien d'autre que le message et la pile. */
+export interface RendererError {
+  /** « erreur », « promesse » (rejet non rattrapé) ou « react » (plantage d'un composant). */
+  nature: 'erreur' | 'promesse' | 'react';
+  message: string;
+  detail?: string;
 }

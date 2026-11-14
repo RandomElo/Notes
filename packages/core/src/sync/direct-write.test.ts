@@ -86,6 +86,16 @@ describe('modifierPageSurLeNas', () => {
     expect(versTexte(await local.lireOctets('Courses/page.md'))).toBe(avant);
   });
 
+  it('change une valeur de ligne de base en gardant les autres, lues sous le verrou', async () => {
+    const { nas, cache, contexte } = telephone({ 'Courses/page.md': page('').replace('title: Courses\n', 'title: Courses\nprops:\n  État: À faire\n  Note: lait\n') });
+    await cache.tirer();
+    await modifierPageSurLeNas(contexte, 'Courses', { corpsAttendu: null, operation: () => null, valeurDeBase: { champ: 'État', valeur: 'Fait' } });
+    expect(nas.contenu()['Courses/page.md']).toContain('props:\n  État: Fait\n  Note: lait\n');
+    await modifierPageSurLeNas(contexte, 'Courses', { corpsAttendu: null, operation: () => null, valeurDeBase: { champ: 'Note', valeur: null } });
+    expect(nas.contenu()['Courses/page.md']).toContain('props:\n  État: Fait\n');
+    expect(nas.contenu()['Courses/page.md']).not.toContain('Note');
+  });
+
   it('n’écrit rien si l’opération ne change rien', async () => {
     const { nas, contexte } = telephone({ 'Courses/page.md': page('- [ ] lait\n') });
     const avant = nas.contenu();

@@ -1,6 +1,6 @@
 {
   "name": "notes",
-  "version": "0.18.4",
+  "version": "0.27.0",
   "private": true,
   "type": "module",
   "description": "Éditeur de notes local-first avec synchronisation SMB",
@@ -30,7 +30,9 @@
     "test:e2e": "npm run build && npm run test:e2e -w @notes/desktop",
     "test:nas": "bash scripts/test-nas.sh",
     "check": "npm run typecheck && npm run lint && npm run test",
-    "version:set": "node scripts/set-version.mjs"
+    "version:set": "node scripts/set-version.mjs",
+    "liste:ranger": "esbuild scripts/sort-todo-page.ts --bundle --platform=node --format=cjs --log-level=warning --outfile=.cache/sort-todo-page.cjs && node .cache/sort-todo-page.cjs",
+    "plan": "bash scripts/outline.sh"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

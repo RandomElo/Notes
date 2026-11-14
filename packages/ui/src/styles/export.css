@@ -217,6 +217,18 @@ body {
     display: table-header-group;
   }
 
+  /* Une phrase d'introduction reste avec sa liste, et une liste ne se coupe pas après son premier item ni avant son dernier :
+     sinon le titre, la phrase et un seul item restent en bas d'une page, le reste sur la suivante. */
+  .notes-page p:has(+ ul),
+  .notes-page p:has(+ ol) {
+    break-after: avoid;
+  }
+
+  .notes-page li:first-child + li,
+  .notes-page li:last-child:not(:first-child) {
+    break-before: avoid;
+  }
+
   .notes-page p,
   .notes-page li,
   .notes-page pre {
@@ -226,6 +238,12 @@ body {
 
   .notes-page img {
     break-inside: avoid;
+  }
+
+  /* Sur le papier, le rouge du code dans le texte reste celui de la palette, déjà foncé pour le blanc : l'éclaircir le rendrait pâle. */
+  .notes-page :not(pre) > code {
+    background-color: color-mix(in srgb, var(--color-erreur) 8%, transparent);
+    color: var(--color-erreur);
   }
 
   /* Sur le papier, les titres du sommaire sont des liens : de la couleur des liens, pour qu'on voie qu'ils se cliquent. */

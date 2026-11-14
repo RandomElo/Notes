@@ -13,8 +13,11 @@ export interface PageMeta {
   role?: PageRole;
 }
 
-/** « todo » : la page se comporte comme une liste de tâches (docs/spec/liste-de-taches.md). */
-export type PageMode = 'todo';
+/**
+ * « todo » : la page se comporte comme une liste de tâches (docs/spec/liste-de-taches.md).
+ * « base » : la page est une base de données, ses sous-pages en sont les lignes (docs/spec/base-de-donnees.md).
+ */
+export type PageMode = 'todo' | 'base';
 export type PageRole = 'memos';
 
 /** Une page telle qu'elle est sur le disque. */

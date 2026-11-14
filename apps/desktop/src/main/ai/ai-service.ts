@@ -54,6 +54,12 @@ export interface AiServiceDependencies {
   ollama?: { lister: typeof listerModelesOllama; decrire: typeof decrireModeleOllama; occupation: typeof occupationOllama; discuter: typeof discuterAvecOllama };
 }
 
+/** Appel impossible. « indisponible » : pas d'IA locale sur ce poste (Ollama absent, carte trop juste). */
+interface Refus {
+  message: string;
+  indisponible: boolean;
+}
+
 interface Preparation {
   fonction: AiPageFunction;
   modele: string;
@@ -205,33 +211,33 @@ export class AiService {
     return { ok: true, texte: consigneACopier(demande.fonction === 'mise-au-propre' ? `${consigne}\n\n${pageEntiereACopier}` : consigne, demande.markdown) };
   }
 
-  private async preparer(demande: AiRequest): Promise<Preparation | string> {
+  private async preparer(demande: AiRequest): Promise<Preparation | Refus> {
     const reglages = await this.reglagesIa();
     const choix = reglages.modeles[demande.fonction];
     let modele = choix.modele;
     const local = await this.verdictLocal(reglages.adresseOllama);
     if (local === null) {
-      return 'Ollama ne répond pas. Vérifie qu’il tourne (réglages, Fonctions IA).';
+      return { message: 'Ollama ne répond pas à son adresse (réglages, Fonctions IA).', indisponible: true };
     }
     if (!local.verdict.disponible) {
-      return local.verdict.raison ?? 'Pas d’IA locale sur ce poste.';
+      return { message: local.verdict.raison ?? 'Pas d’IA locale sur ce poste.', indisponible: true };
     }
     if (modele === '') {
       modele = local.verdict.automatique!;
     }
     const evalue = local.verdict.modeles.find((candidat) => candidat.nom === modele);
     if (evalue === undefined) {
-      return `Le modèle « ${modele} » n’est pas installé dans Ollama.`;
+      return { message: `Le modèle « ${modele} » n’est pas installé dans Ollama.`, indisponible: false };
     }
     if (!evalue.utilisable) {
-      return `${modele} : ${evalue.raison ?? 'ne convient pas à cette carte.'}`;
+      return { message: `${modele} : ${evalue.raison ?? 'ne convient pas à cette carte.'}`, indisponible: false };
     }
     const contexteMax = evalue.contexteMax;
 
     const systeme = reglages.consignes[demande.fonction] ?? consignesParDefaut[demande.fonction];
     const { texte: envoye, reserves } = mettreDeCote(demande.markdown);
     if (envoye.replace(/\[\[BLOC-\d+\]\]/g, '').trim() === '') {
-      return 'La page n’a pas de texte à retravailler.';
+      return { message: 'La page n’a pas de texte à retravailler.', indisponible: false };
     }
     const appels = await this.historique();
     const calage = calibrer(appels, demande.fonction, modele);
@@ -242,7 +248,7 @@ export class AiService {
     const voulu = Math.max(contexteMinimal, Math.ceil((entree + sortie * 1.3 + 512) / 4096) * 4096);
     const plafond = contexteMax ?? contexteSansCarte;
     if (entree + sortie > plafond) {
-      return `La page est trop longue pour ${modele} sur cette carte (${Math.round(plafond / 1000)} 000 tokens au plus avec la réponse).`;
+      return { message: `La page est trop longue pour ${modele} sur cette carte (${Math.round(plafond / 1000)} 000 tokens au plus avec la réponse).`, indisponible: false };
     }
     return {
       fonction: demande.fonction,
@@ -267,8 +273,8 @@ export class AiService {
       return { ok: false, message: 'Demande illisible.' };
     }
     const preparation = await this.preparer(demande);
-    if (typeof preparation === 'string') {
-      return { ok: false, message: preparation };
+    if ('indisponible' in preparation) {
+      return { ok: false, message: preparation.message, indisponible: preparation.indisponible };
     }
     return {
       ok: true,
@@ -321,8 +327,8 @@ export class AiService {
     this.enCours = controleur;
     try {
       const preparation = await this.preparer(demande);
-      if (typeof preparation === 'string') {
-        return { ok: false, annule: false, message: preparation };
+      if ('indisponible' in preparation) {
+        return { ok: false, annule: false, message: preparation.indisponible ? `Fonctionnalité non disponible sur ce poste. ${preparation.message}` : preparation.message };
       }
       return await this.executer(preparation, controleur.signal);
     } finally {

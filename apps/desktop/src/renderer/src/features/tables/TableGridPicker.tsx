@@ -2,8 +2,10 @@ import type { Editor } from '@tiptap/react';
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import type { KeyboardEvent } from 'react';
 
-const maxColonnes = 8;
-const maxLignes = 8;
+/** Grille montrée au départ ; elle grandit d'une case quand on arrive à son bord, jusqu'au maximum. */
+const grilleDeDepart = 8;
+const maxColonnes = 20;
+const maxLignes = 30;
 
 interface TableGridPickerProps {
   editor: Editor;
@@ -49,6 +51,9 @@ export function TableGridPicker({ editor, position, surFermeture }: TableGridPic
   const [taille, definirTaille] = useState({ colonnes: 3, lignes: 3 });
   const [place, definirPlace] = useState<{ gauche: number; haut: number } | null>(null);
   const grille = useRef<HTMLDivElement>(null);
+  // Une case de plus que la taille visée, pour pouvoir continuer à grandir (comme dans Notion).
+  const colonnesMontrees = Math.min(maxColonnes, Math.max(grilleDeDepart, taille.colonnes + 1));
+  const lignesMontrees = Math.min(maxLignes, Math.max(grilleDeDepart, taille.lignes + 1));
 
   useLayoutEffect(() => {
     const curseur = editor.view.coordsAtPos(Math.min(position, editor.state.doc.content.size));
@@ -59,10 +64,13 @@ export function TableGridPicker({ editor, position, surFermeture }: TableGridPic
       gauche: Math.max(8, Math.min(curseur.left, window.innerWidth - largeur - 8)),
       haut: dessous + hauteur > window.innerHeight - 8 ? Math.max(8, curseur.top - hauteur - 6) : dessous,
     });
-    // Après le focus que TipTap rend à l'éditeur, à l'image suivante, quand la commande « / » s'applique.
+  }, [editor, position, colonnesMontrees, lignesMontrees]);
+
+  // Après le focus que TipTap rend à l'éditeur, à l'image suivante, quand la commande « / » s'applique.
+  useEffect(() => {
     const image = window.requestAnimationFrame(() => grille.current?.focus());
     return () => window.cancelAnimationFrame(image);
-  }, [editor, position]);
+  }, []);
 
   useEffect(() => {
     const clicAilleurs = (evenement: MouseEvent): void => {
@@ -108,10 +116,10 @@ export function TableGridPicker({ editor, position, surFermeture }: TableGridPic
       style={{ left: place?.gauche ?? 0, top: place?.haut ?? 0, visibility: place === null ? 'hidden' : 'visible' }}
       className="border-bordure bg-surface fixed z-40 rounded-md border p-2 shadow-xl shadow-black/40 outline-0"
     >
-      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${maxColonnes}, 1.1rem)` }}>
-        {Array.from({ length: maxLignes * maxColonnes }, (_, index) => {
-          const colonne = (index % maxColonnes) + 1;
-          const ligne = Math.floor(index / maxColonnes) + 1;
+      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${colonnesMontrees}, 1.1rem)` }}>
+        {Array.from({ length: lignesMontrees * colonnesMontrees }, (_, index) => {
+          const colonne = (index % colonnesMontrees) + 1;
+          const ligne = Math.floor(index / colonnesMontrees) + 1;
           const dedans = colonne <= taille.colonnes && ligne <= taille.lignes;
           return (
             <button

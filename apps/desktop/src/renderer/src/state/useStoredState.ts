@@ -37,3 +37,4 @@ export const estTexteOuNull = (valeur: unknown): valeur is string | null => vale
 export const estListeDeTextes = (valeur: unknown): valeur is string[] =>
   Array.isArray(valeur) && valeur.every((element) => typeof element === 'string');
 export const estBooleen = (valeur: unknown): valeur is boolean => typeof valeur === 'boolean';
+export const estNombreOuNull = (valeur: unknown): valeur is number | null => valeur === null || (typeof valeur === 'number' && Number.isFinite(valeur));

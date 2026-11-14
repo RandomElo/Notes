@@ -40,13 +40,19 @@ export async function preparer(): Promise<{ vault: string; profil: string }> {
 
 /** Variables d'un lancement d'essai : LanguageTool cherché dans un dossier vide à côté du profil. */
 export function environnementDEssai(profil: string): Record<string, string> {
-  return { ...(process.env as Record<string, string>), NOTES_DOSSIER_LANGUAGETOOL: join(dirname(profil), 'LanguageTool') };
+  return {
+    ...(process.env as Record<string, string>),
+    NOTES_DOSSIER_LANGUAGETOOL: join(dirname(profil), 'LanguageTool'),
+    // Données des applications dans un dossier vide : la loupe et Ctrl+Maj+F ne trouvent pas la barre
+    // de recherche installée sur le poste (elle s'ouvrirait sur l'écran d'Eloi) et ouvrent celle de Notes.
+    XDG_DATA_HOME: join(dirname(profil), 'donnees'),
+  };
 }
 
 /**
  * Lance l'application construite sur un vault et un profil donnés. LanguageTool
- * est cherché dans un dossier vide à côté du profil : un essai ne lance jamais
- * celui installé sur le poste. `env` ajoute des variables (faux serveur).
+ * et la barre de recherche du poste sont cherchés dans des dossiers vides à côté
+ * du profil : un essai ne lance jamais ceux installés sur le poste. `env` ajoute des variables (faux serveur).
  */
 export async function lancer({ vault, profil }: { vault: string; profil: string }, argumentsEnPlus: string[] = [], env: Record<string, string> = {}): Promise<Session> {
   const application = await electron.launch({
@@ -135,4 +141,9 @@ export async function lireVault(vault: string): Promise<Record<string, string>> 
 /** Corps d'une page du vault, sans son front-matter. */
 export async function lireCorps(vault: string, page: string): Promise<string> {
   return (await readFile(join(vault, page, 'page.md'), 'utf8')).replace(/^---\n[\s\S]*?\n---\n/, '');
+}
+
+/** Dans les réglages ouverts, affiche une rubrique (docs/spec/interface.md). */
+export async function rubrique(page: Page, nom: string): Promise<void> {
+  await page.getByRole('navigation', { name: 'Rubriques des réglages' }).getByRole('button', { name: nom, exact: true }).click();
 }

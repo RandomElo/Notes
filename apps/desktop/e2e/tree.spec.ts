@@ -26,6 +26,12 @@ test('Ctrl+N crée une page sœur juste après la page ouverte, Ctrl+Maj+N à la
   const racine = await titresAffiches(page);
   expect(racine.indexOf('Sœur de Courses')).toBe(racine.indexOf('Courses') + 1);
   expect(await readFile(join(vault, 'Sœur de Courses', 'page.md'), 'utf8')).toContain('title: Sœur de Courses');
+  // La page créée a son propre onglet, à côté de celui de « Courses ».
+  await expect(page.getByRole('tablist', { name: 'Onglets' }).getByRole('tab')).toHaveCount(2);
+  // L'Entrée qui valide le nom ne passe pas dans la page : un seul paragraphe, vide, curseur dedans.
+  await expect(editeur(page).locator('> *')).toHaveCount(1);
+  await page.keyboard.type('Premier mot');
+  await expect(editeur(page).locator('> p').first()).toHaveText('Premier mot');
 
   // Depuis une sous-page : la nouvelle page reste au même niveau, sous le même parent.
   await ligne(page, 'Projets').locator('button[aria-label="Déplier"]').click();
@@ -140,10 +146,10 @@ test('Échap ferme l’écran du thème, puis les réglages', async () => {
 
   await page.keyboard.press('Escape');
   await expect(page.getByLabel('Aperçu du thème')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Connexion au NAS' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Rubriques des réglages' })).toBeVisible();
 
   await page.keyboard.press('Escape');
-  await expect(page.getByRole('heading', { name: 'Connexion au NAS' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Rubriques des réglages' })).toHaveCount(0);
   await expect(titreDePage(page)).toHaveText('Courses');
   // Le bouton « Réglages » garde le focus : il se montre par son fond, sans contour.
   const reglages = page.getByRole('button', { name: 'Réglages', exact: true });
@@ -188,5 +194,37 @@ test('la barre de dépôt est un trait plat de 2 px, aux bouts droits', async ()
 
   await source.dispatchEvent('dragend', { dataTransfer: transfert });
   await expect(trait).toHaveCount(0);
+  await fermer(session);
+});
+
+test('le panneau des pages se ferme et se rouvre par ses boutons, et se règle en largeur en tirant son bord', async () => {
+  const preparation = await preparer();
+  let session = await lancer(preparation);
+  let { page } = session;
+  const panneau = page.getByRole('navigation', { name: 'Arborescence des pages' });
+  await expect(panneau).toBeVisible();
+
+  // Tirer le bord droit : la largeur suit, et reste au redémarrage.
+  const bord = page.getByRole('separator', { name: 'Largeur du panneau des pages' });
+  const cadre = (await bord.boundingBox())!;
+  const largeurAvant = (await panneau.boundingBox())!.width;
+  await page.mouse.move(cadre.x + cadre.width / 2, cadre.y + 200);
+  await page.mouse.down();
+  await page.mouse.move(cadre.x + cadre.width / 2 + 100, cadre.y + 200, { steps: 5 });
+  await page.mouse.up();
+  await expect.poll(async () => Math.round((await panneau.boundingBox())!.width)).toBe(Math.round(largeurAvant + 100));
+
+  await page.getByRole('button', { name: 'Fermer le panneau des pages' }).click();
+  await expect(panneau).toBeHidden();
+  await page.getByRole('button', { name: 'Ouvrir le panneau des pages' }).click();
+  await expect(panneau).toBeVisible();
+
+  await fermer(session);
+  session = await lancer(preparation);
+  page = session.page;
+  await expect.poll(async () => Math.round((await page.getByRole('navigation', { name: 'Arborescence des pages' }).boundingBox())!.width)).toBe(Math.round(largeurAvant + 100));
+  // Double-clic sur le bord : la largeur du thème revient.
+  await page.getByRole('separator', { name: 'Largeur du panneau des pages' }).dblclick();
+  await expect.poll(async () => Math.round((await page.getByRole('navigation', { name: 'Arborescence des pages' }).boundingBox())!.width)).toBe(Math.round(largeurAvant));
   await fermer(session);
 });

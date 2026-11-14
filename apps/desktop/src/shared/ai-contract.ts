@@ -117,7 +117,8 @@ export type AiEstimateResult =
       /** Appels passés sur lesquels repose l'estimation de la sortie. */
       appelsConnus: number;
     }
-  | { ok: false; message: string };
+  /** « indisponible » : pas d'IA locale sur ce poste ; la fenêtre le dit d'abord, la raison ensuite. */
+  | { ok: false; message: string; indisponible?: boolean };
 
 /** Avancement d'un appel en cours, envoyé par le main. */
 export interface AiProgress {

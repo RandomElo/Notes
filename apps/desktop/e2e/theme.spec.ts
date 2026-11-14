@@ -124,9 +124,9 @@ test('le thème se règle dans les réglages : effet immédiat, fichier écrit, 
   await page.getByRole('button', { name: 'Réglages', exact: true }).click();
   await expect(page.getByText('Thème par défaut.')).toBeVisible();
   await expect(page.getByLabel('Aperçu du thème')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: 'Connexion au NAS' })).toBeVisible();
+  await expect(page.getByRole('navigation', { name: 'Rubriques des réglages' })).toBeVisible();
   await page.getByRole('button', { name: 'Modifier le thème' }).click();
-  await expect(page.getByRole('heading', { name: 'Connexion au NAS' })).toHaveCount(0);
+  await expect(page.getByRole('navigation', { name: 'Rubriques des réglages' })).toHaveCount(0);
   const apercu = page.getByLabel('Aperçu du thème');
   const enregistre = page.getByRole('status', { name: 'Enregistrement du thème' });
   const titre1 = page.getByRole('group', { name: 'Titre 1', exact: true });

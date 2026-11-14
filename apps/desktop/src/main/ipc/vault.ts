@@ -1,7 +1,7 @@
 import { renommerMentions } from '@notes/document';
-import { LocalFsError, VaultError, enregistrerLargeursDesTableaux, ajouterIconeImage, changerIcone, changerMode, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, lireConflit, listerConflits, resoudreConflit, deplacerPage, deplacerPages, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
-import type { BrokenMention, PageLocation, TreeNode, VaultContext } from '@notes/core';
-import type { ConflictReadResult, PageReadResult, PageSaveResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
+import { LocalFsError, VaultError, enregistrerLargeursDesTableaux, ajouterIconeImage, changerIcone, changerMode, chargerPage, mentionsCassees, pagesQuiMentionnent, reecrireCorps, creerPage, ecarterConflitDOrdre, lireConflit, lireConflitDOrdre, listerConflits, resoudreConflit, deplacerPage, deplacerPages, dupliquerPage, supprimerPageVide, enregistrerCorps, importer, lireArbre, lireContenu, renommerPage, verifierCheminRelatif } from '@notes/core';
+import type { BrokenMention, OrderConflict, PageLocation, TreeNode, VaultContext } from '@notes/core';
+import type { ConflictReadResult, PageReadResult, PageSaveResult, TrashActionResult, VaultFailure, VaultOperationResult, VaultState } from '../../shared/ipc-contract';
 import { creerFileDAttente } from '../vault/serial-queue';
 import type { SerialQueue } from '../vault/serial-queue';
 import type { VaultService } from '../vault/vault-service';
@@ -77,7 +77,7 @@ export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAtt
 
     changerMode: (demande: unknown) => {
       const { chemin, mode } = champs(demande);
-      if (!estChemin(chemin) || !(mode === null || mode === 'todo')) {
+      if (!estChemin(chemin) || !(mode === null || mode === 'todo' || mode === 'base')) {
         return Promise.resolve(requeteInvalide());
       }
       return operation((contexte) => changerMode(contexte, chemin, mode));
@@ -210,6 +210,35 @@ export function creerHandlersVault({ vault, choisirDossier, file = creerFileDAtt
       return enSerie(async () => {
         try {
           return { ok: true, ...(await resoudreConflit(vault.contexte(), sauvegarde, { corps, corpsDeBase })) };
+        } catch (erreur) {
+          return { ok: false, erreur: versErreur(erreur) };
+        }
+      });
+    },
+
+    lireConflitDOrdre: (demande: unknown): Promise<({ ok: true } & OrderConflict) | VaultFailure> => {
+      const { sauvegarde } = champs(demande);
+      if (!estChemin(sauvegarde)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          return { ok: true, ...(await lireConflitDOrdre(vault.contexte().fs, sauvegarde)) };
+        } catch (erreur) {
+          return { ok: false, erreur: versErreur(erreur) };
+        }
+      });
+    },
+
+    ecarterConflitDOrdre: (demande: unknown): Promise<TrashActionResult> => {
+      const { sauvegarde } = champs(demande);
+      if (!estChemin(sauvegarde)) {
+        return Promise.resolve(requeteInvalide());
+      }
+      return enSerie(async () => {
+        try {
+          await ecarterConflitDOrdre(vault.contexte(), sauvegarde);
+          return { ok: true };
         } catch (erreur) {
           return { ok: false, erreur: versErreur(erreur) };
         }

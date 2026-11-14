@@ -1,8 +1,10 @@
 # Raccourcis clavier
 
-Tous les raccourcis de l'application desktop, version 0.18.0. Le téléphone n'a pas de raccourci clavier ; ses champs reprennent la saisie Markdown et la fermeture des paires ci-dessous.
+Tous les raccourcis de l'application desktop, rangés par endroit. Le téléphone n'a pas de raccourci clavier ; ses champs reprennent la saisie Markdown et la fermeture des paires ci-dessous.
 
-Notes n'a plus de recherche à elle depuis la 0.17.4 (ni `Ctrl+K`, ni `Ctrl+Alt+Espace`) : les pages se cherchent avec la barre de recherche du poste.
+Pour faire le tri : supprimer ici les lignes des raccourcis dont on ne veut plus, puis demander de retirer du code ce qui n'y figure plus.
+
+Notes ne prend ni `Ctrl+K` ni `Ctrl+Alt+Espace` : ils restent libres pour la barre de recherche du poste. `Ctrl+Maj+F` l'ouvre aussi depuis Notes.
 
 ## Application
 
@@ -10,18 +12,15 @@ Notes n'a plus de recherche à elle depuis la 0.17.4 (ni `Ctrl+K`, ni `Ctrl+Alt+
 |---|---|
 | `Ctrl+N` | Nouvelle page juste après la page ouverte, au même niveau (à la racine si aucune page n'est ouverte) |
 | `Ctrl+Shift+N` | Nouvelle page à la racine |
-| `Ctrl+T` | Nouvel onglet, vide |
-| `Ctrl+W` | Fermer l'onglet (le dernier se vide au lieu de se fermer) |
-| `Ctrl+Tab` / `Ctrl+Shift+Tab` | Onglet suivant / précédent |
-| `Ctrl+1` à `Ctrl+9` | Onglet 1 à 9 |
 | Clic du milieu sur un onglet | Fermer l'onglet |
-| `Ctrl+\` | Masquer ou montrer la barre latérale |
-| `Ctrl+Shift+\` | Masquer ou montrer le sommaire à droite de la page |
-| `Ctrl+,` | Ouvrir ou fermer les réglages |
-| `Ctrl+Q` | Quitter Notes (comme fermer la fenêtre) |
+| Glisser un onglet | Changer sa place |
+| `Ctrl+Maj+F` | Chercher une page : la barre de recherche du poste, sur les pages de Notes, ou sans elle la recherche de Notes en fenêtre (`Échap` la ferme) |
+| `↑` / `↓`, `Entrée` (sans page affichée) | Choisir et ouvrir une page dans la recherche au milieu de la fenêtre |
+| `Ctrl+F` | Chercher dans la page ouverte (`Entrée` / `Maj+Entrée` : suivant / précédent, `Échap` : fermer en sélectionnant le passage) |
 | `Échap` (réglages) | Revenir aux réglages depuis l'écran du thème, puis à la page |
 | `Échap` (corbeille) | Revenir à la page. Pendant une confirmation (« Effacer pour de bon »), l'annule d'abord |
 | `Ctrl+Z` (après « Accepter » d'une fonction IA) | Revenir à la page d'avant |
+| `Ctrl+Z` (après le retrait d'une ligne d'une base sans pages, hors d'un champ de saisie) | Remettre la ligne |
 
 ## Sommaire complet
 
@@ -34,8 +33,8 @@ Le sommaire complet de la page (menu « ⋮ », « Sommaire de la page ») se pi
 | `↑` / `↓` | Page précédente / suivante |
 | `→` / `←` | Déplier, aller au premier enfant / replier, remonter au parent |
 | `Début` / `Fin` | Première / dernière page |
-| `Entrée` ou `Espace` | Ouvrir la page |
-| `Ctrl+Entrée`, `Ctrl+clic`, clic du milieu | Ouvrir la page dans un nouvel onglet |
+| Clic, clic du milieu, `Entrée` ou `Espace` | Ouvrir la page dans un nouvel onglet (ou dans son onglet s'il existe) |
+| `Ctrl+clic`, `Ctrl+Entrée` | Ouvrir la page à la place de celle de l'onglet affiché |
 | `Maj+↑` / `Maj+↓` | Étendre la sélection depuis la page du focus |
 | `Maj+clic` | Sélectionner toutes les pages entre la page ouverte (ou le début de la sélection) et la page cliquée, sans l'ouvrir |
 | `Échap` | Défaire la sélection |
@@ -59,13 +58,11 @@ Le sommaire complet de la page (menu « ⋮ », « Sommaire de la page ») se pi
 |---|---|
 | `Ctrl+B` / `Ctrl+I` / `Ctrl+U` | Gras / italique / souligné |
 | `Ctrl+Shift+S` | Barré |
-| `Ctrl+E` | Code dans le texte |
-| `Ctrl+Alt+1` à `Ctrl+Alt+5` | Titre de niveau 1 à 5 |
-| `Ctrl+Alt+0` | Paragraphe |
+| `Ctrl+E` | Code dans le texte (en rouge sur fond gris) |
 | `Ctrl+Z` / `Ctrl+Shift+Z` | Annuler / rétablir |
 | `/` | Menu des blocs (flèches, `Entrée` ou `Tab` pour valider, `Échap` pour fermer) |
 | `@` | Mentionner une page (mêmes touches que le menu des blocs) |
-| Clic, `Ctrl+clic` sur un lien | Ouvrir le lien ou la page mentionnée ; `Ctrl+clic` ou clic du milieu : la page dans un nouvel onglet |
+| Clic, `Ctrl+clic` sur un lien | Ouvrir le lien, ou la page mentionnée dans un nouvel onglet ; `Ctrl+clic` : à la place de la page affichée |
 
 ## Saisie Markdown
 
@@ -79,7 +76,7 @@ Le sommaire complet de la page (menu « ⋮ », « Sommaire de la page ») se pi
 | `[]` ou `[ ]`, `- [ ]` | Case à cocher (`- [x]` : cochée) |
 | ` ``` ` | Bloc de code |
 
-Dans le texte : `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``.
+Dans le texte : `**gras**`, `*italique*`, `~~barré~~`, `` `code` ``. `->` donne →, `<-` donne ← (pas dans le code).
 
 ## Fermeture des paires
 
@@ -97,6 +94,7 @@ La paire ne s'ouvre que devant la fin de la ligne, une espace ou une ponctuation
 
 | Raccourci | Effet |
 |---|---|
+| `Ctrl+A` | Sélectionner tous les blocs de la page |
 | `Échap` | Sélectionner le bloc du curseur, puis toute la liste, puis rien |
 | `↑` / `↓` (bloc sélectionné) | Bloc précédent / suivant |
 | `Shift+↑` / `Shift+↓` | Étendre la sélection de blocs |
@@ -104,9 +102,19 @@ La paire ne s'ouvre que devant la fin de la ligne, une espace ou une ponctuation
 | `Ctrl+D` | Dupliquer |
 | `Tab` / `Shift+Tab` | Indenter / désindenter (éléments de liste) |
 | `Entrée` (bloc sélectionné) | Revenir au texte, curseur à la fin du bloc |
-| `Suppr` / `Retour arrière` (bloc sélectionné) | Supprimer les blocs sélectionnés |
+| `Suppr` / `Retour arrière` (bloc sélectionné) | Supprimer les blocs sélectionnés, le curseur revient à la fin du bloc d'au-dessus |
+| Clic droit sur des blocs sélectionnés | Barre d'outils pour tous ces blocs (nature, mise en forme) |
 | `Entrée` sur une ligne vide à la fin d'un callout | Sortir du callout |
 | `Retour arrière` au tout début d'un callout | Retirer le callout, son texte reste en paragraphes |
+
+## Page en mode liste de tâches
+
+| Raccourci | Effet |
+|---|---|
+| `Entrée` en fin de tâche | Nouvelle tâche dessous |
+| `Retour arrière` sur une tâche vide | La retirer, curseur à la fin de la tâche d'avant |
+| `Tab` / `Shift+Tab` | Faire une sous-tâche / la remonter d'un niveau |
+| Image collée dans une tâche | Elle va sous le texte de la tâche |
 
 ## Tableaux
 
@@ -119,6 +127,7 @@ La paire ne s'ouvre que devant la fin de la ligne, une espace ou une ponctuation
 | `Entrée` | Cellule du dessous, nouvelle ligne sous la dernière |
 | `Ctrl+Entrée` / `Maj+Entrée` | Saut de ligne dans la cellule (`<br>` dans le fichier) |
 | Glisser la bordure entre deux colonnes | Régler la largeur des colonnes |
+| Tirer la poignée « + » du bord droit ou bas | Ajouter des colonnes ou des lignes, la taille s'affiche pendant le geste |
 | `↓` dans la dernière ligne | Sortir du tableau |
 | Grille de `/tableau` : flèches, `Entrée`, `Échap` | Choisir la taille, valider, abandonner |
 

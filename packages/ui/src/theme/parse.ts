@@ -46,7 +46,8 @@ export function lireTheme(texte: string | null): ParsedTheme {
       if (genre !== undefined) {
         const attendu = refus(genre, valeur);
         if (attendu === null) {
-          ecrireValeur(theme, chemin, valeur);
+          // Les tables lues par smol-toml n'ont pas de prototype : les états sont recopiés en objets ordinaires.
+          ecrireValeur(theme, chemin, genre === 'etats' ? (valeur as { name: string; color: string }[]).map(({ name, color }) => ({ name, color })) : valeur);
         } else {
           avertissements.push(`${chemin} : ${montrer(valeur)} n'est pas ${attendu}. La valeur par défaut est gardée.`);
         }

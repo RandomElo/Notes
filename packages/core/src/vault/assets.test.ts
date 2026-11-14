@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { versOctets } from '../fs/utf8';
 import { MemoryLocalFs, contexteDeTest } from '../testing/memory-fs';
-import { ajouterImage, listerImagesOrphelines, natureDImage, nomDeFichierDImage } from './assets';
+import { ajouterImage, ajouterPdf, listerFichiersInutilises, natureDImage, nomDeFichierDImage, pdfDeLaPage } from './assets';
 
 const png = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0]);
 const jpg = Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, 0, 0]);
@@ -64,19 +64,53 @@ describe('ajouterImage', () => {
   });
 });
 
-describe('listerImagesOrphelines', () => {
-  it('liste les images auxquelles leur page ne renvoie plus', async () => {
+describe('ajouterPdf et pdfDeLaPage', () => {
+  const pdf = versOctets('%PDF-1.7\ncontenu');
+
+  it('copie le PDF dans assets/ sous un nom libre et rend son adresse', async () => {
+    const fs = MemoryLocalFs.depuis({ 'Alpha/page.md': enTete });
+    const contexte = contexteDeTest(fs);
+    expect(await ajouterPdf(contexte, 'Alpha', 'Cours n°1.pdf', pdf)).toBe('assets/Cours-n%C2%B01.pdf');
+    expect(await ajouterPdf(contexte, 'Alpha', 'Cours n°1.pdf', pdf)).toBe('assets/Cours-n%C2%B01-2.pdf');
+    expect(await fs.lireOctets('Alpha/assets/Cours-n°1.pdf')).toEqual(pdf);
+  });
+
+  it('refuse ce qui n’est pas un PDF', async () => {
+    const fs = MemoryLocalFs.depuis({ 'Alpha/page.md': enTete });
+    await expect(ajouterPdf(contexteDeTest(fs), 'Alpha', 'x.pdf', versOctets('<html>'))).rejects.toMatchObject({ code: 'chemin_invalide' });
+  });
+
+  it('reconnaît le lien d’un PDF de la page, et rien d’autre', () => {
+    expect(pdfDeLaPage('assets/Cours-n%C2%B01.pdf')).toBe('Cours-n°1.pdf');
+    expect(pdfDeLaPage('assets/../secret.pdf')).toBeNull();
+    expect(pdfDeLaPage('assets/sous/x.pdf')).toBeNull();
+    expect(pdfDeLaPage('assets/script.sh')).toBeNull();
+    expect(pdfDeLaPage('https://exemple.fr/a.pdf')).toBeNull();
+    expect(pdfDeLaPage('assets/%E0.pdf')).toBeNull();
+  });
+});
+
+describe('listerFichiersInutilises', () => {
+  it('liste les images et PDF auxquels leur page ne renvoie plus, avec leur taille', async () => {
     const fs = MemoryLocalFs.depuis({
       'Alpha/page.md': enTete + '![a](assets/utilisee.png)\n\n![b](assets/%C3%A9t%C3%A9.png#largeur=33)\n\n![c](assets/accent-écrit.png)\n',
       'Alpha/assets/utilisee.png': '',
       'Alpha/assets/été.png': '',
       'Alpha/assets/accent-écrit.png': '',
       'Alpha/assets/oubliee.png': '',
+      'Alpha/assets/cours.pdf': '%PDF-1.7',
+      'Alpha/assets/notes.txt': 'pas un fichier joint',
       'Alpha/Enfant/page.md': enTete,
       'Alpha/Enfant/assets/seule.jpg': '',
       '.trash/Vieux/assets/x.png': '',
     });
-    expect(await listerImagesOrphelines(fs)).toEqual(['Alpha/assets/oubliee.png', 'Alpha/Enfant/assets/seule.jpg']);
+    const trouves = await listerFichiersInutilises(fs);
+    expect(trouves.map(({ chemin, nature }) => [chemin, nature])).toEqual([
+      ['Alpha/assets/cours.pdf', 'pdf'],
+      ['Alpha/assets/oubliee.png', 'image'],
+      ['Alpha/Enfant/assets/seule.jpg', 'image'],
+    ]);
+    expect(trouves[0]!.taille).toBe(8);
     expect(fs.ecritures).toBe(0);
   });
 });

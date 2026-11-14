@@ -258,3 +258,52 @@ export function sectionTerminee(document: ProseMirrorNode): number[] {
   });
   return positions;
 }
+
+/** Une sous-tâche cochée sous une tâche à faire, montrée dans « Terminé » (voir `sousTachesTerminees`). */
+export interface DoneSubtask {
+  /** Position de la sous-tâche cochée. */
+  position: number;
+  /** Ses tâches parentes, de la tâche de la liste jusqu'à la plus proche, aucune cochée. */
+  parents: number[];
+}
+
+/**
+ * Sous-tâches cochées dont aucune tâche parente n'est cochée, hors de la
+ * section « Terminé », dans l'ordre de lecture (docs/spec/liste-de-taches.md).
+ * L'affichage les montre dans « Terminé », sous leurs parents non cochés ;
+ * dans le fichier, elles restent sous leur parent. Une sous-tâche cochée
+ * emporte les siennes, qui ne sont pas listées à part.
+ */
+export function sousTachesTerminees(document: ProseMirrorNode): DoneSubtask[] {
+  const liste = listeSeule(document);
+  if (liste === null) {
+    return [];
+  }
+  const termine = new Set(sectionTerminee(document));
+  const trouvees: DoneSubtask[] = [];
+  const parcourirTache = (tache: ProseMirrorNode, debut: number, parents: number[]): void => {
+    let interieur = debut + 1;
+    tache.forEach((enfant) => {
+      if (enfant.type.name === 'taskList') {
+        let position = interieur + 1;
+        enfant.forEach((sous) => {
+          if (sous.attrs['checked'] === true) {
+            trouvees.push({ position, parents: [...parents, debut] });
+          } else {
+            parcourirTache(sous, position, [...parents, debut]);
+          }
+          position += sous.nodeSize;
+        });
+      }
+      interieur += enfant.nodeSize;
+    });
+  };
+  let position = 1;
+  liste.forEach((item) => {
+    if (item.attrs['checked'] !== true && !termine.has(position)) {
+      parcourirTache(item, position, []);
+    }
+    position += item.nodeSize;
+  });
+  return trouvees;
+}

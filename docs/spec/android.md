@@ -25,6 +25,7 @@ Compagnon pour consulter et retoucher, pas un second éditeur complet. Construit
 | Enregistrer un mémo vocal ([memos](memos.md)) | Accueil |
 | Cocher, décocher une tâche (ses sous-tâches suivent, à tous les niveaux) | Toutes les pages |
 | Écrire, ajouter, supprimer, réordonner, décaler des tâches | Pages en mode liste |
+| Trier une base de données, changer les valeurs de ses lignes, en ajouter | Pages en base de données ([base-de-donnees](base-de-donnees.md)) |
 | Écrire directement dans la page | Pages classiques |
 | Couleur et icône d'un callout, icône de la page (emoji) | Toutes les pages |
 | Créer une page (classique ou liste de tâches) | Tiroir |
@@ -50,7 +51,7 @@ Toute modification exige une connexion SMB directe au NAS au moment où elle est
 - Un éditeur TipTap avec le schéma et les raccourcis de saisie du PC (`- `, `# `, `[] `, `1. `), sans le menu `/`, la gestion des blocs ni la barre flottante ; seuls les blocs modifiés changent dans le fichier.
 - Toucher le texte y met le curseur ; toucher sous le dernier bloc le met en fin de page. Une page vide montre « Écrire… » sous son titre.
 - Barre au-dessus du clavier : texte, titre (1, 2, 3 en touchant de nouveau), puces, tâches, callout, « Markdown » ; à droite, à part, « Fermer le clavier ». Pas de gras ni d'italique (raccourcis `**` et `*`). « Markdown » ouvre le Markdown du bloc du curseur dans une feuille haute : vidé, le bloc est retiré ; une ligne vide le coupe en plusieurs.
-- La page part sur le NAS 0,6 s après la dernière frappe et en quittant le texte ; le verrou est pris sans faire attendre la saisie, gardé tant que le curseur est dans la page, rendu 1,5 s après. Si le PC édite la page, elle repasse en lecture avec un message.
+- La page part sur le NAS 0,6 s après la dernière frappe, en quittant le texte, et dès que l'application passe en arrière-plan ou se ferme (la dernière frappe n'est pas perdue) ; le verrou est pris sans faire attendre la saisie, gardé tant que le curseur est dans la page, rendu 1,5 s après. Si le PC édite la page, elle repasse en lecture avec un message.
 - Une case se coche d'un toucher sans ouvrir le clavier. Un lien ou une image s'ouvrent d'un toucher. Appui long : la sélection et le copier-coller d'Android.
 - Callout : toucher son icône ouvre sa couleur (Info, Succès, Attention, Danger) et son icône, ou le retire, sans ouvrir le clavier.
 - Icône de page : toucher l'icône, ou « Ajouter une icône » sous le chemin, ouvre le choix d'un emoji, cherché en français, ou « Retirer ». Pas d'image ni de détourage sur le téléphone.

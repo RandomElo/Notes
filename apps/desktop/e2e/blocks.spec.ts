@@ -53,13 +53,11 @@ test('une page se restructure entièrement au clavier', async () => {
   await taper(page, 'x');
   await expect(editeur(page).locator('p')).toHaveText(['deux', 'un', 'trois!']);
 
-  // Ctrl+D duplique, Suppr supprime, Entrée rend le curseur.
+  // Ctrl+D duplique ; Suppr supprime, plus rien n'est sélectionné, le curseur est à la fin du bloc d'au-dessus.
   await touche(page, 'Control+d');
   await expect(editeur(page).locator('p')).toHaveText(['deux', 'un', 'trois!', 'un', 'trois!']);
   await touche(page, 'Delete');
   await expect(editeur(page).locator('p')).toHaveText(['deux', 'un', 'trois!']);
-  await expect(selectionnes(page)).toHaveText(['trois!']);
-  await touche(page, 'Enter');
   await expect(selectionnes(page)).toHaveCount(0);
   await taper(page, ' fin');
 
@@ -213,6 +211,32 @@ test('la barre d’outils apparaît sur une sélection, met en forme, change la 
   await expect(barre.getByRole('button', { name: 'Gras' })).toHaveCount(0);
   await attendreEnregistrement(page);
   expect(await lireCorps(vault, 'Projets')).toBe('```\nUn titre\n```\n');
+  await fermer(session);
+});
+
+test('un clic droit sur des blocs sélectionnés ouvre la barre d’outils, qui change leur nature à tous', async () => {
+  const session = await lancer(await preparer());
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Projets');
+  await editeur(page).click();
+  await taper(page, 'Premier');
+  await touche(page, 'Enter');
+  await taper(page, 'Second');
+  await touche(page, 'Enter');
+  await taper(page, 'Troisième');
+  // Ctrl+A : tous les blocs d'emblée.
+  await touche(page, 'Control+a');
+  await expect(selectionnes(page)).toHaveText(['Premier', 'Second', 'Troisième']);
+  await touche(page, 'Enter', 'ArrowUp', 'Escape', 'Shift+ArrowUp');
+  await expect(selectionnes(page)).toHaveCount(2);
+  const barre = page.getByRole('toolbar', { name: 'Mise en forme' });
+  await editeur(page).locator('p', { hasText: 'Second' }).click({ button: 'right' });
+  await expect(barre).toBeVisible();
+  await barre.getByRole('button', { name: /Nature du bloc/ }).click();
+  await barre.getByRole('option', { name: 'Titre 2' }).click();
+  await expect(editeur(page).locator('h2')).toHaveText(['Premier', 'Second']);
+  await attendreEnregistrement(page);
+  expect(await lireCorps(vault, 'Projets')).toBe('## Premier\n\n## Second\n\nTroisième\n');
   await fermer(session);
 });
 

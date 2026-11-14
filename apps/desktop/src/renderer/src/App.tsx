@@ -1,8 +1,10 @@
 import type { TreeNode } from '@notes/core';
 import { dossierParent, titreParDefaut, trouverNoeud } from '@notes/core';
+import { ChevronRight } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ConflictScreen } from './features/conflicts/ConflictScreen';
 import { PageEditor } from './features/editor/PageEditor';
+import { PageErrorBoundary } from './features/error-log/PageErrorBoundary';
 import { BrokenMentions } from './features/mentions/BrokenMentions';
 import { ExportDialog } from './features/export/ExportDialog';
 import { IconPicker } from './features/page-icon/IconPicker';
@@ -10,8 +12,10 @@ import { annuaireDesPages } from './features/mentions/pages-directory';
 import { renommerEnSuivantLesMentions } from './features/mentions/rename-follow';
 import { toutEnregistrer } from './features/editor/pending-saves';
 import { PageSummary } from './features/page/PageSummary';
-import { UnusedImages } from './features/images/UnusedImages';
+import { UnusedFiles } from './features/unused-files/UnusedFiles';
 import { WebpConversion } from './features/images/WebpConversion';
+import { SettingsScreen } from './features/settings/SettingsScreen';
+import { NotionImportPanel } from './features/notion-import/NotionImportPanel';
 import { NasConnectionPanel } from './features/settings/NasConnectionPanel';
 import { Sidebar } from './features/sidebar/Sidebar';
 import { ThemeNotice } from './features/theme/ThemeNotice';
@@ -30,13 +34,17 @@ import { ajouterALaPageOuverte, peutAjouter } from './features/markdown-drop/app
 import { MarkdownDropDialog } from './features/markdown-drop/MarkdownDropDialog';
 import { SpellcheckPanel } from './features/spellcheck/SpellcheckPanel';
 import { useSpellcheck } from './features/spellcheck/useSpellcheck';
+import { PageSearch } from './features/page-search/PageSearch';
+import { PageSearchDialog } from './features/page-search/PageSearchDialog';
+import { compterOuverture, estCompteDOuvertures } from './features/page-search/page-suggestions';
+import type { OpenCounts } from './features/page-search/page-suggestions';
 import { TabBar } from './features/tabs/TabBar';
-import { ajouter, estEtatDOnglets, etatInitial, fermer, ongletActif, ouvrir, parNumero, remplacer, voisin } from './features/tabs/tabs-model';
+import { ajouter, deplacer, estEtatDOnglets, etatInitial, fermer, fermerLesPages, ongletActif, ouvrir } from './features/tabs/tabs-model';
 import type { TabsState } from './features/tabs/tabs-model';
 import { usePendingPages } from './features/tabs/usePendingPages';
 import { VaultChooser } from './features/welcome/VaultChooser';
 import { api } from './lib/ipc';
-import { estBooleen, estListeDeTextes, useStoredState } from './state/useStoredState';
+import { estBooleen, estListeDeTextes, estNombreOuNull, useStoredState } from './state/useStoredState';
 import { useVault } from './state/useVault';
 
 /**
@@ -75,14 +83,25 @@ export function App() {
     definirCorbeilleOuverte(false);
   }, []);
   const [onglets, definirOnglets] = useStoredState<TabsState>('notes.onglets', ongletsDeDepart(), estEtatDOnglets);
-  const selection = ongletActif(onglets).cle;
-  // Page de l'onglet affiché, changée sans chercher dans les autres onglets (abandon d'une page neuve).
-  const definirSelection = useCallback((cle: string | null) => definirOnglets((etat) => remplacer(etat, cle)), [definirOnglets]);
+  const selection = ongletActif(onglets)?.cle ?? null;
   const [recentes, definirRecentes] = useStoredState<string[]>('notes.recentes', [], estListeDeTextes);
+  // Ouvertures de chaque page, pour les suggestions de la recherche de pages.
+  const [ouvertures, definirOuvertures] = useStoredState<OpenCounts>('notes.ouvertures', {}, estCompteDOuvertures);
+  const derniereComptee = useRef<string | null>(null);
+  // Fenêtre de recherche de Notes, quand la barre de recherche du poste n'est pas installée.
+  const [rechercheOuverte, definirRechercheOuverte] = useState(false);
+  /** La barre de recherche du poste (`../BarreRecherche`), sinon la recherche de Notes (docs/spec/interface.md). */
+  const ouvrirLaRecherche = useCallback(() => {
+    void api.ouvrirBarreDeRecherche().then((ouverte) => {
+      if (!ouverte) {
+        definirRechercheOuverte(true);
+      }
+    });
+  }, []);
   // Fichiers Markdown déposés dans la fenêtre, en attente de la réponse : pages ou ajout à la page ouverte.
   const [depot, definirDepot] = useState<{ fichiers: string[]; noms: string[]; ajoutPossible: boolean } | null>(null);
   const [barreVisible, definirBarreVisible] = useStoredState<boolean>('notes.barre-laterale', true, estBooleen);
-  const [sommaireVisible, definirSommaireVisible] = useStoredState<boolean>('notes.sommaire', true, estBooleen);
+  const [largeurDeBarre, definirLargeurDeBarre] = useStoredState<number | null>('notes.largeur-barre-laterale', null, estNombreOuNull);
   const [listeDeplies, definirListeDeplies] = useStoredState<string[]>('notes.deplies', [], estListeDeTextes);
   const [renommage, definirRenommage] = useState<string | null>(null);
   // Choix de l'icône d'une page ouvert, depuis le haut de la page ou le menu de l'arborescence.
@@ -173,7 +192,8 @@ export function App() {
         deplier([cleDeNoeud(parent)]);
       }
       avantCreation.current = selection;
-      selectionner(page.id);
+      // Une page créée s'ouvre dans un nouvel onglet, comme une page ouverte depuis l'arborescence.
+      selectionner(page.id, true);
       creee.current = page.id;
       definirRenommage(page.id);
     },
@@ -181,8 +201,8 @@ export function App() {
   );
 
   /**
-   * Échap sur le nom d'une page encore « Sans titre » : elle est supprimée si elle est vide, et la
-   * page ouverte avant elle revient. Rend la clé de la ligne qui prend le focus, null si la page
+   * Échap sur le nom d'une page encore « Sans titre » : elle est supprimée si elle est vide, son
+   * onglet se ferme et la page ouverte avant elle revient. Rend la clé de la ligne qui prend le focus, null si la page
    * avait quelque chose et reste en place.
    */
   const abandonnerPage = useCallback(
@@ -196,23 +216,36 @@ export function App() {
       const suivante = avantCreation.current ?? (parent === null ? null : cleDeNoeud(parent));
       avantCreation.current = null;
       if (selection === cleDeNoeud(noeud)) {
-        definirSelection(suivante);
+        definirOnglets((etat) => {
+          const sansElle = etat.actif === null ? etat : fermer(etat, etat.actif);
+          return suivante === null ? sansElle : ouvrir(sansElle, suivante);
+        });
       }
       return suivante;
     },
-    [vault, selection, definirSelection],
+    [vault, selection, definirOnglets],
   );
 
   /**
    * Met des pages à la corbeille. La page ouverte est d'abord enregistrée : sa dernière frappe part
-   * avec elle. Son onglet se vide de lui-même, sa page n'étant plus dans l'arbre.
+   * avec elle. Les onglets de ces pages et de leurs sous-pages se ferment.
    */
   const mettreALaCorbeille = useCallback(
     async (noeuds: TreeNode[]): Promise<boolean> => {
       await toutEnregistrer();
-      return vault.mettreALaCorbeille(noeuds.map((noeud) => noeud.chemin));
+      const retirees = new Set<string>();
+      const relever = (noeud: TreeNode): void => {
+        retirees.add(cleDeNoeud(noeud));
+        noeud.enfants.forEach(relever);
+      };
+      noeuds.forEach(relever);
+      const fait = await vault.mettreALaCorbeille(noeuds.map((noeud) => noeud.chemin));
+      if (fait) {
+        definirOnglets((etat) => fermerLesPages(etat, retirees));
+      }
+      return fait;
     },
-    [vault],
+    [vault, definirOnglets],
   );
 
   // Les mentions lisent titres et icônes dans l'annuaire des pages, tenu à jour depuis l'arborescence.
@@ -224,6 +257,18 @@ export function App() {
   }, [recentes]);
 
   const noeudSelectionne = trouverParCle(vault.arbre, selection);
+
+  // Ctrl+Maj+F : la barre de recherche du poste, sur les pages de Notes (son Ctrl+K marche aussi, pris par elle).
+  useEffect(() => {
+    const surTouche = (evenement: KeyboardEvent) => {
+      if (evenement.ctrlKey && evenement.shiftKey && !evenement.altKey && evenement.code === 'KeyF') {
+        evenement.preventDefault();
+        ouvrirLaRecherche();
+      }
+    };
+    window.addEventListener('keydown', surTouche);
+    return () => window.removeEventListener('keydown', surTouche);
+  }, [ouvrirLaRecherche]);
 
   // Ctrl+N : page sœur de la page ouverte, juste après elle, ou page à la racine si aucune n'est ouverte.
   // Ctrl+Maj+N : toujours à la racine.
@@ -252,46 +297,6 @@ export function App() {
     return () => window.removeEventListener('keydown', surTouche);
   }, [creer, vault.etat, vault.arbre, pageDeReference]);
 
-  // Raccourcis de l'application (docs/raccourcis.md). En capture : l'éditeur ne doit pas les prendre pour lui.
-  // Ils ne valent pas dans une fenêtre de recherche ou de sommaire, qui a ses propres touches.
-  useEffect(() => {
-    const surTouche = (evenement: KeyboardEvent) => {
-      if (!evenement.ctrlKey || evenement.altKey || evenement.metaKey || document.querySelector('[aria-modal="true"]') !== null) {
-        return;
-      }
-      const touche = evenement.key.toLowerCase();
-      // Ctrl+Maj+\ donne « | » sur un clavier français : la touche physique est plus sûre.
-      const barreOblique = evenement.code === 'Backslash' || evenement.code === 'IntlBackslash' || touche === '\\';
-      let action: (() => void) | null = null;
-      if (touche === 't' && !evenement.shiftKey) {
-        action = () => changerDOnglets((etat) => ajouter(etat));
-      } else if (touche === 'w' && !evenement.shiftKey) {
-        action = () => changerDOnglets((etat) => fermer(etat, etat.actif));
-      } else if (evenement.key === 'Tab') {
-        action = () => changerDOnglets((etat) => voisin(etat, evenement.shiftKey ? -1 : 1));
-      } else if (/^Digit[1-9]$/.test(evenement.code) && !evenement.shiftKey) {
-        action = () => changerDOnglets((etat) => parNumero(etat, Number(evenement.code.slice(5))));
-      } else if (barreOblique) {
-        action = evenement.shiftKey ? () => definirSommaireVisible((visible) => !visible) : () => definirBarreVisible((visible) => !visible);
-      } else if (touche === 'q' && !evenement.shiftKey) {
-        action = () => void api.quitterNotes();
-      } else if (touche === ',' && !evenement.shiftKey) {
-        action = () => {
-          definirReglagesOuverts((ouverts) => !ouverts);
-          definirThemeOuvert(false);
-          definirCorbeilleOuverte(false);
-          definirHistoriqueIaOuvert(false);
-        };
-      }
-      if (action !== null) {
-        evenement.preventDefault();
-        evenement.stopPropagation();
-        action();
-      }
-    };
-    window.addEventListener('keydown', surTouche, true);
-    return () => window.removeEventListener('keydown', surTouche, true);
-  }, [changerDOnglets, definirBarreVisible, definirSommaireVisible]);
 
   // Un fichier Markdown déposé n'importe où dans la fenêtre : la question s'ouvre (docs/spec/interface.md).
   // Les images déposées dans la page restent à l'éditeur, qui les copie lui-même.
@@ -339,8 +344,15 @@ export function App() {
   useEffect(() => {
     if (selection !== null && trouverParCle(vault.arbre, selection)?.importe === true) {
       definirRecentes((liste) => (liste[0] === selection ? liste : ajouterRecente(liste, selection)));
+      // Une ouverture par changement de page, pas à chaque relecture de l'arborescence.
+      if (derniereComptee.current !== selection) {
+        derniereComptee.current = selection;
+        definirOuvertures((comptes) => compterOuverture(comptes, selection));
+      }
+    } else if (selection === null) {
+      derniereComptee.current = null;
     }
-  }, [selection, vault.arbre, definirRecentes]);
+  }, [selection, vault.arbre, definirRecentes, definirOuvertures]);
 
   // Échap dans les réglages : l'écran du thème revient aux réglages, les réglages reviennent à la page.
   // Un menu ou une liste ouverte qui traite Échap l'empêche d'aller plus loin.
@@ -428,6 +440,7 @@ export function App() {
         surActivation={(id) => changerDOnglets((etat) => ({ ...etat, actif: id }))}
         surFermeture={(id) => changerDOnglets((etat) => fermer(etat, id))}
         surNouveau={() => changerDOnglets((etat) => ajouter(etat))}
+        surDeplacement={(id, rang) => definirOnglets((etat) => deplacer(etat, id, rang))}
       />
     );
 
@@ -435,7 +448,7 @@ export function App() {
     <div className="flex h-full flex-col">
       <TitleBar dossier={vault.etat?.dossier ?? null}>{barreDOnglets}</TitleBar>
 
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         {vault.etat?.dossier != null && barreVisible && (
           <Sidebar
             vault={vaultAffiche}
@@ -459,6 +472,10 @@ export function App() {
             surAbandon={abandonnerPage}
             surIcone={(noeud, x, y) => definirChoixDIcone({ chemin: noeud.chemin, icone: noeud.icone, x, y })}
             surCorbeille={mettreALaCorbeille}
+            largeur={largeurDeBarre}
+            surLargeur={definirLargeurDeBarre}
+            surMasquage={() => definirBarreVisible(false)}
+            surRecherche={ouvrirLaRecherche}
             reglagesOuverts={reglagesOuverts}
             surReglages={() => {
               definirReglagesOuverts((ouverts) => !ouverts);
@@ -474,6 +491,19 @@ export function App() {
               definirHistoriqueIaOuvert(false);
             }}
           />
+        )}
+
+        {vault.etat?.dossier != null && !barreVisible && (
+          // Panneau des pages fermé : de quoi le rouvrir, à sa place.
+          <button
+            type="button"
+            onClick={() => definirBarreVisible(true)}
+            title="Ouvrir le panneau des pages"
+            aria-label="Ouvrir le panneau des pages"
+            className="text-discret hover:bg-texte/10 hover:text-texte focus-visible:bg-texte/20 focus-visible:text-texte absolute top-1.5 left-2 z-20 flex size-7 items-center justify-center rounded outline-0"
+          >
+            <ChevronRight className="size-4" aria-hidden="true" />
+          </button>
         )}
 
         {/* Marge gauche plus large que la droite : les poignées des blocs y tiennent sans toucher le panneau latéral. */}
@@ -498,22 +528,39 @@ export function App() {
                 <ThemePanel theme={theme} surRetour={() => definirThemeOuvert(false)} />
               </div>
             ) : (
-              <div className="mx-auto max-w-2xl space-y-10 py-4">
-                <ThemeSummary theme={theme} surOuverture={() => definirThemeOuvert(true)} />
-                <NasConnectionPanel />
-                <SpellcheckPanel />
-                <AiPanel surHistorique={ouvrirHistoriqueIa} />
-                <WebpConversion />
-                <UnusedImages />
-                <BrokenMentions
-                  surOuverture={(chemin) => {
-                    const page = trouverNoeud(vault.arbre, chemin);
-                    if (page !== null) {
-                      selectionner(cleDeNoeud(page));
-                    }
-                  }}
-                />
-              </div>
+              <SettingsScreen
+                rubriques={[
+                  { id: 'apparence', libelle: 'Apparence', contenu: <ThemeSummary theme={theme} surOuverture={() => definirThemeOuvert(true)} /> },
+                  { id: 'nas', libelle: 'NAS', contenu: <NasConnectionPanel /> },
+                  { id: 'correction', libelle: 'Correction', contenu: <SpellcheckPanel /> },
+                  { id: 'ia', libelle: 'Fonctions IA', contenu: <AiPanel surHistorique={ouvrirHistoriqueIa} /> },
+                  {
+                    id: 'images',
+                    libelle: 'Images et fichiers',
+                    contenu: (
+                      <>
+                        <WebpConversion />
+                        <UnusedFiles />
+                      </>
+                    ),
+                  },
+                  {
+                    id: 'mentions',
+                    libelle: 'Mentions',
+                    contenu: (
+                      <BrokenMentions
+                        surOuverture={(chemin) => {
+                          const page = trouverNoeud(vault.arbre, chemin);
+                          if (page !== null) {
+                            selectionner(cleDeNoeud(page));
+                          }
+                        }}
+                      />
+                    ),
+                  },
+                  { id: 'notion', libelle: 'Import Notion', contenu: <NotionImportPanel surImport={(arbre) => vault.definirArbre(arbre)} /> },
+                ]}
+              />
             )
           ) : noeudSelectionne?.importe === true && conflit !== null ? (
             <ConflictScreen
@@ -528,33 +575,41 @@ export function App() {
               }}
             />
           ) : noeudSelectionne?.importe === true ? (
-            <PageEditor
-              key={`${noeudSelectionne.id}:${rechargements}`}
-              noeud={noeudSelectionne}
-              surRenommage={(titre) => renommerEnSuivantLesMentions(noeudSelectionne.chemin, titre).then((resultat) => {
-                if (!resultat.ok) {
-                  return resultat.erreur.message;
+            <PageErrorBoundary key={noeudSelectionne.id} surReouverture={() => definirRechargements((nombre) => nombre + 1)}>
+              <PageEditor
+                key={`${noeudSelectionne.id}:${rechargements}`}
+                noeud={noeudSelectionne}
+                surRenommage={(titre) =>
+                  renommerEnSuivantLesMentions(noeudSelectionne.chemin, titre).then((resultat) => {
+                    if (!resultat.ok) {
+                      return resultat.erreur.message;
+                    }
+                    void vault.recharger();
+                    return null;
+                  })
                 }
-                void vault.recharger();
-                return null;
-              })}
-              surSousPage={() => void creer(noeudSelectionne)}
-              entrer={aEcrire === noeudSelectionne.id}
-              surEntree={contenuRejoint}
-              theme={theme.theme}
-              surConflit={ouvrirConflit}
-              sommaireVisible={sommaireVisible}
-              surOuvrirPage={selectionner}
-              surIcone={(x, y) => definirChoixDIcone({ chemin: noeudSelectionne.chemin, icone: noeudSelectionne.icone, x, y })}
-              surExport={() => definirExportDe(noeudSelectionne.chemin)}
-              surMode={(mode) => vault.changerMode(noeudSelectionne.chemin, mode)}
-              memos={noeudSelectionne.role === 'memos' ? memos.etat : null}
-              surMemos={memos.definir}
-            />
+                surSousPage={() => void creer(noeudSelectionne)}
+                entrer={aEcrire === noeudSelectionne.id}
+                surEntree={contenuRejoint}
+                theme={theme.theme}
+                surConflit={ouvrirConflit}
+                // Sommaire latéral permanent (docs/spec/interface.md) : plus d'interrupteur depuis le retrait de Ctrl+Maj+\.
+                sommaireVisible={true}
+                surOuvrirPage={selectionner}
+                surIcone={(x, y) => definirChoixDIcone({ chemin: noeudSelectionne.chemin, icone: noeudSelectionne.icone, x, y })}
+                surExport={() => definirExportDe(noeudSelectionne.chemin)}
+                surMode={(mode) => vault.changerMode(noeudSelectionne.chemin, mode)}
+                memos={noeudSelectionne.role === 'memos' ? memos.etat : null}
+                surMemos={memos.definir}
+                surArbreModifie={() => void vault.recharger()}
+                surCorbeille={mettreALaCorbeille}
+              />
+            </PageErrorBoundary>
+          ) : noeudSelectionne === null ? (
+            <PageSearch arbre={vault.arbre} recentes={recentes} ouvertures={ouvertures} surOuverture={(cle) => selectionner(cle)} surCreation={() => void creer(null)} />
           ) : (
             <PageSummary
               noeud={noeudSelectionne}
-              surCreation={() => void creer(null)}
               surImport={(noeud) => {
                 void vault.importer(noeud.chemin).then((page) => page !== null && selectionner(page.id));
               }}
@@ -563,6 +618,9 @@ export function App() {
         </main>
       </div>
       <StatusBar surResolution={ouvrirConflit} />
+      {rechercheOuverte && (
+        <PageSearchDialog arbre={vault.arbre} recentes={recentes} ouvertures={ouvertures} surOuverture={(cle) => selectionner(cle, true)} surFermeture={() => definirRechercheOuverte(false)} />
+      )}
       {noeudAExporter !== null && <ExportDialog noeud={noeudAExporter} theme={theme.theme} surFermeture={() => definirExportDe(null)} />}
       {choixDIcone !== null && (
         <IconPicker
@@ -588,7 +646,7 @@ export function App() {
             definirDepot(null);
             const premiere = resultat.pages[0];
             if (premiere !== undefined) {
-              selectionner(premiere.id);
+              selectionner(premiere.id, true);
             }
             return null;
           }}

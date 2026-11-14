@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activer, ajouter, estEtatDOnglets, etatInitial, fermer, ongletActif, ouvrir, parNumero, remplacer, voisin } from './tabs-model';
+import { activer, ajouter, deplacer, estEtatDOnglets, etatInitial, fermer, fermerLesPages, ongletActif, ouvrir, remplacer, sansOnglet } from './tabs-model';
 import type { TabsState } from './tabs-model';
 
 const cles = (etat: TabsState) => etat.onglets.map((onglet) => onglet.cle);
@@ -30,13 +30,34 @@ describe('ouvrir', () => {
     expect(cles(etat)).toEqual(['a', 'b', 'd', 'c']);
     expect(ongletActif(etat)).toEqual({ id: 'o4', cle: 'd' });
   });
+
+  it('un onglet affiché vide reçoit la page au lieu d’en ouvrir un autre', () => {
+    const etat = ouvrir(ajouter(trois), 'd', true);
+    expect(cles(etat)).toEqual(['a', 'b', 'd', 'c']);
+  });
+});
+
+describe('deplacer et fermerLesPages', () => {
+  it('déplace un onglet vers la place visée, sans changer l’onglet affiché', () => {
+    expect(cles(deplacer(trois, 'o1', 3))).toEqual(['b', 'c', 'a']);
+    expect(cles(deplacer(trois, 'o3', 0))).toEqual(['c', 'a', 'b']);
+    expect(deplacer(trois, 'o2', 2)).toBe(trois);
+    expect(deplacer(trois, 'o1', 3).actif).toBe('o2');
+  });
+
+  it('ferme les onglets des pages retirées', () => {
+    const etat = fermerLesPages(trois, new Set(['b', 'c']));
+    expect(cles(etat)).toEqual(['a']);
+    expect(etat.actif).toBe('o1');
+    expect(cles(fermerLesPages(trois, new Set(['a', 'b', 'c'])))).toEqual([]);
+  });
 });
 
 describe('remplacer', () => {
   it('ferme l’autre onglet qui montrait la même page', () => {
     const etat = remplacer(trois, 'a');
     expect(cles(etat)).toEqual(['a', 'c']);
-    expect(ongletActif(etat).id).toBe('o2');
+    expect(ongletActif(etat)?.id).toBe('o2');
   });
 
   it('vide l’onglet affiché', () => {
@@ -45,7 +66,7 @@ describe('remplacer', () => {
 });
 
 describe('ajouter et fermer', () => {
-  it('Ctrl+T ajoute un onglet vide après l’onglet affiché', () => {
+  it('le « + » ajoute un onglet vide après l’onglet affiché', () => {
     const etat = ajouter(trois);
     expect(cles(etat)).toEqual(['a', 'b', null, 'c']);
     expect(etat.actif).toBe('o4');
@@ -60,10 +81,23 @@ describe('ajouter et fermer', () => {
     expect(fermer(trois, 'o1')).toEqual({ onglets: [trois.onglets[1], trois.onglets[2]], actif: 'o2' });
   });
 
-  it('le dernier onglet devient vide au lieu de se fermer', () => {
-    expect(fermer(etatInitial('a'), 'o1')).toEqual(etatInitial(null));
-    const vide = etatInitial(null);
-    expect(fermer(vide, 'o1')).toBe(vide);
+  it('le dernier onglet se ferme, même vide', () => {
+    expect(fermer(etatInitial('a'), 'o1')).toEqual(sansOnglet);
+    expect(fermer(etatInitial(null), 'o1')).toEqual(sansOnglet);
+  });
+
+  it('sans onglet, ouvrir une page en ouvre un', () => {
+    expect(ongletActif(sansOnglet)).toBeNull();
+    expect(ouvrir(sansOnglet, 'a')).toEqual(etatInitial('a'));
+    expect(ouvrir(sansOnglet, 'a', true)).toEqual(etatInitial('a'));
+    expect(remplacer(sansOnglet, 'a')).toEqual(etatInitial('a'));
+    expect(remplacer(sansOnglet, null)).toBe(sansOnglet);
+    expect(ajouter(sansOnglet)).toEqual(etatInitial(null));
+  });
+
+  it('l’état sans onglet est gardé d’un lancement à l’autre', () => {
+    expect(estEtatDOnglets(sansOnglet)).toBe(true);
+    expect(estEtatDOnglets({ onglets: [], actif: 'o1' })).toBe(false);
   });
 
   it('un onglet inconnu ne change rien', () => {
@@ -73,17 +107,6 @@ describe('ajouter et fermer', () => {
 });
 
 describe('parcours', () => {
-  it('Ctrl+Tab et Ctrl+Maj+Tab tournent en boucle', () => {
-    expect(voisin(trois, 1).actif).toBe('o3');
-    expect(voisin({ ...trois, actif: 'o3' }, 1).actif).toBe('o1');
-    expect(voisin({ ...trois, actif: 'o1' }, -1).actif).toBe('o3');
-  });
-
-  it('Ctrl+n va à l’onglet n s’il existe', () => {
-    expect(parNumero(trois, 1).actif).toBe('o1');
-    expect(parNumero(trois, 9)).toBe(trois);
-  });
-
   it('les numéros d’onglet restent uniques', () => {
     const etat = ajouter(fermer(ajouter(trois), 'o1'));
     expect(new Set(etat.onglets.map((onglet) => onglet.id)).size).toBe(etat.onglets.length);

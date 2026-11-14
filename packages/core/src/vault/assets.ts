@@ -73,6 +73,17 @@ export function aUneExtensionDImage(nom: string): boolean {
   return extension !== undefined && extensionsDImage.includes(extension);
 }
 
+/** Le nom d'origine sans extension, réduit à des caractères qu'aucun outil n'a à encoder. */
+function baseDuNom(nomDOrigine: string | null): string {
+  return (nomDOrigine ?? '')
+    .replace(/\.[^.]*$/, '')
+    .normalize('NFC')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\\/:*?"<>|#%&{}()[\]^`~!$'=+;,@\s\u0000-\u001f\u007f]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^[-.]+|[-.]+$/g, '');
+}
+
 /**
  * Nom du fichier copié dans `assets/` : le nom d'origine sans ce qui gênerait
  * dans un lien Markdown ou sur le NAS (espaces, parenthèses, caractères
@@ -80,15 +91,12 @@ export function aUneExtensionDImage(nom: string): boolean {
  * reçoit un numéro (`schema-2.png`). Sans nom d'origine (image collée), la date.
  */
 export function nomDeFichierDImage(nomDOrigine: string | null, nature: ImageKind, nomsPris: Iterable<string>, maintenant: number): string {
-  const base = (nomDOrigine ?? '')
-    .replace(/\.[^.]*$/, '')
-    .normalize('NFC')
-    // eslint-disable-next-line no-control-regex
-    .replace(/[\\/:*?"<>|#%&{}()[\]^`~!$'=+;,@\s\u0000-\u001f\u007f]+/g, '-')
-    .replace(/-+/g, '-')
-    .replace(/^[-.]+|[-.]+$/g, '');
+  const base = baseDuNom(nomDOrigine);
   const nom = base === '' ? `image-${horodatage(maintenant)}` : [...base].slice(0, longueurMaxNom - 12).join('');
-  const extension = extensions[nature][0] as string;
+  return nomLibre(nom, extensions[nature][0] as string, nomsPris);
+}
+
+function nomLibre(nom: string, extension: string, nomsPris: Iterable<string>): string {
   const pris = new Set([...nomsPris].map(cleDeNom));
   for (let numero = 1; ; numero++) {
     const candidat = `${nom}${numero === 1 ? '' : `-${numero}`}.${extension}`;
@@ -133,13 +141,30 @@ export async function ajouterImage(contexte: VaultContext, cheminDeLaPage: strin
   return `${dossierAssets}/${encodeURIComponent(nom)}`;
 }
 
+/** Un fichier joint (image ou PDF) d'un dossier `assets/` auquel sa page ne renvoie plus. */
+export interface UnusedFile {
+  /** Chemin dans le dossier des notes. */
+  chemin: string;
+  nature: 'image' | 'pdf';
+  /** Taille en octets. */
+  taille: number;
+  /** Date de dernière modification, en millisecondes depuis l'époque Unix. */
+  modifieLe: number;
+}
+
+/** Vrai pour un fichier joint que les fichiers inutilisés listent : une image ou un PDF, d'après son nom. */
+export function estFichierJoint(nom: string): boolean {
+  return aUneExtensionDImage(nom) || /\.pdf$/i.test(nom);
+}
+
 /**
- * Images orphelines : les fichiers des dossiers `assets/` auxquels leur page
- * ne renvoie plus. Une image compte comme utilisée dès que la page contient
- * son adresse, encodée ou non. Ne modifie rien.
+ * Fichiers inutilisés (docs/spec/stockage.md) : les images et PDF des dossiers
+ * `assets/` auxquels leur page ne renvoie plus. Un fichier compte comme utilisé
+ * dès que la page contient son adresse, encodée ou non. Les autres fichiers
+ * d'un dossier `assets/` ne sont pas listés. Ne modifie rien.
  */
-export async function listerImagesOrphelines(fs: LocalFs): Promise<string[]> {
-  const orphelines: string[] = [];
+export async function listerFichiersInutilises(fs: LocalFs): Promise<UnusedFile[]> {
+  const inutilises: UnusedFile[] = [];
   const parcourir = async (dossier: string): Promise<void> => {
     const entrees = await fs.lister(dossier);
     const assets = entrees.find((entree) => entree.estDossier && entree.nom === dossierAssets);
@@ -148,12 +173,17 @@ export async function listerImagesOrphelines(fs: LocalFs): Promise<string[]> {
       const texte = page === undefined ? '' : await fs.lireTexte(joindreChemins(dossier, fichierPage));
       const variantes = new Set([texte, decoderSansErreur(texte)]);
       for (const fichier of await fs.lister(joindreChemins(dossier, dossierAssets))) {
-        if (fichier.estDossier || fichier.nom.startsWith('.')) {
+        if (fichier.estDossier || fichier.nom.startsWith('.') || !estFichierJoint(fichier.nom)) {
           continue;
         }
         const cherche = `${dossierAssets}/${fichier.nom}`;
         if (![...variantes].some((variante) => variante.includes(cherche) || variante.includes(`${dossierAssets}/${encodeURIComponent(fichier.nom)}`))) {
-          orphelines.push(joindreChemins(dossier, dossierAssets, fichier.nom));
+          inutilises.push({
+            chemin: joindreChemins(dossier, dossierAssets, fichier.nom),
+            nature: aUneExtensionDImage(fichier.nom) ? 'image' : 'pdf',
+            taille: fichier.taille,
+            modifieLe: fichier.modifieLe,
+          });
         }
       }
     }
@@ -164,7 +194,7 @@ export async function listerImagesOrphelines(fs: LocalFs): Promise<string[]> {
     }
   };
   await parcourir('');
-  return orphelines;
+  return inutilises;
 }
 
 /** Le texte avec ses séquences `%XX` décodées, là où elles se décodent. */
@@ -176,4 +206,42 @@ function decoderSansErreur(texte: string): string {
       return sequence;
     }
   });
+}
+
+/** Taille maximale d'un PDF joint à une page. */
+export const tailleMaxDePdf = 50 * 1024 * 1024;
+
+/** Le nom d'un PDF du dossier `assets/` d'une page, d'après l'adresse d'un lien (`assets/cours.pdf`), ou null si ce n'en est pas un. */
+export function pdfDeLaPage(adresse: string): string | null {
+  let decodee: string;
+  try {
+    decodee = decodeURIComponent(adresse);
+  } catch {
+    return null;
+  }
+  const trouve = /^assets\/([^/\\]+\.pdf)$/i.exec(decodee);
+  return trouve === null || trouve[1]!.startsWith('.') ? null : trouve[1]!;
+}
+
+/**
+ * Joint un PDF à une page (docs/spec/stockage.md) : il va dans son dossier
+ * `assets/`, comme les images, sous un nom libre. Rend son adresse relative.
+ */
+export async function ajouterPdf(contexte: VaultContext, cheminDeLaPage: string, nomDOrigine: string | null, octets: Uint8Array): Promise<string> {
+  if (octets.length === 0 || octets.length > tailleMaxDePdf) {
+    throw new VaultError('chemin_invalide', `Un PDF doit faire moins de ${tailleMaxDePdf / 1024 / 1024} Mo.`);
+  }
+  if (String.fromCharCode(...octets.subarray(0, 5)) !== '%PDF-') {
+    throw new VaultError('chemin_invalide', "Ce fichier n'est pas un PDF.");
+  }
+  const page = await contexte.fs.infos(joindreChemins(cheminDeLaPage, fichierPage));
+  if (page === null || page.estDossier) {
+    throw new VaultError('introuvable', 'Cette page est introuvable.');
+  }
+  const dossier = joindreChemins(cheminDeLaPage, dossierAssets);
+  await contexte.fs.creerDossier(dossier);
+  const base = baseDuNom(nomDOrigine);
+  const nom = nomLibre(base === '' ? 'document' : [...base].slice(0, longueurMaxNom - 12).join(''), 'pdf', (await contexte.fs.lister(dossier)).map((entree) => entree.nom));
+  await contexte.fs.ecrireOctets(joindreChemins(dossier, nom), octets);
+  return `${dossierAssets}/${encodeURIComponent(nom)}`;
 }

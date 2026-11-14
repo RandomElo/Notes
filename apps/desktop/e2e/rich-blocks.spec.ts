@@ -4,7 +4,7 @@ import { readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
 import type { Page } from '@playwright/test';
-import { attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparer } from './app';
+import { attendreEnregistrement, editeur, fermer, lancer, lireCorps, ouvrirPage, preparer, rubrique } from './app';
 
 // Ce que les fonctions passées à evaluate utilisent du DOM, que la configuration TypeScript des essais ne connaît pas.
 declare const DataTransfer: new () => { items: { add(fichier: unknown): void } };
@@ -234,7 +234,21 @@ test('la barre d’outils d’un tableau et les poignées de ligne et de colonne
   const lignes = () => editeur(page).locator('table tr');
 
   // Barre d'outils : l'étiquette « Tableau », un « + » qui ouvre les ajouts, une corbeille qui ouvre les suppressions.
+  // Un simple clic dans une cellule ne la montre pas : il faut sélectionner son texte.
   await editeur(page).locator('td', { hasText: 'b' }).click();
+  await page.waitForTimeout(200);
+  await expect(page.getByRole('toolbar', { name: 'Mise en forme' })).toBeHidden();
+  await page.keyboard.press('Shift+Home');
+  // Plusieurs cellules sélectionnées en glissant : la barre vient aussi, avec le menu du tableau.
+  await page.keyboard.press('Escape');
+  const cellules = editeur(page).locator('table tr').first().locator('th, td');
+  await cellules.first().hover();
+  await page.mouse.down();
+  await cellules.nth(1).hover();
+  await page.mouse.up();
+  await expect(page.getByRole('toolbar', { name: 'Mise en forme' }).getByRole('button', { name: 'Ajouter une ligne ou une colonne' })).toBeVisible();
+  await editeur(page).locator('td', { hasText: 'b' }).click();
+  await page.keyboard.press('Shift+Home');
   await page.getByRole('button', { name: 'Ajouter une ligne ou une colonne' }).click();
   await expect(page.getByRole('menu', { name: 'Ajouter une ligne ou une colonne' }).getByRole('menuitem')).toHaveText([
     'Ligne au-dessus', 'Ligne en dessous', 'Colonne à gauche', 'Colonne à droite',
@@ -243,8 +257,8 @@ test('la barre d’outils d’un tableau et les poignées de ligne et de colonne
   await expect(lignes()).toHaveCount(3);
   await lignes().nth(2).locator('td').first().click();
   await page.keyboard.type('c', { delay: 15 });
-  // La barre d'outils s'efface à la frappe : un clic la ramène.
-  await editeur(page).locator('td', { hasText: /^c$/ }).click();
+  // La barre d'outils s'efface à la frappe : sélectionner le texte la ramène.
+  await page.keyboard.press('Shift+Home');
   await page.waitForTimeout(150);
   await page.getByRole('button', { name: 'Supprimer', exact: true }).click();
   await expect(page.getByRole('menu', { name: 'Supprimer' }).getByRole('menuitem')).toHaveText(['Supprimer la ligne', 'Supprimer la colonne', 'Supprimer le tableau']);
@@ -349,6 +363,7 @@ test('les images déjà dans le dossier des notes se convertissent en WebP depui
   const session = await lancer(await preparer());
   const { page, vault } = session;
   await page.getByRole('button', { name: 'Réglages', exact: true }).click();
+  await rubrique(page, 'Images et fichiers');
   const bloc = page.getByRole('region', { name: 'Images en WebP' });
   await expect(bloc.getByRole('status')).toHaveText('Une image en PNG, JPEG ou AVIF.');
   await bloc.getByRole('button', { name: 'Convertir' }).click();
@@ -358,9 +373,9 @@ test('les images déjà dans le dossier des notes se convertissent en WebP depui
   const corps = await lireCorps(vault, 'Bienvenue');
   expect(corps).toContain('![Un petit schéma](assets/schema.webp "Une image copiée dans le dossier de la page")');
   expect((await readdir(join(vault, 'Bienvenue', 'assets'))).sort()).toEqual(['schema.png', 'schema.webp']);
-  const images = page.getByRole('region', { name: 'Images inutilisées' });
-  await images.getByRole('button', { name: 'Chercher' }).click();
-  await expect(images.getByRole('status')).toHaveText('Une image inutilisée.');
+  const fichiers = page.getByRole('region', { name: 'Fichiers inutilisés' });
+  await fichiers.getByRole('button', { name: 'Chercher' }).click();
+  await expect(fichiers.getByRole('status')).toHaveText(/^Inutilisés : un fichier,/);
 
   // L'image s'affiche toujours dans la page.
   await page.getByRole('button', { name: 'Réglages', exact: true }).click();
@@ -452,5 +467,25 @@ test('tableau : colonnes fixes réglées en glissant leur bordure, gardées dans
   await ouvrirPage(page, 'Courses');
   await ouvrirPage(page, 'Bienvenue');
   await expect(editeur(page).locator('col').first()).toHaveAttribute('style', /width: 75%/);
+  await fermer(session);
+});
+
+test('une colonne ajoutée à un tableau aux largeurs réglées a sa place, sans casser la page', async () => {
+  const preparation = await preparer();
+  await writeFile(
+    join(preparation.vault, 'Courses', 'page.md'),
+    '---\nid: 0199a0b0-0000-7000-8000-0000000000d1\ntitle: Courses\ncreated: 2026-01-01T00:00:00.000Z\nupdated: 2026-01-01T00:00:00.000Z\ntable_widths:\n  - [40, 30, 30]\n---\n| A | B | C |\n| --- | --- | --- |\n| 1 | 2 | 3 |\n',
+  );
+  const session = await lancer(preparation);
+  const { page } = session;
+  await ouvrirPage(page, 'Courses');
+  const cellule = editeur(page).locator('table tr').first().locator('th').last();
+  await cellule.hover();
+  const bord = (await cellule.boundingBox())!;
+  await page.mouse.move(bord.x + bord.width - 3, bord.y + bord.height + 20);
+  await page.getByRole('button', { name: 'Ajouter une colonne' }).click();
+  const largeurs = await editeur(page).locator('table col').evaluateAll((cols) => cols.map((col) => (col as unknown as { style: { width: string } }).style.width));
+  expect(largeurs).toHaveLength(4);
+  expect(largeurs.every((largeur) => largeur.endsWith('%'))).toBe(true);
   await fermer(session);
 });

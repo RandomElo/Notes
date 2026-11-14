@@ -2,7 +2,7 @@ import { niveauxDeTitre, nomsDeCouleur } from './defaults';
 import type { Theme } from './defaults';
 
 /** Nature d'une valeur du thème : c'est elle qui dit ce qui est accepté. */
-export type FieldKind = 'couleur' | 'reference' | 'taille' | 'graisse' | 'booleen' | 'interligne' | 'police' | 'duree';
+export type FieldKind = 'couleur' | 'reference' | 'taille' | 'graisse' | 'booleen' | 'interligne' | 'police' | 'duree' | 'etats';
 
 export interface ThemeField {
   /** Chemin dans le TOML et dans l'objet du thème : `heading.h2.size`. */
@@ -38,6 +38,7 @@ export const champsDuTheme: ThemeField[] = [
   ...['info', 'success', 'warning', 'danger'].map((nom) => champ(`callout.${nom}`, 'reference')),
   champ('table.border', 'reference'),
   champ('table.header_background', 'reference'),
+  champ('database.states', 'etats'),
   champ('ui.content_width', 'taille'),
   champ('ui.sidebar_width', 'taille'),
   champ('ui.radius', 'taille'),
@@ -51,6 +52,28 @@ const duree = /^\d{1,4}ms$/;
 
 export function estCouleur(valeur: unknown): valeur is string {
   return typeof valeur === 'string' && couleur.test(valeur);
+}
+
+/** Une liste d'états de base de données : 1 à 20, noms non vides et différents (40 caractères au plus), couleurs du thème. */
+function estListeDEtats(valeur: unknown): boolean {
+  if (!Array.isArray(valeur) || valeur.length === 0 || valeur.length > 20) {
+    return false;
+  }
+  const noms = new Set<string>();
+  for (const etat of valeur as unknown[]) {
+    if (typeof etat !== 'object' || etat === null || Array.isArray(etat)) {
+      return false;
+    }
+    const { name, color } = etat as { name?: unknown; color?: unknown };
+    if (Object.keys(etat).some((cle) => cle !== 'name' && cle !== 'color')) {
+      return false;
+    }
+    if (typeof name !== 'string' || name.trim() === '' || name.length > 40 || noms.has(name) || refus('reference', color) !== null) {
+      return false;
+    }
+    noms.add(name);
+  }
+  return true;
 }
 
 /**
@@ -80,6 +103,8 @@ export function refus(genre: FieldKind, valeur: unknown): string | null {
       return typeof valeur === 'string' && police.test(valeur) ? null : 'un nom de police, ou plusieurs séparés par des virgules';
     case 'duree':
       return typeof valeur === 'string' && duree.test(valeur) ? null : 'une durée comme "150ms"';
+    case 'etats':
+      return estListeDEtats(valeur) ? null : 'une liste de 1 à 20 états aux noms différents, comme [{ name = "Fait", color = "success" }]';
   }
 }
 

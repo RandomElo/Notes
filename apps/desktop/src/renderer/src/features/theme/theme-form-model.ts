@@ -131,6 +131,17 @@ export const sectionsDuFormulaire: FormSection[] = [
     ],
   },
   {
+    titre: 'Bases de données',
+    avance: true,
+    champs: [
+      {
+        chemin: 'database.states',
+        libelle: 'États',
+        aide: "Un état par ligne : son nom, deux-points, sa couleur (un nom de la palette comme success, ou #rrggbb). L'ordre est celui de la liste et du tri.",
+      },
+    ],
+  },
+  {
     titre: 'Interface',
     avance: true,
     champs: [
@@ -215,4 +226,21 @@ export function surSixChiffres(couleur: string): string | null {
     return `#${[...chiffres.slice(0, 3)].map((chiffre) => chiffre + chiffre).join('')}`.toLowerCase();
   }
   return chiffres.length === 6 || chiffres.length === 8 ? `#${chiffres.slice(0, 6)}`.toLowerCase() : null;
+}
+
+/** Les états d'une base en texte, un par ligne : « Fait : success ». */
+export function etatsEnTexte(etats: readonly { name: string; color: string }[]): string {
+  return etats.map((etat) => `${etat.name} : ${etat.color}`).join('\n');
+}
+
+/** Le texte du champ des états relu en liste ; une ligne sans deux-points prend la couleur grise. Les lignes vides sont ignorées. */
+export function etatsDuTexte(texte: string): { name: string; color: string }[] {
+  return texte
+    .split('\n')
+    .map((ligne) => ligne.trim())
+    .filter((ligne) => ligne !== '')
+    .map((ligne) => {
+      const separation = ligne.lastIndexOf(':');
+      return separation === -1 ? { name: ligne, color: 'muted' } : { name: ligne.slice(0, separation).trim(), color: ligne.slice(separation + 1).trim() };
+    });
 }

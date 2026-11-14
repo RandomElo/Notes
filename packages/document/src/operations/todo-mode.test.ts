@@ -5,7 +5,7 @@ import { ecrireMarkdown } from '../markdown/serialize';
 import { ajouterTache } from './list-items';
 import { basculerTache } from './toggle-task';
 import { schema } from '../schema/extensions';
-import { convertirEnListe, normaliserListe, ouvrirNouvelleTache, rangerTaches, retirerTachesVides, sectionTerminee } from './todo-mode';
+import { convertirEnListe, normaliserListe, ouvrirNouvelleTache, rangerTaches, retirerTachesVides, sectionTerminee, sousTachesTerminees } from './todo-mode';
 
 /** Applique une opération au corps Markdown et rend le corps qui en sort, comme à l'enregistrement. */
 function appliquer(corps: string, operation: (tr: Transform) => unknown): string {
@@ -191,5 +191,26 @@ describe('section « Terminé »', () => {
   it('est vide sans tâche cochée en fin de liste', () => {
     expect(sectionTerminee(lireMarkdown('- [x] a\n- [ ] b\n').document)).toEqual([]);
     expect(sectionTerminee(lireMarkdown('Texte\n').document)).toEqual([]);
+  });
+});
+
+describe('sous-tâches cochées sous une tâche à faire', () => {
+  const texteEn = (tr: Transform, position: number): string => tr.doc.nodeAt(position)?.firstChild?.textContent ?? '';
+
+  it('les trouve avec leurs parents, sans celles de « Terminé » ni celles d’une sous-tâche déjà cochée', () => {
+    const { document } = lireMarkdown('- [ ] courses\n  - [x] pain\n  - [ ] lait\n    - [x] entier\n- [ ] rien\n- [x] fini\n  - [x] dedans\n');
+    const tr = new Transform(document);
+    const trouvees = sousTachesTerminees(tr.doc);
+    expect(trouvees.map(({ position, parents }) => [texteEn(tr, position), parents.map((parent) => texteEn(tr, parent))])).toEqual([
+      ['pain', ['courses']],
+      ['entier', ['courses', 'lait']],
+    ]);
+  });
+
+  it('une sous-tâche cochée emporte les siennes, et rien hors du mode liste', () => {
+    const { document } = lireMarkdown('- [ ] a\n  - [x] b\n    - [x] c\n');
+    const tr = new Transform(document);
+    expect(sousTachesTerminees(tr.doc).map(({ position }) => texteEn(tr, position))).toEqual(['b']);
+    expect(sousTachesTerminees(lireMarkdown('Texte\n\n- [ ] a\n  - [x] b\n').document)).toEqual([]);
   });
 });

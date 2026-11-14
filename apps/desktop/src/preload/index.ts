@@ -39,6 +39,12 @@ const api: NotesApi = {
   listerMentionsCassees: () => ipcRenderer.invoke(canaux.listerMentionsCassees),
   changerIcone: (demande) => ipcRenderer.invoke(canaux.changerIcone, demande),
   changerMode: (demande) => ipcRenderer.invoke(canaux.changerMode, demande),
+  lireBase: (demande) => ipcRenderer.invoke(canaux.lireBase, demande),
+  changerConfigDeBase: (demande) => ipcRenderer.invoke(canaux.changerConfigDeBase, demande),
+  changerValeurDeBase: (demande) => ipcRenderer.invoke(canaux.changerValeurDeBase, demande),
+  renommerChampDeBase: (demande) => ipcRenderer.invoke(canaux.renommerChampDeBase, demande),
+  renommerChoixDeBase: (demande) => ipcRenderer.invoke(canaux.renommerChoixDeBase, demande),
+  retirerChoixDeBase: (demande) => ipcRenderer.invoke(canaux.retirerChoixDeBase, demande),
   ajouterIconeImage: (demande) => ipcRenderer.invoke(canaux.ajouterIconeImage, demande),
   deplacerPage: (demande) => ipcRenderer.invoke(canaux.deplacerPage, demande),
   deplacerPages: (demande) => ipcRenderer.invoke(canaux.deplacerPages, demande),
@@ -55,6 +61,8 @@ const api: NotesApi = {
   listerConflits: (demande) => ipcRenderer.invoke(canaux.listerConflits, demande),
   lireConflit: (demande) => ipcRenderer.invoke(canaux.lireConflit, demande),
   resoudreConflit: (demande) => ipcRenderer.invoke(canaux.resoudreConflit, demande),
+  ecarterConflitDOrdre: (demande) => ipcRenderer.invoke(canaux.ecarterConflitDOrdre, demande),
+  lireConflitDOrdre: (demande) => ipcRenderer.invoke(canaux.lireConflitDOrdre, demande),
   lireTheme: () => ipcRenderer.invoke(canaux.lireTheme),
   creerTheme: () => ipcRenderer.invoke(canaux.creerTheme),
   ouvrirTheme: () => ipcRenderer.invoke(canaux.ouvrirTheme),
@@ -71,10 +79,22 @@ const api: NotesApi = {
 
   quitterNotes: () => ipcRenderer.invoke(canaux.quitterNotes),
   prendrePageDemandee: () => ipcRenderer.invoke(canaux.prendrePageDemandee),
+  ouvrirBarreDeRecherche: () => ipcRenderer.invoke(canaux.ouvrirBarreDeRecherche),
   surPageDemandee: (ecouteur) => {
     const relais = (): void => ecouteur();
     ipcRenderer.on(evenements.pageDemandee, relais);
     return () => ipcRenderer.removeListener(evenements.pageDemandee, relais);
+  },
+  signalerErreur: (erreur) => ipcRenderer.invoke(canaux.signalerErreur, erreur),
+  choisirArchivesNotion: () => ipcRenderer.invoke(canaux.choisirArchivesNotion),
+  analyserNotion: (demande) => ipcRenderer.invoke(canaux.analyserNotion, demande),
+  importerNotion: (demande) => ipcRenderer.invoke(canaux.importerNotion, demande),
+  apercuNotion: (demande) => ipcRenderer.invoke(canaux.apercuNotion, demande),
+  abandonnerNotion: () => ipcRenderer.invoke(canaux.abandonnerNotion),
+  surAvancementNotion: (ecouteur) => {
+    const relais = (_evenement: unknown, avancement: Parameters<typeof ecouteur>[0]): void => ecouteur(avancement);
+    ipcRenderer.on(evenements.avancementNotion, relais);
+    return () => ipcRenderer.removeListener(evenements.avancementNotion, relais);
   },
   miseAJourEnAttente: () => ipcRenderer.invoke(canaux.miseAJourEnAttente),
   surMiseAJourInstallee: (ecouteur) => {
@@ -98,9 +118,10 @@ const api: NotesApi = {
   listerImagesAConvertir: () => ipcRenderer.invoke(canaux.listerImagesAConvertir),
   lireImage: (demande) => ipcRenderer.invoke(canaux.lireImage, demande),
   convertirImage: (demande) => ipcRenderer.invoke(canaux.convertirImage, demande),
-  listerImagesOrphelines: () => ipcRenderer.invoke(canaux.listerImagesOrphelines),
+  listerFichiersInutilises: () => ipcRenderer.invoke(canaux.listerFichiersInutilises),
   retirerLeFond: (demande) => ipcRenderer.invoke(canaux.retirerLeFond, demande),
   copierImage: (demande) => ipcRenderer.invoke(canaux.copierImage, demande),
+  ouvrirPdf: (demande) => ipcRenderer.invoke(canaux.ouvrirPdf, demande),
   apercuDuSite: (demande) => ipcRenderer.invoke(canaux.apercuDuSite, demande),
   enregistrerFavicon: (demande) => ipcRenderer.invoke(canaux.enregistrerFavicon, demande),
   montrerFichier: (demande) => ipcRenderer.invoke(canaux.montrerFichier, demande),
@@ -109,7 +130,7 @@ const api: NotesApi = {
   lireImageDExport: (demande) => ipcRenderer.invoke(canaux.lireImageDExport, demande),
 
   mettreALaCorbeille: (demande) => ipcRenderer.invoke(canaux.mettreALaCorbeille, demande),
-  mettreImageALaCorbeille: (demande) => ipcRenderer.invoke(canaux.mettreImageALaCorbeille, demande),
+  mettreFichierJointALaCorbeille: (demande) => ipcRenderer.invoke(canaux.mettreFichierJointALaCorbeille, demande),
   listerCorbeille: () => ipcRenderer.invoke(canaux.listerCorbeille),
   apercuCorbeille: (demande) => ipcRenderer.invoke(canaux.apercuCorbeille, demande),
   restaurerDeLaCorbeille: (demande) => ipcRenderer.invoke(canaux.restaurerDeLaCorbeille, demande),

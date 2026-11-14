@@ -7,6 +7,9 @@ import type { TrashListResult, TrashPlace, TrashPreviewResult } from '../../../.
 import { api } from '../../lib/ipc';
 import { versDataUri } from '../export/export-images';
 import { MemoPlayer } from '../voice-memos/MemoPlayer';
+
+/** Un PDF joint mis à la corbeille y est de nature « image » (fichier de `assets/`) : on le reconnaît à son nom. */
+const estPdf = (nom: string): boolean => /\.pdf$/i.test(nom);
 import { dateDeSuppression, delaiAvantEffacement, emplacementDOrigine, typeDImage } from './trash-labels';
 
 type Entry = TrashListResult['entrees'][number];
@@ -114,7 +117,7 @@ export function TrashScreen({ surRestauration, surOuverture }: TrashScreenProps)
           <ul aria-label="Éléments de la corbeille" className="space-y-0.5">
             {entrees.map((element, rang) => {
               const cle = cleDe(element);
-              const Icone = element.nature === 'image' ? IconeImage : element.nature === 'memo' ? Mic : FileText;
+              const Icone = element.nature === 'image' && !estPdf(element.nom) ? IconeImage : element.nature === 'memo' ? Mic : FileText;
               const active = cle === choisie;
               return (
                 <li key={cle}>
@@ -204,7 +207,7 @@ function EntryPreview({ entree, maintenant, surRestauree, surSupprimee }: EntryP
         <div>
           <h3 className="text-lg font-semibold break-words">{entree.titre}</h3>
           <p className="text-discret mt-0.5">
-            {entree.nature === 'image' ? 'Image' : entree.nature === 'memo' ? 'Mémo vocal' : 'Page'} supprimée {dateDeSuppression(entree.supprimeLe, maintenant)}, {emplacementDOrigine(entree.cheminOrigine)}.{' '}
+            {entree.nature === 'image' ? (estPdf(entree.nom) ? 'PDF supprimé' : 'Image supprimée') : entree.nature === 'memo' ? 'Mémo vocal supprimé' : 'Page supprimée'} {dateDeSuppression(entree.supprimeLe, maintenant)}, {emplacementDOrigine(entree.cheminOrigine)}.{' '}
             {delaiAvantEffacement(entree.supprimeLe, maintenant)}.
           </p>
         </div>
@@ -254,6 +257,8 @@ function EntryPreview({ entree, maintenant, surRestauree, surSupprimee }: EntryP
         <p className="text-erreur text-sm">{apercu.erreur.message}</p>
       ) : apercu.nature === 'memo' ? (
         <MemoPlayer octets={apercu.octets} nom={entree.nom} libelle={`Écouter ${entree.titre}`} />
+      ) : apercu.nature === 'image' && estPdf(entree.nom) ? (
+        <p className="text-discret text-sm">PDF joint à une page, sans aperçu ici. Restauré, il revient dans le dossier de sa page.</p>
       ) : apercu.nature === 'image' ? (
         <img src={versDataUri(apercu.octets, typeDImage(entree.nom))} alt={entree.titre} className="max-h-96 max-w-full rounded-md" />
       ) : (

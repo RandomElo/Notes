@@ -2,7 +2,7 @@
 
 Le « vault » est le dossier qui contient toutes les notes : c'est lui qu'on choisit au premier lancement et qui est copié sur le NAS. Le mot vient d'Obsidian (un coffre de notes). Il existe en deux exemplaires, le vault local sur le poste, où l'on travaille, et sa copie sur le NAS. Dans l'interface, on parle simplement du « dossier des notes ».
 
-Une page est un dossier contenant `page.md`, un dossier `assets/` si besoin, et les pages enfants.
+Une page est un dossier contenant `page.md`, un dossier `assets/` si besoin (ses images, et ses PDF joints, 50 Mo au plus, liés par `[📎 nom](assets/nom.pdf)`), et les pages enfants. Une image ou un PDF de `assets/` dont la page ne parle plus est un fichier inutilisé : les réglages les listent, et une fenêtre aide à les trier quand il y en a plus de cinq (cases à cocher, aperçu, page, taille, tri par taille, nom ou date, filtre images ou PDF).
 
 ```
 vault/
@@ -28,7 +28,9 @@ Nom de dossier = titre assaini (caractères refusés par SMB remplacés : `\ / :
 | `title` | Titre de la page |
 | `icon` | Emoji (`📚`), nom d'icône Lucide en kebab-case (`book-open`) ou image du dossier `assets/` de la page (`assets/icone.webp`) |
 | `created`, `updated` | Dates ISO |
-| `mode` | Optionnel, `todo` pour le mode liste de tâches ([liste-de-taches](liste-de-taches.md)) |
+| `mode` | Optionnel, `todo` pour le mode liste de tâches ([liste-de-taches](liste-de-taches.md)), `base` pour une base de données ([base-de-donnees](base-de-donnees.md)) |
+| `base` | Optionnel, champs et tri d'une base de données ([base-de-donnees](base-de-donnees.md)) |
+| `props` | Optionnel, valeurs d'une ligne de base de données, sur une sous-page de la base |
 | `theme_overrides` | Optionnel, surcharges de couleurs ([theme](theme.md)) |
 | `table_widths` | Optionnel, largeur des colonnes des tableaux : une liste par tableau, dans l'ordre de la page, en pourcentages entiers (`- [30, 70]`) ; une liste vide laisse les colonnes égales ([editeur](editeur.md)) |
 

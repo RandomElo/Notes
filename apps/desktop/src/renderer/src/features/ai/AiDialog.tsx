@@ -48,6 +48,15 @@ function Estimation({ estimation }: { estimation: AiEstimateResult | null }) {
       </p>
     );
   }
+  if (!estimation.ok && estimation.indisponible === true) {
+    // Poste sans IA locale (portable sans Ollama) : ce n'est pas une panne, la raison reste en retrait.
+    return (
+      <div role="status" className="text-sm">
+        <p className="text-texte">Fonctionnalité non disponible sur ce poste.</p>
+        <p className="text-discret mt-1">{estimation.message}</p>
+      </div>
+    );
+  }
   if (!estimation.ok) {
     return (
       <p role="alert" className="text-erreur text-sm">

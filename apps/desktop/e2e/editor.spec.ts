@@ -149,8 +149,7 @@ test('les raccourcis de saisie Markdown produisent les bons blocs et le bon fich
   await taper('souligné');
   await page.keyboard.press('Control+u');
   await page.keyboard.press('Enter');
-  await page.keyboard.press('Control+Alt+3');
-  await taper('Titre trois');
+  await taper('### Titre trois');
   await attendreEnregistrement(page);
   expect(await lireCorps(vault, 'Projets')).toMatch(/\n\nfin\n\n\*\*gras\*\* normal <u>souligné<\/u>\n\n### Titre trois\n$/);
 
@@ -381,5 +380,31 @@ test('en écrivant en fin de page, la ligne en cours reste au-dessus du dernier 
     return { bas: fenetre.getSelection().getRangeAt(0).getBoundingClientRect().bottom, hauteur: fenetre.innerHeight };
   });
   expect(bas).toBeLessThan((hauteur * 2) / 3 + 40);
+  await fermer(session);
+});
+
+test('Ctrl+F cherche dans la page sans accents ni casse, Entrée passe au suivant, Échap sélectionne le passage', async () => {
+  const session = await lancer(await preparer());
+  const { page, vault } = session;
+  await ouvrirPage(page, 'Projets');
+  await editeur(page).click();
+  await page.keyboard.type('Été, puis ete et enfin ETE.', { delay: 10 });
+  await page.keyboard.press('Control+f');
+  const recherche = page.getByRole('search', { name: 'Rechercher dans la page' });
+  await recherche.getByRole('textbox').fill('ete');
+  await expect(recherche.getByRole('status')).toHaveText('1 sur 3');
+  await expect(editeur(page).locator('.recherche-trouve, .recherche-courant')).toHaveCount(3);
+  await page.keyboard.press('Enter');
+  await expect(recherche.getByRole('status')).toHaveText('2 sur 3');
+  await page.keyboard.press('Shift+Enter');
+  await page.keyboard.press('Shift+Enter');
+  await expect(recherche.getByRole('status')).toHaveText('3 sur 3');
+  // Échap : la barre se ferme, le passage en cours est sélectionné dans la page, la frappe le remplace.
+  await page.keyboard.press('Escape');
+  await expect(recherche).toBeHidden();
+  await expect(editeur(page).locator('.recherche-trouve, .recherche-courant')).toHaveCount(0);
+  await page.keyboard.type('été');
+  await attendreEnregistrement(page);
+  expect(await lireCorps(vault, 'Projets')).toBe('Été, puis ete et enfin été.\n');
   await fermer(session);
 });
